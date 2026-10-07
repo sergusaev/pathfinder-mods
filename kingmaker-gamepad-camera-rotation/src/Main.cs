@@ -6,8 +6,8 @@ using Kingmaker.Assets.Console.GamepadInput;
 using Kingmaker.GameModes;
 using Kingmaker.UI;
 using Kingmaker.UI._ConsoleUI.InputLayers.InGameLayer;
+using Kingmaker.UI._ConsoleUI.LocalMap;
 using Kingmaker.View;
-using Rewired;
 using UnityEngine;
 using UnityModManagerNet;
 
@@ -28,26 +28,28 @@ namespace GamepadCameraRotation
 
     public static class Main
     {
-        const int RightStickX = 2;
-        const int RightStickY = 3;
-        const int RightStickButton = 19;
+        internal const int RightStickX = 2;
+        internal const int RightStickY = 3;
+        internal const int DPadUp = 6;
+        internal const int DPadDown = 7;
+        internal const int RightStickButton = 19;
         const float DeadZone = 0.2f;
+        const string LocalMapContext = "LocalMapInputContext";
 
         internal static UnityModManager.ModEntry.ModLogger Log;
         internal static Settings Settings;
+        internal static string Dir;
 
         internal static bool RotateMode;
-        internal static bool R3Armed;
-        internal static bool Bypass;
+        internal static float MapYaw;
 
         static readonly FieldInfo PlayerScroll = AccessTools.Field(typeof(CameraZoom), "m_PlayerScrollPosition");
         static readonly FieldInfo ZoomLength = AccessTools.Field(typeof(CameraZoom), "m_ZoomLenght");
-        static readonly MethodInfo ToggleTurnBased =
-            AccessTools.Method(typeof(InGameInputLayerView), "ChangeTurnBasedModeState");
 
         public static bool Load(UnityModManager.ModEntry modEntry)
         {
             Log = modEntry.Logger;
+            Dir = modEntry.Path;
             Settings = UnityModManager.ModSettings.Load<Settings>(modEntry);
             modEntry.OnGUI = OnGUI;
             modEntry.OnSaveGUI = e => Settings.Save(e);
@@ -66,9 +68,11 @@ namespace GamepadCameraRotation
             Settings.InvertZoom = GUILayout.Toggle(Settings.InvertZoom, "Invert zoom");
         }
 
-        static bool InGameLayerActive()
+        internal static void ToggleRotateMode()
         {
-            return GamePad.HasInstance && GamePad.Instance.CurrentInputLayer is InGameInputLayer;
+            RotateMode = !RotateMode;
+            Game.Instance.UI.Common.UISound.Play(UISoundType.ButtonClick);
+            InputRemap.UpdateCameraHintLabel();
         }
 
         static bool CameraControllable()
@@ -84,29 +88,17 @@ namespace GamepadCameraRotation
             try
             {
                 if (!GamePad.HasInstance || Game.Instance == null || !Game.Instance.IsControllerGamepad) return;
-                Rewired.Player player = GamePad.Instance.Player;
-                if (player == null) return;
-
-                if (R3Armed)
-                {
-                    if (player.GetButtonLongPress(RightStickButton))
-                    {
-                        R3Armed = false;
-                        RotateMode = !RotateMode;
-                        Game.Instance.UI.Common.UISound.Play(RotateMode ? UISoundType.ButtonClick : UISoundType.MapClose);
-                    }
-                    else if (!player.GetButton(RightStickButton))
-                    {
-                        R3Armed = false;
-                        Bypass = true;
-                        try { ToggleTurnBased.Invoke(null, new object[] { default(InputActionEventData) }); }
-                        finally { Bypass = false; }
-                    }
-                }
-
-                if (!RotateMode || !InGameLayerActive() || !CameraControllable()) return;
                 CameraRig rig = Game.Instance.UI.GetCameraRig();
                 if (rig == null) return;
+                Compass.Tick(Mathf.DeltaAngle(MapYaw, rig.transform.eulerAngles.y));
+
+                if (!RotateMode) return;
+                Rewired.Player player = GamePad.Instance.Player;
+                InputLayer top = GamePad.Instance.CurrentInputLayer;
+                if (player == null || top == null) return;
+                bool inGame = top is InGameInputLayer && CameraControllable();
+                bool onMap = top.ContextName == LocalMapContext;
+                if (!inGame && !onMap) return;
 
                 float x = player.GetAxis(RightStickX);
                 float y = player.GetAxis(RightStickY);
@@ -117,7 +109,7 @@ namespace GamepadCameraRotation
                     float yaw = x * Settings.RotationSpeed * step * (Settings.InvertRotation ? -1f : 1f);
                     rig.transform.rotation = Quaternion.Euler(0f, rig.transform.eulerAngles.y + yaw, 0f);
                 }
-                if (Mathf.Abs(y) > DeadZone && rig.CameraZoom != null)
+                if (inGame && Mathf.Abs(y) > DeadZone && rig.CameraZoom != null)
                 {
                     CameraZoom zoom = rig.CameraZoom;
                     float len = (float)ZoomLength.GetValue(zoom);
@@ -128,27 +120,34 @@ namespace GamepadCameraRotation
             catch (Exception e)
             {
                 RotateMode = false;
-                R3Armed = false;
                 Log?.Error(e.ToString());
             }
         }
     }
 
-    // R3 press is delivered here only while the in-game layer is on top; release toggles turn-based mode, hold toggles rotate mode.
-    [HarmonyPatch(typeof(InGameInputLayerView), "ChangeTurnBasedModeState")]
-    static class TurnBasedTogglePatch
+    // Area entry passes the default yaw of the area part; it is north for the compass and the fixed yaw of the local map.
+    [HarmonyPatch(typeof(CameraRig), "SetRotation")]
+    static class SetRotationPatch
     {
-        static bool Prefix()
+        [HarmonyPriority(Priority.First)]
+        static void Prefix(float cameraRotation)
         {
-            if (Main.Bypass) return true;
-            Main.R3Armed = true;
-            return false;
+            Main.MapYaw = cameraRotation;
         }
     }
 
     // While rotate mode is on, the right stick rotates and zooms instead of panning.
     [HarmonyPatch(typeof(InGameInputLayer), "OnMoveCamera")]
     static class MoveCameraPatch
+    {
+        static bool Prefix()
+        {
+            return !Main.RotateMode;
+        }
+    }
+
+    [HarmonyPatch(typeof(LocalMapView), "OnMoveCamera")]
+    static class LocalMapMoveCameraPatch
     {
         static bool Prefix()
         {

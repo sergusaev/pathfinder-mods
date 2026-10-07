@@ -35,8 +35,9 @@ mkdir -p "$OUT"
   echo "-r:$REFS/umm/UnityModManager.dll"
 } > "$OUT/refs.rsp"
 
-mcs -target:library -nostdlib -out:"$OUT/GamepadCameraRotation.dll" @"$OUT/refs.rsp" "$HERE/src/Main.cs"
+mcs -target:library -nostdlib -out:"$OUT/GamepadCameraRotation.dll" @"$OUT/refs.rsp" "$HERE"/src/*.cs
 cp "$HERE/Info.json" "$OUT/Info.json"
+rm -rf "$OUT/Compass" && cp -R "$HERE/Compass" "$OUT/Compass"
 echo "built: $OUT/GamepadCameraRotation.dll"
 
 if [ "$INSTALL" = 1 ]; then
@@ -45,5 +46,6 @@ if [ "$INSTALL" = 1 ]; then
   fi
   ssh "$DECK" "mkdir -p '$MOD_DIR' && rm -f '$MOD_DIR'/*.cache"
   scp -q "$OUT/Info.json" "$OUT/GamepadCameraRotation.dll" "$DECK:$MOD_DIR/"
+  scp -qr "$OUT/Compass" "$DECK:$MOD_DIR/"
   echo "installed to $DECK:$MOD_DIR"
 fi
