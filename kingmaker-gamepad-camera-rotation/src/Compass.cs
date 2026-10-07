@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using HarmonyLib;
 using Kingmaker.Assets.UI._ConsoleUI.InGameClock;
 using UnityEngine;
@@ -25,7 +27,14 @@ namespace GamepadCameraRotation
             get { return MoveCameraHintBase + new Vector2(0f, Main.Settings.CameraHintOffsetY); }
         }
 
+        static readonly string[] SpriteNames =
+        {
+            "UI_HudAstrolabeBorder_Console", "UI_HudAstrolabe01", "UI_HudAstrolabe02", "UI_HudAstrolabeArrow",
+            "UI_HudAstrolabeCenter01", "UI_HudAstrolabeCenter02", "UI_CircleHighliht"
+        };
+
         static RectTransform s_Root;
+        static Dictionary<string, Sprite> s_Sprites;
 
         static RectTransform s_Arrow;
         static RectTransform s_Astro01;
@@ -49,11 +58,13 @@ namespace GamepadCameraRotation
             root.anchoredPosition = BlockPos;
             root.sizeDelta = BlockSize;
 
-            Transform clock = root.Find("BackgroundClock");
-            if (clock != null) clock.gameObject.SetActive(false);
-
             s_Root = root;
             PlaceHints();
+
+            // Without WotR the Kingmaker clock stays in place of the compass.
+            if (!LoadSprites()) return;
+            Transform clock = root.Find("BackgroundClock");
+            if (clock != null) clock.gameObject.SetActive(false);
 
             var part = new GameObject(RootName, typeof(RectTransform)).GetComponent<RectTransform>();
             part.SetParent(root, false);
@@ -107,17 +118,94 @@ namespace GamepadCameraRotation
             Set(rt, anchor, pos, size, pivot, scale);
             var img = go.GetComponent<Image>();
             img.raycastTarget = false;
-            img.sprite = LoadSprite(sprite);
+            img.sprite = s_Sprites[sprite];
             return rt;
         }
 
-        static Sprite LoadSprite(string name)
+        static string CacheDir
         {
-            string path = Path.Combine(Path.Combine(Main.Dir, "Compass"), name + ".png");
-            var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
-            ImageConversion.LoadImage(tex, File.ReadAllBytes(path));
-            tex.wrapMode = TextureWrapMode.Clamp;
-            return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+            get { return Path.Combine(Main.Dir, "Compass"); }
+        }
+
+        static bool LoadSprites()
+        {
+            if (s_Sprites != null) return true;
+            try
+            {
+                if (!SpriteNames.All(n => File.Exists(Path.Combine(CacheDir, n + ".png")))) Extract();
+                var sprites = new Dictionary<string, Sprite>();
+                foreach (string name in SpriteNames)
+                {
+                    var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                    ImageConversion.LoadImage(tex, File.ReadAllBytes(Path.Combine(CacheDir, name + ".png")));
+                    tex.wrapMode = TextureWrapMode.Clamp;
+                    sprites[name] = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+                }
+                s_Sprites = sprites;
+                return true;
+            }
+            catch (Exception e)
+            {
+                Main.Log?.Warning("Compass sprites unavailable, keeping the Kingmaker clock: " + e.Message);
+                return false;
+            }
+        }
+
+        // The sprites live in BC7 atlases of the WotR "ui" bundle; the GPU decodes them and each is cut out into a PNG once.
+        static void Extract()
+        {
+            string bundle = WotrSprites.FindBundle(Main.Settings.WotrPath, Application.dataPath);
+            if (bundle == null) throw new FileNotFoundException("Wrath of the Righteous not found, set its folder in the mod settings");
+            Main.Log?.Log("Extracting compass sprites from " + bundle);
+            List<WotrSprites.Entry> entries = WotrSprites.Load(bundle, SpriteNames);
+            string missing = string.Join(", ", SpriteNames.Where(n => entries.All(e => e.Name != n)).ToArray());
+            if (missing.Length > 0) throw new InvalidDataException("not found in the bundle: " + missing);
+
+            Directory.CreateDirectory(CacheDir);
+            var atlases = new Dictionary<WotrSprites.Atlas, Texture2D>();
+            try
+            {
+                foreach (WotrSprites.Entry e in entries)
+                {
+                    Texture2D atlas;
+                    if (!atlases.TryGetValue(e.Atlas, out atlas))
+                    {
+                        var format = (TextureFormat)e.Atlas.Format;
+                        if (!SystemInfo.SupportsTextureFormat(format)) throw new NotSupportedException("the GPU cannot sample " + format);
+                        atlas = new Texture2D(e.Atlas.Width, e.Atlas.Height, format, false, false) { filterMode = FilterMode.Point };
+                        atlas.LoadRawTextureData(e.Atlas.Data);
+                        atlas.Apply(false, false);
+                        atlases[e.Atlas] = atlas;
+                    }
+                    File.WriteAllBytes(Path.Combine(CacheDir, e.Name + ".png"), Cut(atlas, e));
+                }
+            }
+            finally
+            {
+                foreach (Texture2D t in atlases.Values) UnityEngine.Object.Destroy(t);
+            }
+        }
+
+        static byte[] Cut(Texture2D atlas, WotrSprites.Entry e)
+        {
+            int w = Mathf.RoundToInt(e.Width), h = Mathf.RoundToInt(e.Height);
+            RenderTexture rt = RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+            RenderTexture previous = RenderTexture.active;
+            var image = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            try
+            {
+                Graphics.Blit(atlas, rt, new Vector2((float)w / atlas.width, (float)h / atlas.height), new Vector2(e.X / atlas.width, e.Y / atlas.height));
+                RenderTexture.active = rt;
+                image.ReadPixels(new Rect(0, 0, w, h), 0, 0);
+                image.Apply();
+                return ImageConversion.EncodeToPNG(image);
+            }
+            finally
+            {
+                RenderTexture.active = previous;
+                RenderTexture.ReleaseTemporary(rt);
+                UnityEngine.Object.Destroy(image);
+            }
         }
 
         internal static void Tick(float angle)

@@ -1,8 +1,9 @@
 {
   "Id": "GamepadCameraRotation",
   "DisplayName": "Gamepad Camera Rotation",
-  "Author": "local",
-  "Version": "1.0.0",
+  "Author": "sergusaev",
+  "Version": "1.1.0",
+  "HomePage": "https://github.com/sergusaev/pathfinder-mods",
   "ManagerVersion": "0.22.0",
   "AssemblyName": "GamepadCameraRotation.dll",
   "EntryMethod": "GamepadCameraRotation.Main.Load",
