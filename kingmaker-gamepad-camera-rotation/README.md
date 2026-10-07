@@ -23,7 +23,7 @@ A Unity Mod Manager mod for the gamepad (console) interface of Pathfinder: Kingm
 
 The hourglass in the lower left corner is replaced by the WotR console compass. It is built with WotR's layout: the same position, size, layers and hints around it (Pause, Cursor, Menu, Highlight and the camera mode). The arrow and the rings turn with the camera; north is the default camera direction of the current area.
 
-The compass graphics belong to Wrath of the Righteous and are not shipped with the mod. On the first start the mod finds the installed WotR, reads the sprites from its `Wrath_Data/StreamingAssets/Bundles/ui` bundle and saves them as PNG files into `Compass/` inside the mod folder. Later starts use those files.
+The compass graphics belong to Wrath of the Righteous and are not shipped with the mod. On the first start the mod finds the installed WotR, reads the sprites from its `Bundles/ui` bundle and saves them as PNG files into `Compass/` inside the mod folder. Later starts use those files.
 
 - **WotR is searched** next to Kingmaker in the same Steam library, then in all Steam libraries from `libraryfolders.vdf` (SteamOS/Linux and Windows). For any other location enter the WotR folder in the mod settings.
 - **Without WotR** the hourglass stays and everything else works; the UMM log explains why.

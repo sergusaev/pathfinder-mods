@@ -76,7 +76,7 @@ namespace GamepadCameraRotation
             float y = GUILayout.HorizontalSlider(Settings.HintsOffsetY, -60f, 60f, GUILayout.Width(300));
             GUILayout.Label("Camera mode hint offset Y: " + Settings.CameraHintOffsetY.ToString("0"));
             float c = GUILayout.HorizontalSlider(Settings.CameraHintOffsetY, -40f, 80f, GUILayout.Width(300));
-            GUILayout.Label("Wrath of the Righteous folder (empty = search Steam libraries), used once to extract the compass sprites:");
+            GUILayout.Label("Wrath of the Righteous folder (empty = search Steam libraries), used to extract the compass sprites; a change applies on the next area load:");
             Settings.WotrPath = GUILayout.TextField(Settings.WotrPath ?? "", GUILayout.Width(500));
             if (x != Settings.HintsOffsetX || y != Settings.HintsOffsetY || c != Settings.CameraHintOffsetY)
             {

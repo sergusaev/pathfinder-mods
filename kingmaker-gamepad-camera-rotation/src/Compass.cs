@@ -21,10 +21,14 @@ namespace GamepadCameraRotation
         // Kingmaker hints are 25 high with the icon 30 left of the rect; WotR hints are 36 high with the icon at the left edge.
         static readonly Vector2 HintShift = new Vector2(30f, 5.5f);
         static readonly Vector2 MoveCameraHintBase = new Vector2(57.3f, 150.9f) + HintShift;
+        // Without the compass the Kingmaker hints keep their arc (positions from the clock prefab), moved right so the icons
+        // clear the hourglass; the camera hint continues the arc above the clock.
+        static readonly Vector2 ClockHintShift = new Vector2(24f, 0f);
+        static readonly Vector2 ClockCameraHintBase = new Vector2(102f, 133f);
 
         internal static Vector2 MoveCameraHintPos
         {
-            get { return MoveCameraHintBase + new Vector2(0f, Main.Settings.CameraHintOffsetY); }
+            get { return (s_Sprites != null ? MoveCameraHintBase : ClockCameraHintBase) + new Vector2(0f, Main.Settings.CameraHintOffsetY); }
         }
 
         static readonly string[] SpriteNames =
@@ -35,6 +39,8 @@ namespace GamepadCameraRotation
 
         static RectTransform s_Root;
         static Dictionary<string, Sprite> s_Sprites;
+        // A failed search is not repeated on every area load, only after the WotR folder setting changes.
+        static string s_FailedPath;
 
         static RectTransform s_Arrow;
         static RectTransform s_Astro01;
@@ -55,14 +61,18 @@ namespace GamepadCameraRotation
         static void Build(RectTransform root)
         {
             if (root == null || root.Find(RootName) != null) return;
+            s_Root = root;
+
+            // Without WotR the Kingmaker clock and its hint layout stay as they are.
+            if (!LoadSprites())
+            {
+                PlaceHints();
+                return;
+            }
             root.anchoredPosition = BlockPos;
             root.sizeDelta = BlockSize;
-
-            s_Root = root;
             PlaceHints();
 
-            // Without WotR the Kingmaker clock stays in place of the compass.
-            if (!LoadSprites()) return;
             Transform clock = root.Find("BackgroundClock");
             if (clock != null) clock.gameObject.SetActive(false);
 
@@ -87,12 +97,20 @@ namespace GamepadCameraRotation
         internal static void PlaceHints()
         {
             if (s_Root == null) return;
+            PlaceHint(InputRemap.CameraHintName, MoveCameraHintPos);
+            if (s_Sprites == null)
+            {
+                PlaceHint("HintMenu", new Vector2(108f, 95f) + ClockHintShift);
+                PlaceHint("HintCursor", new Vector2(130f, 63f) + ClockHintShift);
+                PlaceHint("HintPause", new Vector2(130f, 25f) + ClockHintShift);
+                PlaceHint("HintHighlight", new Vector2(108f, -7f) + ClockHintShift);
+                return;
+            }
             var side = new Vector2(Main.Settings.HintsOffsetX, Main.Settings.HintsOffsetY);
             PlaceHint("HintPause", new Vector2(103.3f, 105.6f) + HintShift + side);
             PlaceHint("HintCursor", new Vector2(127f, 69f) + HintShift + side);
             PlaceHint("HintMenu", new Vector2(127f, 50.6f - 12.5f) + new Vector2(HintShift.x, 0f) + side);
             PlaceHint("HintHighlight", new Vector2(104.2f, -4.1f) + HintShift + side);
-            PlaceHint(InputRemap.CameraHintName, MoveCameraHintPos);
         }
 
         static void PlaceHint(string name, Vector2 pos)
@@ -130,6 +148,8 @@ namespace GamepadCameraRotation
         static bool LoadSprites()
         {
             if (s_Sprites != null) return true;
+            string configured = Main.Settings.WotrPath ?? "";
+            if (s_FailedPath == configured) return false;
             try
             {
                 if (!SpriteNames.All(n => File.Exists(Path.Combine(CacheDir, n + ".png")))) Extract();
@@ -147,6 +167,7 @@ namespace GamepadCameraRotation
             catch (Exception e)
             {
                 Main.Log?.Warning("Compass sprites unavailable, keeping the Kingmaker clock: " + e.Message);
+                s_FailedPath = configured;
                 return false;
             }
         }

@@ -31,7 +31,10 @@ namespace GamepadCameraRotation
         {
             foreach (string dir in Candidates(configured, gameDataPath))
             {
-                string bundle = Path.Combine(Path.Combine(Path.Combine(Path.Combine(dir, "Wrath_Data"), "StreamingAssets"), "Bundles"), "ui");
+                // Steam keeps the bundles in the game root; StreamingAssets is checked for other builds.
+                string bundle = Path.Combine(Path.Combine(dir, "Bundles"), "ui");
+                if (File.Exists(bundle)) return bundle;
+                bundle = Path.Combine(Path.Combine(Path.Combine(Path.Combine(dir, "Wrath_Data"), "StreamingAssets"), "Bundles"), "ui");
                 if (File.Exists(bundle)) return bundle;
             }
             return null;
