@@ -52,6 +52,16 @@ DECK=deck@steamdeck.local
 
 На Windows игра обычно лежит в `C:/Program Files (x86)/Steam/steamapps/common/`: задать `KINGMAKER_DIR` / `WOTR_DIR` и запускать скрипты из Git Bash.
 
+## Выпуск релиза
+
+```bash
+./release.sh kingmaker-gamepad-camera-rotation              # собрать и упаковать в dist/GamepadCameraRotation-<версия>.zip
+./release.sh kingmaker-gamepad-camera-rotation --publish    # то же, затем тег и релиз на GitHub
+./release.sh wotr-portrait-scroll-fix --publish --notes notes.md
+```
+
+Версия берётся из `Info.json` мода; перед публикацией её нужно поднять — скрипт откажется публиковать уже выпущенную версию, незакоммиченные изменения или невыложенный `main`. Тег — имя папки без префикса игры, например `gamepad-camera-rotation-v1.1.0`. Для публикации нужен [GitHub CLI](https://cli.github.com/) (`gh auth login`). Папка `dist/` в git не попадает.
+
 ## Лицензия
 
 [MIT](LICENSE). Pathfinder: Kingmaker и Pathfinder: Wrath of the Righteous — игры Owlcat Games; файлов игр в репозитории нет.

@@ -19,3 +19,6 @@ local.env
 .env
 .superpowers/
 .codegraph/
+
+# Release zips made by release.sh
+dist/
