@@ -12,6 +12,10 @@ A Unity Mod Manager mod. In the gamepad interface the "Custom" tab of the charac
 
 Tested on WotR (Proton, Steam Deck), UMM 0.32.4, Harmony 2.0.4 from `Wrath_Data/Managed`.
 
+## On the Steam Deck
+
+Nothing to bind: the mod works with the standard gamepad buttons. Copy the portraits in the desktop mode (Dolphin or Konsole) into the folder below. Setting up Unity Mod Manager: [the Steam Deck guide](../docs/steam-deck.md).
+
 ## Where portraits go
 
 Each portrait is a separate subfolder of `Portraits` with `Small.png` (185×242), `Medium.png` (330×432) and `Fulllength.png` (692×1024). Nested subfolders are not seen by the game.

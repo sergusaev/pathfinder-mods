@@ -11,6 +11,10 @@ Each portrait is a separate subfolder of `Portraits` with `Small.png` (185×242)
 - Linux (native build, Steam Deck): `~/.config/unity3d/Owlcat Games/Pathfinder Kingmaker/Portraits/`
 - Windows: `%USERPROFILE%\AppData\LocalLow\Owlcat Games\Pathfinder Kingmaker\Portraits\`
 
+## On the Steam Deck
+
+Nothing to bind: the mod works with the standard gamepad buttons. Copy the portraits in the desktop mode (Dolphin or Konsole) into the folder below. Setting up Unity Mod Manager: [the Steam Deck guide](../docs/steam-deck.md).
+
 ## Behaviour
 
 - Custom portraits come after the built-in ones, sorted by folder name.

@@ -12,14 +12,16 @@ Small [Unity Mod Manager](https://www.nexusmods.com/site/mods/21) mods that make
 
 A gamepad menu for the buff automation mod Buff It 2 The Limit lives in a separate fork: [sergusaev/wrath-epic-buffing](https://github.com/sergusaev/wrath-epic-buffing).
 
-## Installing a mod
+## Installing
 
-1. Install Unity Mod Manager for the game. On the Steam Deck:
-   - Kingmaker runs natively on Linux; use the DoorstopProxy method and the launch options `./run.sh %command%`.
-   - Wrath of the Righteous runs through Proton; put `winhttp.dll` and `doorstop_config.ini` into the game folder and use the launch options `WINEDLLOVERRIDES="winhttp=n,b" %command%`.
-2. Build the mod (below) or take `Info.json` and the DLL from a release.
-3. Copy both files into `<game>/Mods/<ModId>/` for Kingmaker or `<game>/mods/<ModId>/` for WotR. On Linux the folder and `Info.json` names are case-sensitive.
-4. Start the game; the mod is listed in the UMM window (Ctrl+F10 by default) with a green status.
+**Steam Deck:** follow [docs/steam-deck.md](docs/steam-deck.md) — Unity Mod Manager for both games, the Steam Input layout (UMM window on R4, buff menu on L5, mouse on the right trackpad) and the mods, step by step.
+
+Elsewhere:
+
+1. Install [Unity Mod Manager](https://www.nexusmods.com/site/mods/21) for the game.
+2. Download the mod's zip from [Releases](https://github.com/sergusaev/pathfinder-mods/releases).
+3. Unpack it into `<game>/Mods/` for Kingmaker or `<game>/mods/` for WotR, so the result is `Mods/<ModId>/Info.json`. On Linux the folder and file names are case-sensitive.
+4. Start the game; the mod is listed in the UMM window with a green status.
 
 ## Building
 

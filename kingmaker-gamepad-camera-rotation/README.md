@@ -40,6 +40,10 @@ In Kingmaker the local map follows the camera direction but only re-renders when
 - Offsets of the hints around the compass and of the camera mode hint, in case they overlap at your resolution.
 - The Wrath of the Righteous folder, if it is not found automatically.
 
+## On the Steam Deck
+
+The mod uses the standard gamepad buttons, so it needs no Steam Input changes. Its settings live in the UMM window, which needs the mouse: bind R4 to the UMM hotkey and the right trackpad to the mouse as described in [the Steam Deck guide](../docs/steam-deck.md#2-steam-input-layout). The compass is found automatically when WotR is in any Steam library of the deck.
+
 ## Compatibility
 
 - Requires the gamepad interface; with mouse and keyboard the mod does nothing.

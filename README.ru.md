@@ -12,14 +12,16 @@
 
 Меню геймпада для мода автобаффов Buff It 2 The Limit — в отдельном форке: [sergusaev/wrath-epic-buffing](https://github.com/sergusaev/wrath-epic-buffing).
 
-## Установка мода
+## Установка
 
-1. Установить Unity Mod Manager для игры. На Steam Deck:
-   - Kingmaker работает нативно под Linux: метод DoorstopProxy, параметры запуска `./run.sh %command%`.
-   - Wrath of the Righteous работает через Proton: `winhttp.dll` и `doorstop_config.ini` в папку игры, параметры запуска `WINEDLLOVERRIDES="winhttp=n,b" %command%`.
-2. Собрать мод (ниже) или взять `Info.json` и DLL из релиза.
-3. Положить оба файла в `<игра>/Mods/<ModId>/` для Kingmaker или в `<игра>/mods/<ModId>/` для WotR. На Linux регистр имени папки и `Info.json` важен.
-4. Запустить игру: мод появится в окне UMM (по умолчанию Ctrl+F10) с зелёным статусом.
+**Steam Deck:** по шагам в [docs/steam-deck.ru.md](docs/steam-deck.ru.md) — Unity Mod Manager для обеих игр, раскладка Steam Input (окно UMM на R4, меню баффов на L5, мышь на правом трекпаде) и моды.
+
+На других системах:
+
+1. Установить [Unity Mod Manager](https://www.nexusmods.com/site/mods/21) для игры.
+2. Скачать zip мода со страницы [Releases](https://github.com/sergusaev/pathfinder-mods/releases).
+3. Распаковать в `<игра>/Mods/` для Kingmaker или в `<игра>/mods/` для WotR, чтобы получилось `Mods/<ModId>/Info.json`. На Linux регистр имён важен.
+4. Запустить игру: мод появится в окне UMM с зелёным статусом.
 
 ## Сборка
 

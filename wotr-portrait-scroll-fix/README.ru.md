@@ -12,6 +12,10 @@
 
 Проверено на WotR (Proton, Steam Deck), UMM 0.32.4, Harmony 2.0.4 из `Wrath_Data/Managed`.
 
+## На Steam Deck
+
+Ничего назначать не нужно: мод работает на стандартных кнопках геймпада. Портреты копируются в режиме рабочего стола (Dolphin или Konsole) в папку ниже. Установка Unity Mod Manager — [справка по Steam Deck](../docs/steam-deck.ru.md).
+
 ## Куда класть портреты
 
 Каждый портрет — отдельная подпапка в `Portraits` с `Small.png` (185×242), `Medium.png` (330×432) и `Fulllength.png` (692×1024). Вложенные подпапки игра не видит.

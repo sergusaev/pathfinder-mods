@@ -11,6 +11,10 @@
 - Linux (нативная сборка, Steam Deck): `~/.config/unity3d/Owlcat Games/Pathfinder Kingmaker/Portraits/`
 - Windows: `%USERPROFILE%\AppData\LocalLow\Owlcat Games\Pathfinder Kingmaker\Portraits\`
 
+## На Steam Deck
+
+Ничего назначать не нужно: мод работает на стандартных кнопках геймпада. Портреты копируются в режиме рабочего стола (Dolphin или Konsole) в папку ниже. Установка Unity Mod Manager — [справка по Steam Deck](../docs/steam-deck.ru.md).
+
 ## Поведение
 
 - Свои портреты идут после встроенных, по имени папки.
