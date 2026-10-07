@@ -1,0 +1,12 @@
+refs/
+build/
+
+# AI Agents
+.claude/settings.local.json
+.claude/CLAUDE.local.md
+.claude/skills/
+.mcp.json
+.worktrees/
+.env
+.superpowers/
+.codegraph/
