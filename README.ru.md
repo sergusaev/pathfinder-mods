@@ -1,16 +1,16 @@
-# Моды Pathfinder для геймпада
+# Моды Pathfinder
 
 [English version](README.md)
 
-Небольшие моды для [Unity Mod Manager](https://www.nexusmods.com/site/mods/21), которые делают **Pathfinder: Kingmaker** и **Pathfinder: Wrath of the Righteous** удобнее на геймпаде (консольный интерфейс). Написаны и проверены на Steam Deck.
+Небольшие моды для [Unity Mod Manager](https://www.nexusmods.com/site/mods/21), которые делают **Pathfinder: Kingmaker** и **Pathfinder: Wrath of the Righteous** удобнее на геймпаде (консольный интерфейс), а где указано — и с клавиатурой и мышью. Написаны и проверены на Steam Deck и Windows.
 
 | Мод | Игра | Что делает |
 |---|---|---|
-| [Gamepad Camera Rotation](kingmaker-gamepad-camera-rotation/README.ru.md) | Kingmaker | Поворот и приближение камеры правым стиком, компас WotR вместо песочных часов, раскладка WotR для режима камеры, пошагового режима и осмотра |
+| [Camera Rotation and Compass](kingmaker-gamepad-camera-rotation/README.ru.md) | Kingmaker | Геймпад: поворот и приближение камеры правым стиком, компас WotR вместо песочных часов, раскладка WotR для режима камеры, пошагового режима и осмотра. Клавиатура и мышь: поворот средней кнопкой мыши и Alt+A / Alt+D, компас в часах |
 | [Custom Portraits Gamepad Selection Fix](kingmaker-custom-portraits-gamepad/README.ru.md) | Kingmaker | Свои портреты из папки `Portraits` появляются при создании персонажа в режиме геймпада |
 | [Portrait Scroll Fix (gamepad)](wotr-portrait-scroll-fix/README.ru.md) | Wrath of the Righteous | Список своих портретов прокручивается за курсором геймпада и правым стиком |
 
-Меню геймпада для мода автобаффов Buff It 2 The Limit — в отдельном форке: [sergusaev/wrath-epic-buffing](https://github.com/sergusaev/wrath-epic-buffing).
+Buff It 2 The Limit (Groups) — меню групп баффов для мода автобаффов Buff It 2 The Limit; работает с геймпадом, клавиатурой и мышью в WotR и Kingmaker. Живёт в отдельном форке: [sergusaev/wrath-epic-buffing](https://github.com/sergusaev/wrath-epic-buffing).
 
 ## Установка
 

@@ -2,7 +2,7 @@
 
 [Русская версия](steam-deck.ru.md)
 
-This guide sets up Unity Mod Manager (UMM) for **Pathfinder: Kingmaker** and **Pathfinder: Wrath of the Righteous** on the Steam Deck, binds the back buttons, and installs the gamepad mods from this repository and the [Buff It 2 The Limit (Pad)](https://github.com/sergusaev/wrath-epic-buffing) fork. Every step was done and checked on a Steam Deck with SteamOS, Kingmaker 2.1.7b and UMM 0.32.4.
+This guide sets up Unity Mod Manager (UMM) for **Pathfinder: Kingmaker** and **Pathfinder: Wrath of the Righteous** on the Steam Deck, binds the back buttons, and installs the gamepad mods from this repository and the [Buff It 2 The Limit (Groups)](https://github.com/sergusaev/wrath-epic-buffing) fork. Every step was done and checked on a Steam Deck with SteamOS, Kingmaker 2.1.7b and UMM 0.32.4.
 
 The two games are set up differently:
 
@@ -141,7 +141,7 @@ Set this up for each game separately: open the game's page → controller icon �
 | Button | Binding | What for |
 |---|---|---|
 | **R4** | two commands: Left Shift, then F10 with delays (below) | UMM window |
-| **L5** | keyboard key F7, a plain single press, no delays | Buff It 2 The Limit (Pad) menu; tap, hold and double press are recognised by the mod |
+| **L5** | keyboard key F7, a plain single press, no delays | Buff It 2 The Limit (Groups) menu; tap, hold and double press are recognised by the mod |
 | **Right trackpad** | Mouse (as mouse), click = left mouse button | UMM window and mod settings |
 | **R5** | right mouse button | context actions in the UMM window |
 | **L4** | Enter (optional) | confirming dialogs in mouse mode; not needed with `startup.json` |
@@ -162,7 +162,7 @@ Things to avoid:
 
 ## 3. Installing the mods
 
-Download the zip files from the release pages: [pathfinder-mods releases](https://github.com/sergusaev/pathfinder-mods/releases) and [Buff It 2 The Limit (Pad) releases](https://github.com/sergusaev/wrath-epic-buffing/releases). Every zip holds one folder with `Info.json` and the DLL; unpack it into the mods folder of the game, so it becomes `Mods/<ModId>/Info.json`:
+Download the zip files from the release pages: [pathfinder-mods releases](https://github.com/sergusaev/pathfinder-mods/releases) and [Buff It 2 The Limit (Groups) releases](https://github.com/sergusaev/wrath-epic-buffing/releases). Every zip holds one folder with `Info.json` and the DLL; unpack it into the mods folder of the game, so it becomes `Mods/<ModId>/Info.json`:
 
 ```bash
 KM="$HOME/.local/share/Steam/steamapps/common/Pathfinder Kingmaker"
@@ -176,13 +176,13 @@ When a mod is updated, delete `*.cache` files in its folder before starting the 
 
 | Mod | Game | Folder | Steam Deck notes |
 |---|---|---|---|
-| [Gamepad Camera Rotation](../kingmaker-gamepad-camera-rotation) | Kingmaker | `Mods/GamepadCameraRotation` | R3 switches the camera mode, D-pad Up is turn-based mode. The compass needs WotR installed (found automatically). Turn off camera rotation in Bag of Tricks |
+| [Camera Rotation and Compass](../kingmaker-gamepad-camera-rotation) | Kingmaker | `Mods/GamepadCameraRotation` | R3 switches the camera mode, D-pad Up is turn-based mode. The compass needs WotR installed (found automatically). Turn off camera rotation in Bag of Tricks |
 | [Custom Portraits Gamepad Selection Fix](../kingmaker-custom-portraits-gamepad) | Kingmaker | `Mods/ConsoleCustomPortraits` | portraits go to `~/.config/unity3d/Owlcat Games/Pathfinder Kingmaker/Portraits/` |
 | [Portrait Scroll Fix (gamepad)](../wotr-portrait-scroll-fix) | WotR | `mods/PortraitScrollFix` | portraits go to the `Portraits` folder inside the Proton prefix, see the mod README |
-| [Buff It 2 The Limit (Pad)](https://github.com/sergusaev/wrath-epic-buffing) | WotR | `mods/BuffIt2TheLimit` | replaces the original Buff It 2 The Limit and BubbleBuffs: remove those first. Menu on L5, see below |
-| [Buff It 2 The Limit (Pad) for Kingmaker](https://github.com/sergusaev/wrath-epic-buffing) | Kingmaker | `Mods/PadBuffsKingmaker` | the same menu; the menu key is F7 out of the box, so L5 → F7 is all it needs. Spells, class abilities, activatables and songs; no scrolls, potions or wands |
+| [Buff It 2 The Limit (Groups)](https://github.com/sergusaev/wrath-epic-buffing) | WotR | `mods/BuffIt2TheLimit` | replaces the original Buff It 2 The Limit and BubbleBuffs: remove those first. Menu on L5, see below |
+| [Buff It 2 The Limit (Groups) for Kingmaker](https://github.com/sergusaev/wrath-epic-buffing) | Kingmaker | `Mods/PadBuffsKingmaker` | the same menu; the menu key is F7 out of the box, so L5 → F7 is all it needs. Spells, class abilities, activatables and songs; no scrolls, potions or wands |
 
-**The menu key of Buff It 2 The Limit (Pad) in WotR.** In Kingmaker the menu key is F7 out of the box. In WotR it is the "open buff menu" key of the original mod, which is set in the PC spellbook screen, unavailable in gamepad mode. Start WotR once with the mod, load a save and quit, then set the keys in its settings files (menu = F7, Long group = F6, Important group = F9):
+**The menu key of Buff It 2 The Limit (Groups) in WotR.** In Kingmaker the menu key is F7 out of the box. In WotR it is the "open buff menu" key of the original mod, which is set in the PC spellbook screen, unavailable in gamepad mode. Start WotR once with the mod, load a save and quit, then set the keys in its settings files (menu = F7, Long group = F6, Important group = F9):
 
 ```bash
 WOTR="$HOME/.local/share/Steam/steamapps/common/Pathfinder Second Adventure"

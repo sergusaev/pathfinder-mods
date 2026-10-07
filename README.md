@@ -1,16 +1,16 @@
-# Pathfinder gamepad mods
+# Pathfinder mods
 
 [Русская версия](README.ru.md)
 
-Small [Unity Mod Manager](https://www.nexusmods.com/site/mods/21) mods that make **Pathfinder: Kingmaker** and **Pathfinder: Wrath of the Righteous** more comfortable with a gamepad (console interface), written and tested on the Steam Deck.
+Small [Unity Mod Manager](https://www.nexusmods.com/site/mods/21) mods that make **Pathfinder: Kingmaker** and **Pathfinder: Wrath of the Righteous** more comfortable with a gamepad (console interface) and, where noted, with keyboard and mouse; written and tested on the Steam Deck and Windows.
 
 | Mod | Game | What it does |
 |---|---|---|
-| [Gamepad Camera Rotation](kingmaker-gamepad-camera-rotation) | Kingmaker | Camera rotation and zoom with the right stick, the WotR compass instead of the hourglass, and the WotR console layout for camera mode, turn-based mode and inspect |
+| [Camera Rotation and Compass](kingmaker-gamepad-camera-rotation) | Kingmaker | Gamepad: camera rotation and zoom with the right stick, the WotR compass instead of the hourglass, the WotR console layout for camera mode, turn-based mode and inspect. Keyboard and mouse: rotation with the middle mouse button and Alt+A / Alt+D, the compass in the clock |
 | [Custom Portraits Gamepad Selection Fix](kingmaker-custom-portraits-gamepad) | Kingmaker | Custom portraits from the `Portraits` folder appear in the gamepad character creation |
 | [Portrait Scroll Fix (gamepad)](wotr-portrait-scroll-fix) | Wrath of the Righteous | The custom portraits list scrolls with the gamepad cursor and the right stick |
 
-A gamepad menu for the buff automation mod Buff It 2 The Limit lives in a separate fork: [sergusaev/wrath-epic-buffing](https://github.com/sergusaev/wrath-epic-buffing).
+Buff It 2 The Limit (Groups), a menu of buff groups for the buff automation mod Buff It 2 The Limit, works with a gamepad, keyboard and mouse in WotR and Kingmaker; it lives in a separate fork: [sergusaev/wrath-epic-buffing](https://github.com/sergusaev/wrath-epic-buffing).
 
 ## Installing
 

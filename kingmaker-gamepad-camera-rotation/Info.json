@@ -1,6 +1,6 @@
 {
   "Id": "GamepadCameraRotation",
-  "DisplayName": "Gamepad Camera Rotation",
+  "DisplayName": "Camera Rotation and Compass",
   "Author": "sergusaev",
   "Version": "1.2.0",
   "HomePage": "https://github.com/sergusaev/pathfinder-mods",

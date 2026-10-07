@@ -110,7 +110,7 @@ Copy-Item "$KM\Kingmaker_Data\Managed\UnityModManager\Params.xml" $UMM
 
 ## 2. Установка модов
 
-Скачайте zip из [релизов pathfinder-mods](https://github.com/sergusaev/pathfinder-mods/releases) и [релизов Buff It 2 The Limit (Pad)](https://github.com/sergusaev/wrath-epic-buffing/releases). В каждом zip одна папка с `Info.json` и DLL; распакуйте её в папку `Mods` игры:
+Скачайте zip из [релизов pathfinder-mods](https://github.com/sergusaev/pathfinder-mods/releases) и [релизов Buff It 2 The Limit (Groups)](https://github.com/sergusaev/wrath-epic-buffing/releases). В каждом zip одна папка с `Info.json` и DLL; распакуйте её в папку `Mods` игры:
 
 ```powershell
 cd "$env:USERPROFILE\Downloads"
@@ -122,10 +122,10 @@ tar -xf PortraitScrollFix-1.1.0.zip -C "$WOTR\Mods"         # пример дл�
 
 | Мод | Игра | Папка | На Windows |
 |---|---|---|---|
-| [Gamepad Camera Rotation](../kingmaker-gamepad-camera-rotation) | Kingmaker | `Mods\GamepadCameraRotation` | С клавиатурой и мышью: средняя кнопка мыши поворачивает, Alt + средняя кнопка двигает камеру, Alt+A / Alt+D поворачивают, F1 — на север; компас рядом с системными кнопками. Компасу нужна установленная WotR (находится сама в библиотеках Steam) |
+| [Camera Rotation and Compass](../kingmaker-gamepad-camera-rotation) | Kingmaker | `Mods\GamepadCameraRotation` | С клавиатурой и мышью: средняя кнопка мыши поворачивает, Alt + средняя кнопка двигает камеру, Alt+A / Alt+D поворачивают, F1 — на север; компас рядом с системными кнопками. Компасу нужна установленная WotR (находится сама в библиотеках Steam) |
 | [Custom Portraits Gamepad Selection Fix](../kingmaker-custom-portraits-gamepad) | Kingmaker | `Mods\ConsoleCustomPortraits` | нужен только с геймпадом; портреты кладутся в `%USERPROFILE%\AppData\LocalLow\Owlcat Games\Pathfinder Kingmaker\Portraits\` |
 | [Portrait Scroll Fix (gamepad)](../wotr-portrait-scroll-fix) | WotR | `Mods\PortraitScrollFix` | нужен только с геймпадом |
-| [Buff It 2 The Limit (Pad)](https://github.com/sergusaev/wrath-epic-buffing) | WotR | `Mods\BuffIt2TheLimit` | заменяет оригинальные Buff It 2 The Limit и BubbleBuffs: сначала уберите их из `Mods`. Настройки Buff It 2 The Limit сохраняются (один id и одни файлы); настройки BubbleBuffs (`bubblebuff-*.json`) не читаются |
-| [Buff It 2 The Limit (Pad) для Kingmaker](https://github.com/sergusaev/wrath-epic-buffing) | Kingmaker | `Mods\PadBuffsKingmaker` | меню открывается по F7 |
+| [Buff It 2 The Limit (Groups)](https://github.com/sergusaev/wrath-epic-buffing) | WotR | `Mods\BuffIt2TheLimit` | заменяет оригинальные Buff It 2 The Limit и BubbleBuffs: сначала уберите их из `Mods`. Настройки Buff It 2 The Limit сохраняются (один id и одни файлы); настройки BubbleBuffs (`bubblebuff-*.json`) не читаются |
+| [Buff It 2 The Limit (Groups) для Kingmaker](https://github.com/sergusaev/wrath-epic-buffing) | Kingmaker | `Mods\PadBuffsKingmaker` | меню открывается по F7 |
 
 **Kingmaker и подключённый геймпад.** С подключённым контроллером Kingmaker может запуститься в интерфейсе геймпада (консольном). Для интерфейса клавиатуры и мыши выключите контроллер до запуска игры.

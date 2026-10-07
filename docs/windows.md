@@ -110,7 +110,7 @@ Start the game. The UMM window shows on start with an empty Mods tab; later it o
 
 ## 2. Installing the mods
 
-Download the zip files from [pathfinder-mods releases](https://github.com/sergusaev/pathfinder-mods/releases) and [Buff It 2 The Limit (Pad) releases](https://github.com/sergusaev/wrath-epic-buffing/releases). Every zip holds one folder with `Info.json` and the DLL; unpack it into the game's `Mods` folder:
+Download the zip files from [pathfinder-mods releases](https://github.com/sergusaev/pathfinder-mods/releases) and [Buff It 2 The Limit (Groups) releases](https://github.com/sergusaev/wrath-epic-buffing/releases). Every zip holds one folder with `Info.json` and the DLL; unpack it into the game's `Mods` folder:
 
 ```powershell
 cd "$env:USERPROFILE\Downloads"
@@ -122,10 +122,10 @@ When a mod is updated, delete the `*.cache` files in its folder before starting 
 
 | Mod | Game | Folder | Windows notes |
 |---|---|---|---|
-| [Gamepad Camera Rotation](../kingmaker-gamepad-camera-rotation) | Kingmaker | `Mods\GamepadCameraRotation` | With keyboard and mouse: the middle mouse button rotates, Alt + middle mouse moves the camera, Alt+A / Alt+D rotate, F1 turns north; the compass is next to the system buttons. The compass needs WotR installed (found automatically in the Steam libraries) |
+| [Camera Rotation and Compass](../kingmaker-gamepad-camera-rotation) | Kingmaker | `Mods\GamepadCameraRotation` | With keyboard and mouse: the middle mouse button rotates, Alt + middle mouse moves the camera, Alt+A / Alt+D rotate, F1 turns north; the compass is next to the system buttons. The compass needs WotR installed (found automatically in the Steam libraries) |
 | [Custom Portraits Gamepad Selection Fix](../kingmaker-custom-portraits-gamepad) | Kingmaker | `Mods\ConsoleCustomPortraits` | only matters with a gamepad; portraits go to `%USERPROFILE%\AppData\LocalLow\Owlcat Games\Pathfinder Kingmaker\Portraits\` |
 | [Portrait Scroll Fix (gamepad)](../wotr-portrait-scroll-fix) | WotR | `Mods\PortraitScrollFix` | only matters with a gamepad |
-| [Buff It 2 The Limit (Pad)](https://github.com/sergusaev/wrath-epic-buffing) | WotR | `Mods\BuffIt2TheLimit` | replaces the original Buff It 2 The Limit and BubbleBuffs: move those out of `Mods` first. The settings of Buff It 2 The Limit stay (same id and files); the settings of BubbleBuffs (`bubblebuff-*.json`) are not read |
-| [Buff It 2 The Limit (Pad) for Kingmaker](https://github.com/sergusaev/wrath-epic-buffing) | Kingmaker | `Mods\PadBuffsKingmaker` | the menu opens with F7 |
+| [Buff It 2 The Limit (Groups)](https://github.com/sergusaev/wrath-epic-buffing) | WotR | `Mods\BuffIt2TheLimit` | replaces the original Buff It 2 The Limit and BubbleBuffs: move those out of `Mods` first. The settings of Buff It 2 The Limit stay (same id and files); the settings of BubbleBuffs (`bubblebuff-*.json`) are not read |
+| [Buff It 2 The Limit (Groups) for Kingmaker](https://github.com/sergusaev/wrath-epic-buffing) | Kingmaker | `Mods\PadBuffsKingmaker` | the menu opens with F7 |
 
 **Kingmaker and a connected gamepad.** With a controller connected, Kingmaker may start in the gamepad (console) interface. For the keyboard and mouse interface turn the controller off before starting the game.

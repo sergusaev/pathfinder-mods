@@ -105,7 +105,7 @@ namespace GamepadCameraRotation
             KeyField(1, "Rotate left: Alt +", ref Settings.RotateLeftKey, true);
             KeyField(2, "Rotate right: Alt +", ref Settings.RotateRightKey, true);
             KeyField(3, "North (area default):", ref Settings.NorthKey, false);
-            bool compass = GUILayout.Toggle(Settings.PcCompass, "Compass to the right of the system buttons (click: north)");
+            bool compass = GUILayout.Toggle(Settings.PcCompass, "Compass in the clock next to the system buttons (click: north)");
             GUILayout.Label("Compass scale: " + Settings.PcCompassScale.ToString("0.00"));
             float scale = GUILayout.HorizontalSlider(Settings.PcCompassScale, 0.5f, 1.5f, GUILayout.Width(300));
             GUILayout.Label("Compass offset X: " + Settings.PcCompassOffsetX.ToString("0"));
