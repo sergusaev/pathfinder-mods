@@ -18,7 +18,14 @@ namespace GamepadCameraRotation
 
         // Kingmaker hints are 25 high with the icon 30 left of the rect; WotR hints are 36 high with the icon at the left edge.
         static readonly Vector2 HintShift = new Vector2(30f, 5.5f);
-        internal static readonly Vector2 MoveCameraHintPos = new Vector2(57.3f, 150.9f) + HintShift;
+        static readonly Vector2 MoveCameraHintBase = new Vector2(57.3f, 150.9f) + HintShift;
+
+        internal static Vector2 MoveCameraHintPos
+        {
+            get { return MoveCameraHintBase + new Vector2(0f, Main.Settings.CameraHintOffsetY); }
+        }
+
+        static RectTransform s_Root;
 
         static RectTransform s_Arrow;
         static RectTransform s_Astro01;
@@ -45,11 +52,8 @@ namespace GamepadCameraRotation
             Transform clock = root.Find("BackgroundClock");
             if (clock != null) clock.gameObject.SetActive(false);
 
-            PlaceHint(root, "HintPause", new Vector2(103.3f, 105.6f) + HintShift);
-            PlaceHint(root, "HintCursor", new Vector2(127f, 69f) + HintShift);
-            PlaceHint(root, "HintMenu", new Vector2(127f, 50.6f - 12.5f) + new Vector2(HintShift.x, 0f));
-            PlaceHint(root, "HintHighlight", new Vector2(104.2f, -4.1f) + HintShift);
-            PlaceHint(root, InputRemap.CameraHintName, MoveCameraHintPos);
+            s_Root = root;
+            PlaceHints();
 
             var part = new GameObject(RootName, typeof(RectTransform)).GetComponent<RectTransform>();
             part.SetParent(root, false);
@@ -68,9 +72,21 @@ namespace GamepadCameraRotation
             Main.Log?.Log("Compass built");
         }
 
-        static void PlaceHint(RectTransform root, string name, Vector2 pos)
+        // Hints keep the WotR layout, pushed outward by the configurable offset so their icons clear the compass ring.
+        internal static void PlaceHints()
         {
-            var hint = root.Find(name) as RectTransform;
+            if (s_Root == null) return;
+            var side = new Vector2(Main.Settings.HintsOffsetX, Main.Settings.HintsOffsetY);
+            PlaceHint("HintPause", new Vector2(103.3f, 105.6f) + HintShift + side);
+            PlaceHint("HintCursor", new Vector2(127f, 69f) + HintShift + side);
+            PlaceHint("HintMenu", new Vector2(127f, 50.6f - 12.5f) + new Vector2(HintShift.x, 0f) + side);
+            PlaceHint("HintHighlight", new Vector2(104.2f, -4.1f) + HintShift + side);
+            PlaceHint(InputRemap.CameraHintName, MoveCameraHintPos);
+        }
+
+        static void PlaceHint(string name, Vector2 pos)
+        {
+            var hint = s_Root.Find(name) as RectTransform;
             if (hint != null) hint.anchoredPosition = pos;
         }
 

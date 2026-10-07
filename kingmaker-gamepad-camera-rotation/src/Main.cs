@@ -19,6 +19,9 @@ namespace GamepadCameraRotation
         public float ZoomSpeed = 0.8f;
         public bool InvertRotation;
         public bool InvertZoom;
+        public float HintsOffsetX = 40f;
+        public float HintsOffsetY;
+        public float CameraHintOffsetY = 8f;
 
         public override void Save(UnityModManager.ModEntry modEntry)
         {
@@ -66,6 +69,19 @@ namespace GamepadCameraRotation
             Settings.ZoomSpeed = GUILayout.HorizontalSlider(Settings.ZoomSpeed, 0.2f, 3f, GUILayout.Width(300));
             Settings.InvertRotation = GUILayout.Toggle(Settings.InvertRotation, "Invert rotation");
             Settings.InvertZoom = GUILayout.Toggle(Settings.InvertZoom, "Invert zoom");
+            GUILayout.Label("Compass hints offset X: " + Settings.HintsOffsetX.ToString("0"));
+            float x = GUILayout.HorizontalSlider(Settings.HintsOffsetX, -40f, 120f, GUILayout.Width(300));
+            GUILayout.Label("Compass hints offset Y: " + Settings.HintsOffsetY.ToString("0"));
+            float y = GUILayout.HorizontalSlider(Settings.HintsOffsetY, -60f, 60f, GUILayout.Width(300));
+            GUILayout.Label("Camera mode hint offset Y: " + Settings.CameraHintOffsetY.ToString("0"));
+            float c = GUILayout.HorizontalSlider(Settings.CameraHintOffsetY, -40f, 80f, GUILayout.Width(300));
+            if (x != Settings.HintsOffsetX || y != Settings.HintsOffsetY || c != Settings.CameraHintOffsetY)
+            {
+                Settings.HintsOffsetX = Mathf.Round(x);
+                Settings.HintsOffsetY = Mathf.Round(y);
+                Settings.CameraHintOffsetY = Mathf.Round(c);
+                Compass.PlaceHints();
+            }
         }
 
         internal static void ToggleRotateMode()
