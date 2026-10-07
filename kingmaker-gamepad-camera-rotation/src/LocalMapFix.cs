@@ -76,33 +76,51 @@ namespace GamepadCameraRotation
                 var frame = FrameField.GetValue(__instance) as RectTransform;
                 var image = ImageField.GetValue(__instance) as RawImage;
                 if (frame == null || image == null) return;
-                var parent = (RectTransform)frame.parent;
-                if (parent.Find(OutlineName) != null) return;
+                AddOutline(frame, image, null);
+            }
+            catch (Exception e)
+            {
+                Main.Log?.Error(e.ToString());
+            }
+        }
 
-                Color color = Color.white;
-                var frameImage = frame.GetComponentInChildren<Graphic>(true);
-                if (frameImage != null) color = frameImage.color;
+        // The outline goes next to the frame, or into imageRect from its bottom-left corner when that is given (PC map).
+        internal static void AddOutline(RectTransform frame, RawImage image, RectTransform imageRect)
+        {
+            var parent = imageRect ?? (RectTransform)frame.parent;
+            if (parent.Find(OutlineName) != null) return;
 
-                var go = new GameObject(OutlineName, typeof(RectTransform), typeof(ViewOutline));
-                var rt = go.GetComponent<RectTransform>();
-                rt.SetParent(parent, false);
+            Color color = Color.white;
+            var frameImage = frame.GetComponentInChildren<Graphic>(true);
+            if (frameImage != null) color = frameImage.color;
+
+            var go = new GameObject(OutlineName, typeof(RectTransform), typeof(ViewOutline));
+            var rt = go.GetComponent<RectTransform>();
+            rt.SetParent(parent, false);
+            if (imageRect != null)
+            {
+                rt.anchorMin = rt.anchorMax = Vector2.zero;
+                rt.pivot = Vector2.zero;
+                rt.sizeDelta = Vector2.zero;
+                rt.anchoredPosition = Vector2.zero;
+                rt.SetAsLastSibling();
+            }
+            else
+            {
                 rt.SetSiblingIndex(frame.GetSiblingIndex());
                 rt.anchorMin = frame.anchorMin;
                 rt.anchorMax = frame.anchorMax;
                 rt.pivot = Vector2.zero;
                 rt.sizeDelta = Vector2.zero;
                 rt.localPosition = Vector3.zero;
-                var outline = go.GetComponent<ViewOutline>();
-                outline.MapImage = image.rectTransform;
-                outline.color = color;
-                outline.raycastTarget = false;
-                frame.gameObject.SetActive(false);
-                Main.Log?.Log("Map outline added, frame pivot " + frame.pivot + " anchors " + frame.anchorMin + " parent " + parent.name);
             }
-            catch (Exception e)
-            {
-                Main.Log?.Error(e.ToString());
-            }
+            var outline = go.GetComponent<ViewOutline>();
+            outline.MapImage = image.rectTransform;
+            outline.Frame = frame.gameObject;
+            outline.color = color;
+            outline.raycastTarget = false;
+            frame.gameObject.SetActive(false);
+            Main.Log?.Log("Map outline added, frame pivot " + frame.pivot + " anchors " + frame.anchorMin + " parent " + parent.name);
         }
     }
 
@@ -111,11 +129,14 @@ namespace GamepadCameraRotation
         const float Width = 2.5f;
 
         public RectTransform MapImage;
+        // The game's own frame; kept hidden if the map view turns it back on.
+        public GameObject Frame;
         readonly Vector2[] m_Points = new Vector2[4];
         static readonly Vector3[] Corners = { new Vector3(0f, 0f, 1f), new Vector3(1f, 0f, 1f), new Vector3(1f, 1f, 1f), new Vector3(0f, 1f, 1f) };
 
         void LateUpdate()
         {
+            if (Frame != null && Frame.activeSelf) Frame.SetActive(false);
             Camera cam = Game.GetCamera();
             LocalMapRenderer renderer = LocalMapRenderer.Instance;
             CameraRig rig = Game.Instance?.UI?.GetCameraRig();

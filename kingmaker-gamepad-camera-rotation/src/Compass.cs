@@ -42,9 +42,13 @@ namespace GamepadCameraRotation
         // A failed search is not repeated on every area load, only after the WotR folder setting changes.
         static string s_FailedPath;
 
-        static RectTransform s_Arrow;
-        static RectTransform s_Astro01;
-        static RectTransform s_Astro02;
+        // Every built compass: the console one on the clock and the PC one next to the menu buttons.
+        sealed class Dial
+        {
+            public RectTransform Arrow, Astro01, Astro02;
+        }
+
+        static readonly List<Dial> s_Dials = new List<Dial>();
 
         static void Postfix(InGameClockView __instance)
         {
@@ -80,17 +84,31 @@ namespace GamepadCameraRotation
             part.SetParent(root, false);
             part.SetAsFirstSibling();
             Set(part, Vector2.zero, Vector2.zero, BlockSize, Vector2.zero, 1f);
+            BuildDial(part);
+            Main.Log?.Log("Compass built");
+        }
 
-            s_Astro02 = Layer(part, "UI_HudAstrolabe02", Vector2.zero, new Vector2(75.756f, 67.84f), new Vector2(78.5f, 81.5f), new Vector2(0.526f, 0.507f), 1.15f);
+        internal static Vector2 Size
+        {
+            get { return BlockSize; }
+        }
+
+        // The WotR astrolabe layers inside part, a BlockSize rect; false without the sprites.
+        internal static bool BuildDial(RectTransform part)
+        {
+            if (!LoadSprites()) return false;
+            var dial = new Dial();
+            dial.Astro02 = Layer(part, "UI_HudAstrolabe02", Vector2.zero, new Vector2(75.756f, 67.84f), new Vector2(78.5f, 81.5f), new Vector2(0.526f, 0.507f), 1.15f);
             var border = Layer(part, "UI_HudAstrolabeBorder_Console", Vector2.zero, new Vector2(75.51f, 71.24f), new Vector2(130f, 138f), new Vector2(0.5f, 0.5f), 1f);
             var button = Layer(border, "UI_CircleHighliht", Vector2.zero, new Vector2(0.456f, -2.068f), new Vector2(-6.389f, -15.088f), new Vector2(0.5f, 0.5f), 1f);
             button.anchorMax = Vector2.one;
             button.GetComponent<Image>().color = new Color(0.55f, 0.38f, 0.29f, 0.2f);
-            s_Astro01 = Layer(part, "UI_HudAstrolabe01", Vector2.zero, new Vector2(75.338f, 68.326f), new Vector2(63f, 63f), new Vector2(0.373f, 0.451f), 1.15f);
+            dial.Astro01 = Layer(part, "UI_HudAstrolabe01", Vector2.zero, new Vector2(75.338f, 68.326f), new Vector2(63f, 63f), new Vector2(0.373f, 0.451f), 1.15f);
             Layer(part, "UI_HudAstrolabeCenter01", Vector2.zero, new Vector2(75.51f, 68.06f), new Vector2(17f, 17f), new Vector2(0.5f, 0.5f), 1.15f);
-            s_Arrow = Layer(part, "UI_HudAstrolabeArrow", new Vector2(0.5f, 0.5f), new Vector2(8.009f, 6.839f), new Vector2(31.5f, 120.5f), new Vector2(0.5f, 0.442f), 1.15f);
-            Layer(s_Arrow, "UI_HudAstrolabeCenter02", Vector2.zero, new Vector2(15.75f, 52.75f), new Vector2(11.5f, 11.5f), new Vector2(0.5f, 0.5f), 1f);
-            Main.Log?.Log("Compass built");
+            dial.Arrow = Layer(part, "UI_HudAstrolabeArrow", new Vector2(0.5f, 0.5f), new Vector2(8.009f, 6.839f), new Vector2(31.5f, 120.5f), new Vector2(0.5f, 0.442f), 1.15f);
+            Layer(dial.Arrow, "UI_HudAstrolabeCenter02", Vector2.zero, new Vector2(15.75f, 52.75f), new Vector2(11.5f, 11.5f), new Vector2(0.5f, 0.5f), 1f);
+            s_Dials.Add(dial);
+            return true;
         }
 
         // Hints keep the WotR layout, pushed outward by the configurable offset so their icons clear the compass ring.
@@ -231,10 +249,13 @@ namespace GamepadCameraRotation
 
         internal static void Tick(float angle)
         {
-            if (s_Arrow == null) return;
-            s_Arrow.localEulerAngles = new Vector3(0f, 0f, -angle);
-            s_Astro01.localEulerAngles = new Vector3(0f, 0f, angle);
-            s_Astro02.localEulerAngles = new Vector3(0f, 0f, -angle);
+            s_Dials.RemoveAll(d => d.Arrow == null);
+            foreach (Dial d in s_Dials)
+            {
+                d.Arrow.localEulerAngles = new Vector3(0f, 0f, -angle);
+                d.Astro01.localEulerAngles = new Vector3(0f, 0f, angle);
+                d.Astro02.localEulerAngles = new Vector3(0f, 0f, -angle);
+            }
         }
     }
 }

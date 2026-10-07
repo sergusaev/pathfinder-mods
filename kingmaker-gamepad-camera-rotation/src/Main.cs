@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using HarmonyLib;
 using Kingmaker;
@@ -23,6 +24,15 @@ namespace GamepadCameraRotation
         public float HintsOffsetY;
         public float CameraHintOffsetY = 8f;
         public string WotrPath = "";
+        // Keyboard and mouse mode.
+        public float MouseRotationSpeed = 0.3f;
+        public KeyCode RotateLeftKey = KeyCode.A;
+        public KeyCode RotateRightKey = KeyCode.D;
+        public KeyCode NorthKey = KeyCode.F1;
+        public bool PcCompass = true;
+        public float PcCompassScale = 0.85f;
+        public float PcCompassOffsetX;
+        public float PcCompassOffsetY;
 
         public override void Save(UnityModManager.ModEntry modEntry)
         {
@@ -45,6 +55,8 @@ namespace GamepadCameraRotation
         internal static string Dir;
 
         internal static bool RotateMode;
+        // The key field of the settings window waiting for a key press: 0 none, 1 left, 2 right, 3 north.
+        static int s_Capturing;
         internal static float MapYaw;
 
         static readonly FieldInfo PlayerScroll = AccessTools.Field(typeof(CameraZoom), "m_PlayerScrollPosition");
@@ -85,6 +97,55 @@ namespace GamepadCameraRotation
                 Settings.CameraHintOffsetY = Mathf.Round(c);
                 Compass.PlaceHints();
             }
+
+            GUILayout.Space(10);
+            GUILayout.Label("Keyboard and mouse:");
+            GUILayout.Label("Middle mouse drag rotates, Alt + middle mouse moves the camera. Mouse rotation, deg per pixel: " + Settings.MouseRotationSpeed.ToString("0.00"));
+            Settings.MouseRotationSpeed = GUILayout.HorizontalSlider(Settings.MouseRotationSpeed, 0.05f, 1f, GUILayout.Width(300));
+            KeyField(1, "Rotate left: Alt +", ref Settings.RotateLeftKey, true);
+            KeyField(2, "Rotate right: Alt +", ref Settings.RotateRightKey, true);
+            KeyField(3, "North (area default):", ref Settings.NorthKey, false);
+            bool compass = GUILayout.Toggle(Settings.PcCompass, "Compass to the right of the system buttons (click: north)");
+            GUILayout.Label("Compass scale: " + Settings.PcCompassScale.ToString("0.00"));
+            float scale = GUILayout.HorizontalSlider(Settings.PcCompassScale, 0.5f, 1.5f, GUILayout.Width(300));
+            GUILayout.Label("Compass offset X: " + Settings.PcCompassOffsetX.ToString("0"));
+            float px = GUILayout.HorizontalSlider(Settings.PcCompassOffsetX, -100f, 300f, GUILayout.Width(300));
+            GUILayout.Label("Compass offset Y: " + Settings.PcCompassOffsetY.ToString("0"));
+            float py = GUILayout.HorizontalSlider(Settings.PcCompassOffsetY, -100f, 300f, GUILayout.Width(300));
+            Settings.PcCompassScale = Mathf.Round(scale * 20f) / 20f;
+            Settings.PcCompassOffsetX = Mathf.Round(px);
+            Settings.PcCompassOffsetY = Mathf.Round(py);
+            if (compass != Settings.PcCompass)
+            {
+                Settings.PcCompass = compass;
+                PcMode.Reset();
+            }
+        }
+
+        // A key setting: the button waits for the next key press (Esc cancels); game actions on the same key are listed.
+        static void KeyField(int id, string label, ref KeyCode key, bool alt)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(label, GUILayout.Width(170));
+            string caption = s_Capturing == id ? "press a key…" : PcMode.KeyName(key);
+            if (GUILayout.Button(caption, GUILayout.Width(140))) s_Capturing = s_Capturing == id ? 0 : id;
+            GUILayout.EndHorizontal();
+            Event e = Event.current;
+            if (s_Capturing == id && e.type == EventType.KeyDown && e.keyCode != KeyCode.None)
+            {
+                if (e.keyCode != KeyCode.Escape) key = e.keyCode;
+                s_Capturing = 0;
+                e.Use();
+            }
+            List<string> conflicts = PcMode.Conflicts(key, alt);
+            if (conflicts.Count > 0)
+                GUILayout.Label("    Also bound in the game: " + string.Join(", ", conflicts.ToArray()));
+        }
+
+        internal static void Rotate(CameraRig rig, float yaw)
+        {
+            if (Settings.InvertRotation) yaw = -yaw;
+            rig.transform.rotation = Quaternion.Euler(0f, rig.transform.eulerAngles.y + yaw, 0f);
         }
 
         internal static void ToggleRotateMode()
@@ -94,7 +155,7 @@ namespace GamepadCameraRotation
             InputRemap.UpdateCameraHintLabel();
         }
 
-        static bool CameraControllable()
+        internal static bool CameraControllable()
         {
             var game = Game.Instance;
             return game != null
@@ -106,10 +167,16 @@ namespace GamepadCameraRotation
         {
             try
             {
-                if (!GamePad.HasInstance || Game.Instance == null || !Game.Instance.IsControllerGamepad) return;
+                if (Game.Instance == null) return;
                 CameraRig rig = Game.Instance.UI.GetCameraRig();
                 if (rig == null) return;
                 Compass.Tick(Mathf.DeltaAngle(MapYaw, rig.transform.eulerAngles.y));
+                if (!Game.Instance.IsControllerGamepad)
+                {
+                    PcMode.Update(rig);
+                    return;
+                }
+                if (!GamePad.HasInstance) return;
 
                 if (!RotateMode) return;
                 Rewired.Player player = GamePad.Instance.Player;
@@ -125,8 +192,7 @@ namespace GamepadCameraRotation
 
                 if (Mathf.Abs(x) > DeadZone)
                 {
-                    float yaw = x * Settings.RotationSpeed * step * (Settings.InvertRotation ? -1f : 1f);
-                    rig.transform.rotation = Quaternion.Euler(0f, rig.transform.eulerAngles.y + yaw, 0f);
+                    Rotate(rig, x * Settings.RotationSpeed * step);
                 }
                 if (inGame && Mathf.Abs(y) > DeadZone && rig.CameraZoom != null)
                 {
