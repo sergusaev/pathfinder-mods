@@ -1,11 +1,12 @@
 {
-    "Id": "PortraitScrollFix",
-    "DisplayName": "Portrait Scroll Fix (gamepad)",
-    "Author": "local",
-    "Version": "1.1.0",
-    "ManagerVersion": "0.23.0",
-    "GameVersion": "1.4.0",
-    "AssemblyName": "PortraitScrollFix.dll",
-    "EntryMethod": "PortraitScrollFix.Main.Load",
-    "Requirements": []
+  "Id": "PortraitScrollFix",
+  "DisplayName": "Portrait Scroll Fix (gamepad)",
+  "Author": "sergusaev",
+  "Version": "1.1.0",
+  "HomePage": "https://github.com/sergusaev/pathfinder-mods",
+  "ManagerVersion": "0.23.0",
+  "GameVersion": "1.4.0",
+  "AssemblyName": "PortraitScrollFix.dll",
+  "EntryMethod": "PortraitScrollFix.Main.Load",
+  "Requirements": []
 }

@@ -1,0 +1,21 @@
+# Game assemblies copied for compiling, and build output
+refs/
+build/
+
+# Compass sprites, extracted from the installed Wrath of the Righteous at runtime
+kingmaker-gamepad-camera-rotation/Compass/
+
+# Personal build settings
+local.env
+
+.DS_Store
+
+# AI Agents
+.claude/settings.local.json
+.claude/CLAUDE.local.md
+.claude/skills/
+.mcp.json
+.worktrees/
+.env
+.superpowers/
+.codegraph/
