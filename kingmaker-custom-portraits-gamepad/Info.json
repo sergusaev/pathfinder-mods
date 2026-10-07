@@ -1,0 +1,10 @@
+{
+  "Id": "ConsoleCustomPortraits",
+  "DisplayName": "Custom Portraits Gamepad Selection Fix",
+  "Author": "local",
+  "Version": "1.0.0",
+  "ManagerVersion": "0.22.0",
+  "AssemblyName": "ConsoleCustomPortraits.dll",
+  "EntryMethod": "ConsoleCustomPortraits.Main.Load",
+  "Requirements": []
+}
