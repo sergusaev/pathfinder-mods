@@ -16,6 +16,10 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Mono for Windows does not add itself to PATH.
+command -v mcs >/dev/null || [ ! -d "/c/Program Files/Mono/bin" ] || PATH="/c/Program Files/Mono/bin:$PATH"
+# mcs.exe on Windows needs Windows paths, also inside the response file.
+winpath() { if command -v cygpath >/dev/null; then cygpath -m "$1"; else printf '%s\n' "$1"; fi; }
 HERE="$(cd "$(dirname "$0")" && pwd)"
 [ -f "$ROOT/local.env" ] && . "$ROOT/local.env"
 
@@ -63,16 +67,17 @@ fi
 
 mkdir -p "$OUT"
 {
-  if [ "$HARMONY_FROM_UMM" = 1 ]; then
-    ls "$REFS"/*.dll | grep -v "/0Harmony" | sed 's/^/-r:/'
-    echo "-r:$REFS/umm/0Harmony.dll"
-  else
-    ls "$REFS"/*.dll | sed 's/^/-r:/'
-  fi
-  echo "-r:$REFS/umm/UnityModManager.dll"
+  for dll in "$REFS"/*.dll; do
+    [ "$HARMONY_FROM_UMM" = 1 ] && [[ "$(basename "$dll")" == 0Harmony* ]] && continue
+    echo "-r:$(winpath "$dll")"
+  done
+  [ "$HARMONY_FROM_UMM" = 1 ] && echo "-r:$(winpath "$REFS/umm/0Harmony.dll")"
+  echo "-r:$(winpath "$REFS/umm/UnityModManager.dll")"
 } > "$OUT/refs.rsp"
 
-mcs -target:library -nostdlib -out:"$OUT/$MOD_DLL.dll" @"$OUT/refs.rsp" "$HERE"/src/*.cs
+SOURCES=()
+for f in "$HERE"/src/*.cs; do SOURCES+=("$(winpath "$f")"); done
+mcs -target:library -nostdlib -out:"$(winpath "$OUT/$MOD_DLL.dll")" @"$(winpath "$OUT/refs.rsp")" "${SOURCES[@]}"
 cp "$HERE/Info.json" "$OUT/Info.json"
 echo "built: $OUT/$MOD_DLL.dll"
 

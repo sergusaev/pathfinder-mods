@@ -25,10 +25,23 @@
 
 ## Сборка
 
-Нужно:
+### Сторонние программы
 
-- Mono с компилятором `mcs` (macOS: `brew install mono`, Linux: `mono-devel`, Windows: Mono и Git Bash).
-- Сама игра: моды компилируются против её сборок. `build.sh` при первом запуске копирует их в `<мод>/refs`. Это файлы игры, поэтому `refs/` исключена из git, публиковать её нельзя.
+| Программа | Зачем | macOS | Linux | Windows |
+|---|---|---|---|---|
+| Mono с `mcs` (компилятор C#, 6.12) | компиляция | `brew install mono` | `sudo apt install mono-devel` (Debian/Ubuntu; в других дистрибутивах `mono-complete`) | `winget install Mono.Mono` |
+| Bash | `build.sh`, `release.sh` | встроен | встроен | Git for Windows: `winget install Git.Git`, скрипты запускать из **Git Bash** |
+| `ssh` | копирование сборок игры с другой машины и установка на неё (`DECK`) | встроен | `openssh-client` | входит в Git for Windows |
+| `zip` или bsdtar | упаковка zip для релиза | встроен (`tar`) | `sudo apt install zip` | `C:\Windows\System32\tar.exe`, используется сам |
+| GitHub CLI `gh` | только `release.sh --publish` | `brew install gh` | [cli.github.com](https://cli.github.com/) | `winget install GitHub.cli` |
+
+После установки `gh` один раз войти: `gh auth login`. Mono для Windows не добавляет себя в `PATH`; `build-mod.sh` сам находит его в `C:\Program Files\Mono\bin` и переводит пути для `mcs.exe`. Сборки на macOS и Windows совпадают байт в байт.
+
+**Игра.** Моды компилируются против сборок самой игры: `build.sh` при первом запуске (или с `--fetch`) копирует `<Игра>_Data/Managed/*.dll`, а из UMM — `UnityModManager.dll` и `0Harmony.dll` в `<мод>/refs`, с этой машины или по SSH. Unity Mod Manager в игре должен быть уже установлен. В `refs/` лежат файлы игры, поэтому папка исключена из git, публиковать её нельзя.
+
+**Steam Deck как машина с игрой.** Один раз включить SSH в режиме рабочего стола (Konsole): `passwd` — задать пароль пользователю `deck`, затем `sudo systemctl enable --now sshd`; с машины сборки — `ssh-copy-id deck@steamdeck.local`, после этого `DECK=deck@steamdeck.local` в `local.env`.
+
+### Команды
 
 ```bash
 ./kingmaker-gamepad-camera-rotation/build.sh            # скопировать refs, если их нет, и собрать в build/

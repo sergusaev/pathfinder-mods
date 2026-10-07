@@ -25,10 +25,23 @@ Elsewhere:
 
 ## Building
 
-Requirements:
+### Third-party tools
 
-- Mono with the `mcs` compiler (`brew install mono` on macOS, `mono-devel` on Linux, Mono for Windows with Git Bash).
-- The game itself: the mods compile against its assemblies. `build.sh` copies them into `<mod>/refs` on the first run. These are the game's files, so `refs/` is excluded from git and must not be published.
+| Tool | What for | macOS | Linux | Windows |
+|---|---|---|---|---|
+| Mono with `mcs` (C# compiler, 6.12) | compiling | `brew install mono` | `sudo apt install mono-devel` (Debian/Ubuntu; `mono-complete` on other distros) | `winget install Mono.Mono` |
+| Bash | `build.sh`, `release.sh` | built in | built in | Git for Windows: `winget install Git.Git`, run the scripts from **Git Bash** |
+| `ssh` | copying the game's assemblies from / installing to another machine (`DECK`) | built in | `openssh-client` | comes with Git for Windows |
+| `zip` or bsdtar | packing release zips | built in (`tar`) | `sudo apt install zip` | `C:\Windows\System32\tar.exe`, used automatically |
+| GitHub CLI `gh` | `release.sh --publish` only | `brew install gh` | [cli.github.com](https://cli.github.com/) | `winget install GitHub.cli` |
+
+After installing `gh`, sign in once with `gh auth login`. Mono for Windows does not add itself to `PATH`; `build-mod.sh` finds it in `C:\Program Files\Mono\bin` and converts paths for `mcs.exe` itself. Builds are byte-identical on macOS and Windows.
+
+**The game.** The mods compile against the game's own assemblies: `build.sh` copies `<Game>_Data/Managed/*.dll` and UMM's `UnityModManager.dll` and `0Harmony.dll` into `<mod>/refs` on the first run (or with `--fetch`), from this machine or over SSH. Unity Mod Manager must already be installed in that game. `refs/` holds the game's files, so it is excluded from git and must not be published.
+
+**A Steam Deck as the game machine.** Enable SSH once in the desktop mode (Konsole): `passwd` to set a password for `deck`, then `sudo systemctl enable --now sshd`; from the build machine `ssh-copy-id deck@steamdeck.local`, then `DECK=deck@steamdeck.local` in `local.env`.
+
+### Commands
 
 ```bash
 ./kingmaker-gamepad-camera-rotation/build.sh            # copy refs if missing, then build into build/
