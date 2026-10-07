@@ -182,6 +182,7 @@ python3 -m zipfile -e PortraitScrollFix-1.1.0.zip "$WOTR/mods/"              # e
 | [Custom Portraits Gamepad Selection Fix](../kingmaker-custom-portraits-gamepad/README.ru.md) | Kingmaker | `Mods/ConsoleCustomPortraits` | портреты кладутся в `~/.config/unity3d/Owlcat Games/Pathfinder Kingmaker/Portraits/` |
 | [Portrait Scroll Fix (gamepad)](../wotr-portrait-scroll-fix/README.ru.md) | WotR | `mods/PortraitScrollFix` | портреты — в папку `Portraits` внутри префикса Proton, см. README мода |
 | [Buff It 2 The Limit (Pad)](https://github.com/sergusaev/wrath-epic-buffing/blob/gamepad/pad-docs/README.ru.md) | WotR | `mods/BuffIt2TheLimit` | заменяет оригинальные Buff It 2 The Limit и BubbleBuffs — их сначала удалить. Меню на L5, см. ниже |
+| [Buff It 2 The Limit (Pad) для Kingmaker](https://github.com/sergusaev/wrath-epic-buffing/blob/gamepad/pad-docs/README.ru.md#kingmaker) | Kingmaker | `Mods/PadBuffsKingmaker` | то же меню; клавиша меню — F7 сразу, нужно только L5 → F7. Заклинания, классовые способности, переключаемые, песни; без свитков, зелий и жезлов |
 
 **Клавиша меню Buff It 2 The Limit (Pad) в WotR.** В Kingmaker клавиша меню — F7 сразу. В WotR это клавиша «открыть меню баффов» оригинального мода, а задаётся она в PC-экране книги заклинаний, недоступном в режиме геймпада. Запустить WotR с модом, загрузить сохранение и выйти, затем прописать клавиши в файлы настроек (меню = F7, группа Long = F6, группа Important = F9):
 

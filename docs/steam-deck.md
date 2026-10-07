@@ -180,6 +180,7 @@ When a mod is updated, delete `*.cache` files in its folder before starting the 
 | [Custom Portraits Gamepad Selection Fix](../kingmaker-custom-portraits-gamepad) | Kingmaker | `Mods/ConsoleCustomPortraits` | portraits go to `~/.config/unity3d/Owlcat Games/Pathfinder Kingmaker/Portraits/` |
 | [Portrait Scroll Fix (gamepad)](../wotr-portrait-scroll-fix) | WotR | `mods/PortraitScrollFix` | portraits go to the `Portraits` folder inside the Proton prefix, see the mod README |
 | [Buff It 2 The Limit (Pad)](https://github.com/sergusaev/wrath-epic-buffing) | WotR | `mods/BuffIt2TheLimit` | replaces the original Buff It 2 The Limit and BubbleBuffs: remove those first. Menu on L5, see below |
+| [Buff It 2 The Limit (Pad) for Kingmaker](https://github.com/sergusaev/wrath-epic-buffing) | Kingmaker | `Mods/PadBuffsKingmaker` | the same menu; the menu key is F7 out of the box, so L5 → F7 is all it needs. Spells, class abilities, activatables and songs; no scrolls, potions or wands |
 
 **The menu key of Buff It 2 The Limit (Pad) in WotR.** In Kingmaker the menu key is F7 out of the box. In WotR it is the "open buff menu" key of the original mod, which is set in the PC spellbook screen, unavailable in gamepad mode. Start WotR once with the mod, load a save and quit, then set the keys in its settings files (menu = F7, Long group = F6, Important group = F9):
 
