@@ -16,11 +16,13 @@ A gamepad menu for the buff automation mod Buff It 2 The Limit lives in a separa
 
 **Steam Deck:** follow [docs/steam-deck.md](docs/steam-deck.md) — Unity Mod Manager for both games, the Steam Input layout (UMM window on R4, buff menu on L5, mouse on the right trackpad) and the mods, step by step.
 
+**Windows without the UMM installer** (e.g. over SSH): [docs/windows.md](docs/windows.md) — UMM for both games with PowerShell commands, and the mods.
+
 Elsewhere:
 
 1. Install [Unity Mod Manager](https://www.nexusmods.com/site/mods/21) for the game.
 2. Download the mod's zip from [Releases](https://github.com/sergusaev/pathfinder-mods/releases).
-3. Unpack it into `<game>/Mods/` for Kingmaker or `<game>/mods/` for WotR, so the result is `Mods/<ModId>/Info.json`. On Linux the folder and file names are case-sensitive.
+3. Unpack it into `<game>/Mods/`, so the result is `Mods/<ModId>/Info.json`. `Mods` is the folder UMM's `Config.xml` names for both games. On Linux the names are case-sensitive for the native Kingmaker; WotR runs through Proton, which ignores case, so the `mods` folder of the Steam Deck guide works too.
 4. Start the game; the mod is listed in the UMM window with a green status.
 
 ## Building
@@ -63,7 +65,10 @@ Put personal values into `local.env` next to `build-mod.sh` (not tracked by git)
 DECK=deck@steamdeck.local
 ```
 
-On Windows the game is usually under `C:/Program Files (x86)/Steam/steamapps/common/`, so set `KINGMAKER_DIR` / `WOTR_DIR` and run the scripts from Git Bash.
+On Windows the game is usually under `C:/Program Files (x86)/Steam/steamapps/common/`, so set `KINGMAKER_DIR` / `WOTR_DIR` and run the scripts from Git Bash. Two things to do once after cloning on Windows, or after copying a working copy over from macOS or Linux:
+
+- `git config core.filemode false` in each clone. Windows has no executable bit, so otherwise git shows every `.sh` file as modified. The setting lives in `.git/config`: copying `.git` from another machine brings back the old value, so set it again.
+- `local.env` copied from another machine keeps that machine's `DECK` and game paths; check it.
 
 ## Releasing
 

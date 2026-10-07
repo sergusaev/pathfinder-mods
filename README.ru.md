@@ -16,11 +16,13 @@
 
 **Steam Deck:** по шагам в [docs/steam-deck.ru.md](docs/steam-deck.ru.md) — Unity Mod Manager для обеих игр, раскладка Steam Input (окно UMM на R4, меню баффов на L5, мышь на правом трекпаде) и моды.
 
+**Windows без установщика UMM** (например, по SSH): [docs/windows.ru.md](docs/windows.ru.md) — UMM для обеих игр командами PowerShell и моды.
+
 На других системах:
 
 1. Установить [Unity Mod Manager](https://www.nexusmods.com/site/mods/21) для игры.
 2. Скачать zip мода со страницы [Releases](https://github.com/sergusaev/pathfinder-mods/releases).
-3. Распаковать в `<игра>/Mods/` для Kingmaker или в `<игра>/mods/` для WotR, чтобы получилось `Mods/<ModId>/Info.json`. На Linux регистр имён важен.
+3. Распаковать в `<игра>/Mods/`, чтобы получилось `Mods/<ModId>/Info.json`. Именно `Mods` указан в `Config.xml` UMM для обеих игр. На Linux регистр важен для нативного Kingmaker; WotR идёт через Proton, где регистр не важен, поэтому папка `mods` из справки для Steam Deck тоже работает.
 4. Запустить игру: мод появится в окне UMM с зелёным статусом.
 
 ## Сборка
@@ -63,7 +65,10 @@
 DECK=deck@steamdeck.local
 ```
 
-На Windows игра обычно лежит в `C:/Program Files (x86)/Steam/steamapps/common/`: задать `KINGMAKER_DIR` / `WOTR_DIR` и запускать скрипты из Git Bash.
+На Windows игра обычно лежит в `C:/Program Files (x86)/Steam/steamapps/common/`: задать `KINGMAKER_DIR` / `WOTR_DIR` и запускать скрипты из Git Bash. Два шага один раз после клонирования на Windows или после копирования рабочей копии с macOS или Linux:
+
+- `git config core.filemode false` в каждом клоне. В Windows нет признака исполняемого файла, и без этой настройки git показывает все `.sh` изменёнными. Настройка хранится в `.git/config`: при копировании `.git` с другой машины возвращается старое значение, её надо выставить снова.
+- `local.env`, скопированный с другой машины, хранит её `DECK` и пути к играм; проверьте его.
 
 ## Выпуск релиза
 
