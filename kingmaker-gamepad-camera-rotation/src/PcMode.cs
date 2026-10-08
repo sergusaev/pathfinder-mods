@@ -35,16 +35,17 @@ namespace GamepadCameraRotation
         static readonly Vector2 ClockSize = new Vector2(140f, 117f);
         static readonly Vector2 ClockWindow = new Vector2(69.5f, 68.5f);
         static readonly Vector2 DialCenter = new Vector2(75.5f, 68.6f);
-        // The window's radius is 37.5, the clock's rim around it ends at 49. The dial (45 units in radius) fills the
-        // window up to 1.5 units from the rim; the arrow (77 units from the centre to the tip) is scaled on its own to
-        // reach the middle of the rim.
+        // The window's radius is 37.5. The dial (45 units in radius) fills it up to 1.5 units from the rim; the arrow
+        // (61 units from the centre to the tail) is scaled on its own so that its tail stops just short of the rim.
         const float ClockDialScale = 0.8f;
-        const float ClockArrowScale = 0.56f;
+        const float ClockArrowScale = 0.6f;
         const string ArrowName = "UI_HudAstrolabeArrow";
         const float ArrowLayerScale = 1.15f;
 
         static readonly FieldInfo BaseMousePoint = AccessTools.Field(typeof(CameraRig), "m_BaseMousePoint");
         static readonly PropertyInfo BindName = AccessTools.Property(typeof(SettingsEntityKeybind), "Name");
+        // The hourglass, and the gears with their backing behind the clock's window.
+        static readonly string[] ClockParts = { ClockName + "/" + HourglassName, "BackgroundClock" };
 
         static RectTransform s_Compass;
         static RectTransform s_Menu;
@@ -52,6 +53,7 @@ namespace GamepadCameraRotation
         static TextMeshProUGUI s_TipTitle;
         static TextMeshProUGUI s_TipText;
         static float s_NextSearch;
+        static List<GameObject> s_ClockParts;
         static bool s_Dragging;
         static float s_LastMouseX;
 
@@ -142,7 +144,7 @@ namespace GamepadCameraRotation
         {
             if (!Main.Settings.PcCompass)
             {
-                SetHourglass(true);
+                SetClockParts(true);
                 if (s_Compass != null) UnityEngine.Object.Destroy(s_Compass.gameObject);
                 s_Compass = null;
                 return;
@@ -154,6 +156,7 @@ namespace GamepadCameraRotation
                 GameObject menu = GameObject.Find(MenuBlockName);
                 if (menu == null) return;
                 s_Menu = (RectTransform)menu.transform;
+                s_ClockParts = null;
                 Build((RectTransform)s_Menu.parent);
                 if (s_Compass == null) return;
             }
@@ -197,16 +200,28 @@ namespace GamepadCameraRotation
             if (arrow != null) arrow.localScale = new Vector3(scale, scale, 1f);
         }
 
-        static void SetHourglass(bool shown)
+        // The game shows the hourglass again on its own when combat mode is switched, so the parts are hidden on every
+        // placement.
+        static void SetClockParts(bool shown)
         {
             if (s_Menu == null) return;
-            Transform sand = s_Menu.Find(ClockName + "/" + HourglassName);
-            if (sand != null && sand.gameObject.activeSelf != shown) sand.gameObject.SetActive(shown);
+            if (s_ClockParts == null)
+            {
+                s_ClockParts = new List<GameObject>();
+                foreach (string path in ClockParts)
+                {
+                    Transform part = s_Menu.Find(path);
+                    if (part != null) s_ClockParts.Add(part.gameObject);
+                }
+            }
+            foreach (GameObject part in s_ClockParts)
+                if (part != null && part.activeSelf != shown) part.SetActive(shown);
         }
 
         internal static void Reset()
         {
-            SetHourglass(true);
+            SetClockParts(true);
+            s_ClockParts = null;
             s_NextSearch = 0f;
             if (s_Compass != null) UnityEngine.Object.Destroy(s_Compass.gameObject);
             s_Compass = null;
@@ -221,7 +236,8 @@ namespace GamepadCameraRotation
             var clock = s_Menu.Find(ClockName) as RectTransform;
             if (clock != null && clock.gameObject.activeInHierarchy)
             {
-                SetHourglass(false);
+                SetClockParts(false);
+                SetArrowScale(ArrowLayerScale * ClockArrowScale / ClockDialScale);
                 var frame = new Vector3[4];
                 clock.GetWorldCorners(frame);
                 Vector3 min = parent.InverseTransformPoint(frame[0]);
@@ -229,14 +245,13 @@ namespace GamepadCameraRotation
                 float k = (max.x - min.x) / ClockSize.x;
                 // The scale setting still works here, relative to its default.
                 float dialScale = ClockDialScale * Main.Settings.PcCompassScale / 0.85f * k;
-                SetArrowScale(ArrowLayerScale * ClockArrowScale / ClockDialScale);
                 s_Compass.localScale = new Vector3(dialScale, dialScale, 1f);
                 Vector2 center = (Vector2)min + ClockWindow * k;
                 s_Compass.localPosition = new Vector3(center.x - DialCenter.x * dialScale + Main.Settings.PcCompassOffsetX,
                     center.y - DialCenter.y * dialScale + Main.Settings.PcCompassOffsetY, 0f);
                 return;
             }
-            SetHourglass(true);
+            SetClockParts(true);
             SetArrowScale(ArrowLayerScale);
             float right = float.MinValue, bottom = float.MaxValue;
             var corners = new Vector3[4];
