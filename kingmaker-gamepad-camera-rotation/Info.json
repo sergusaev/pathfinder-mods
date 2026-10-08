@@ -2,7 +2,7 @@
   "Id": "GamepadCameraRotation",
   "DisplayName": "Camera Rotation and Compass",
   "Author": "sergusaev",
-  "Version": "1.2.0",
+  "Version": "1.2.1",
   "HomePage": "https://github.com/sergusaev/pathfinder-mods",
   "ManagerVersion": "0.22.0",
   "AssemblyName": "GamepadCameraRotation.dll",
