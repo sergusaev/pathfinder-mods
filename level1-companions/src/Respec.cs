@@ -237,6 +237,8 @@ namespace Level1Companions
     // What a story companion keeps through the respec besides what Player.RespecCompanion keeps itself.
     // WotR keeps the alignment itself (UnitAlignment.CopyFrom) and keeps the doll in a unit part, not in the
     // descriptor, so there the snapshot has neither.
+    // OverrideAsks is not kept: it is the voice of a polymorph buff (ReplaceAsksList), set while the buff is on and
+    // cleared with it, and the respec takes the buffs' effects off.
     class Identity
     {
         internal static Identity Pending;
@@ -249,7 +251,6 @@ namespace Level1Companions
         readonly string m_Name;
         readonly Gender? m_Gender;
         readonly BlueprintUnitAsksList m_Asks;
-        readonly BlueprintUnitAsksList m_OverrideAsks;
         readonly bool? m_LeftHanded;
         readonly string m_Prefab;
         readonly int m_BirthDay;
@@ -265,7 +266,6 @@ namespace Level1Companions
             m_Name = d.CustomName;
             m_Gender = d.CustomGender;
             m_Asks = d.CustomAsks;
-            m_OverrideAsks = d.OverrideAsks;
             m_LeftHanded = d.LeftHandedOverride;
             m_Prefab = d.CustomPrefabGuid;
             m_BirthDay = d.BirthDay;
@@ -282,7 +282,6 @@ namespace Level1Companions
             d.CustomName = m_Name;
             d.CustomGender = m_Gender;
             d.CustomAsks = m_Asks;
-            d.OverrideAsks = m_OverrideAsks;
             d.LeftHandedOverride = m_LeftHanded;
             d.CustomPrefabGuid = m_Prefab;
             d.BirthDay = m_BirthDay;
@@ -305,7 +304,6 @@ namespace Level1Companions
                 Compare(diff, "name", d.CustomName, m_Name);
                 Compare(diff, "gender", d.CustomGender, m_Gender);
                 Compare(diff, "voice", d.CustomAsks, m_Asks);
-                Compare(diff, "override voice", d.OverrideAsks, m_OverrideAsks);
                 Compare(diff, "left-handed", d.LeftHandedOverride, m_LeftHanded);
                 Compare(diff, "model", d.CustomPrefabGuid, m_Prefab);
                 Compare(diff, "birthday", d.BirthDay, m_BirthDay);

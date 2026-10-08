@@ -37,7 +37,7 @@ The button is unavailable in combat, in dialogs and with game windows open; the 
 ## What a respec keeps
 
 - **A story companion's respec changes only class and abilities.** The editor has no portrait, race, appearance, alignment, voice or name steps for a story companion.
-- The mod keeps the name, gender, voice, custom model and birthday. The game's respec itself resets them to the blueprint's values.
+- The mod keeps the name, gender, voice, custom model and birthday. The voice of a polymorph (such as Ulbrig's griffon aspect) is not kept: it belongs to the form's buff, which the respec takes off. The game's respec itself resets them to the blueprint's values.
 - The editor preview shows the companion's own model, not the bare chargen doll the gamepad interface of both games puts there.
 - Kingmaker: the mod also keeps the alignment with its shift history.
 - WotR: the game keeps the alignment itself. Mythic levels are not touched by the mod: the respec keeps the mythic experience, and the mythic levels come back through the level up after the respec.
