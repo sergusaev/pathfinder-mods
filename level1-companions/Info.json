@@ -1,0 +1,11 @@
+{
+  "Id": "Level1Companions",
+  "DisplayName": "Level 1 Companions & Free Respec",
+  "Author": "sergusaev",
+  "Version": "1.0.0",
+  "HomePage": "https://github.com/sergusaev/pathfinder-mods",
+  "ManagerVersion": "0.22.0",
+  "AssemblyName": "Level1Companions.dll",
+  "EntryMethod": "Level1Companions.Main.Load",
+  "Requirements": []
+}

@@ -178,6 +178,7 @@ When a mod is updated, delete `*.cache` files in its folder before starting the 
 |---|---|---|---|
 | [Camera Rotation and Compass](../kingmaker-gamepad-camera-rotation) | Kingmaker | `Mods/GamepadCameraRotation` | R3 switches the camera mode, D-pad Up is turn-based mode. The compass needs WotR installed (found automatically). Turn off camera rotation in Bag of Tricks |
 | [Custom Portraits Gamepad Selection Fix](../kingmaker-custom-portraits-gamepad) | Kingmaker | `Mods/ConsoleCustomPortraits` | portraits go to `~/.config/unity3d/Owlcat Games/Pathfinder Kingmaker/Portraits/` |
+| [Level 1 Companions & Free Respec](../level1-companions) | Kingmaker, WotR | `Mods/Level1Companions`, `mods/Level1Companions` | a separate zip per game (`-kingmaker`, `-wotr`). Respec button in the UMM window (R4). In WotR delete `mods/lvl1companions` first |
 | [Portrait Scroll Fix (gamepad)](../wotr-portrait-scroll-fix) | WotR | `mods/PortraitScrollFix` | portraits go to the `Portraits` folder inside the Proton prefix, see the mod README |
 | [Buff It 2 The Limit (Groups)](https://github.com/sergusaev/wrath-epic-buffing) | WotR | `mods/BuffIt2TheLimit` | replaces the original Buff It 2 The Limit and BubbleBuffs: remove those first. Menu on L5, see below |
 | [Buff It 2 The Limit (Groups) for Kingmaker](https://github.com/sergusaev/wrath-epic-buffing) | Kingmaker | `Mods/PadBuffsKingmaker` | the same menu; the menu key is F7 out of the box, so L5 → F7 is all it needs. Spells, class abilities, activatables and songs; no scrolls, potions or wands |

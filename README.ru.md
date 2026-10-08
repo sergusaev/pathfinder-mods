@@ -8,6 +8,7 @@
 |---|---|---|
 | [Camera Rotation and Compass](kingmaker-gamepad-camera-rotation/README.ru.md) | Kingmaker | Геймпад: поворот и приближение камеры правым стиком, компас WotR вместо песочных часов, раскладка WotR для режима камеры, пошагового режима и осмотра. Клавиатура и мышь: поворот средней кнопкой мыши и Alt+A / Alt+D, компас в часах |
 | [Custom Portraits Gamepad Selection Fix](kingmaker-custom-portraits-gamepad/README.ru.md) | Kingmaker | Свои портреты из папки `Portraits` появляются при создании персонажа в режиме геймпада |
+| [Level 1 Companions & Free Respec](level1-companions/README.ru.md) | Kingmaker и Wrath of the Righteous | Сюжетные спутники вступают на 1-м уровне, дальше прокачка полностью ручная; бесплатная кнопка респека до 1-го уровня, имя, голос и внешность спутника сохраняются, а окно респека WotR можно закрыть с нераспределёнными уровнями. В WotR заменяет lvl1companions |
 | [Portrait Scroll Fix (gamepad)](wotr-portrait-scroll-fix/README.ru.md) | Wrath of the Righteous | Список своих портретов прокручивается за курсором геймпада и правым стиком |
 
 Buff It 2 The Limit (Groups) — меню групп баффов для мода автобаффов Buff It 2 The Limit; работает с геймпадом, клавиатурой и мышью в WotR и Kingmaker. Живёт в отдельном форке: [sergusaev/wrath-epic-buffing](https://github.com/sergusaev/wrath-epic-buffing).
@@ -51,6 +52,16 @@ Buff It 2 The Limit (Groups) — меню групп баффов для мод�
 ./kingmaker-gamepad-camera-rotation/build.sh --install  # собрать и установить в папку модов игры; игра должна быть закрыта
 ```
 
+**Моды для обеих игр.** Мод, у которого в `build.sh` вместо `GAME=` задано `GAMES="kingmaker wotr"` ([Level 1 Companions & Free Respec](level1-companions/README.ru.md)), собирается из одних исходников под каждую игру:
+
+```bash
+./level1-companions/build.sh                              # все игры по очереди: build/kingmaker/, build/wotr/
+./level1-companions/build.sh --game wotr                  # только одна игра
+./level1-companions/build.sh --game kingmaker --install   # собрать и установить в одну игру
+```
+
+Компилятор получает `-define:KINGMAKER` или `-define:WOTR`; `src/*.cs` общие, `src/kingmaker/` и `src/wotr/` компилируются только для своей игры. Сборки игры копируются в `refs/<игра>/`, поэтому для полной сборки на машине с игрой должны быть установлены обе игры с UMM. Без `--game` ключи `--fetch` и `--install` действуют на все игры.
+
 Общая логика всех модов — в [`build-mod.sh`](build-mod.sh). Игру он находит по переменным:
 
 | Переменная | Смысл | По умолчанию |
@@ -69,6 +80,7 @@ DECK=deck@steamdeck.local
 
 - `git config core.filemode false` в каждом клоне. В Windows нет признака исполняемого файла, и без этой настройки git показывает все `.sh` изменёнными. Настройка хранится в `.git/config`: при копировании `.git` с другой машины возвращается старое значение, её надо выставить снова.
 - `local.env`, скопированный с другой машины, хранит её `DECK` и пути к играм; проверьте его.
+- Концы строк. Git for Windows выписывает текстовые файлы с CRLF (по умолчанию `core.autocrlf=true`), а Bash на скрипте с CRLF падает (`$'\r': command not found`). `.gitattributes` держит `*.sh` в LF на любой машине; клону, сделанному до его появления, нужно один раз обновить скрипты в Git Bash: `git ls-files -z '*.sh' | xargs -0 rm && git checkout -- '*.sh'`. `release.sh` отрезает `\r`, когда читает `Info.json` и `build.sh`, так что CRLF в них не мешает.
 
 ## Выпуск релиза
 
@@ -77,6 +89,8 @@ DECK=deck@steamdeck.local
 ./release.sh kingmaker-gamepad-camera-rotation --publish    # то же, затем тег и релиз на GitHub
 ./release.sh wotr-portrait-scroll-fix --publish --notes notes.md
 ```
+
+Мод для обеих игр упаковывается в отдельный zip для каждой игры, `dist/<ModId>-<версия>-kingmaker.zip` и `dist/<ModId>-<версия>-wotr.zip`, оба прикладываются к одному релизу (тег `level1-companions-v1.0.0`).
 
 Версия берётся из `Info.json` мода; перед публикацией её нужно поднять — скрипт откажется публиковать уже выпущенную версию, незакоммиченные изменения или невыложенный `main`. Тег — имя папки без префикса игры, например `gamepad-camera-rotation-v1.1.0`. Для публикации нужен [GitHub CLI](https://cli.github.com/) (`gh auth login`). Папка `dist/` в git не попадает.
 

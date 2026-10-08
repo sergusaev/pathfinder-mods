@@ -8,6 +8,7 @@ Small [Unity Mod Manager](https://www.nexusmods.com/site/mods/21) mods that make
 |---|---|---|
 | [Camera Rotation and Compass](kingmaker-gamepad-camera-rotation) | Kingmaker | Gamepad: camera rotation and zoom with the right stick, the WotR compass instead of the hourglass, the WotR console layout for camera mode, turn-based mode and inspect. Keyboard and mouse: rotation with the middle mouse button and Alt+A / Alt+D, the compass in the clock |
 | [Custom Portraits Gamepad Selection Fix](kingmaker-custom-portraits-gamepad) | Kingmaker | Custom portraits from the `Portraits` folder appear in the gamepad character creation |
+| [Level 1 Companions & Free Respec](level1-companions) | Kingmaker and Wrath of the Righteous | Story companions join at level 1 and are leveled entirely by hand; a free respec button back to level 1 keeps the companion's name, voice and looks, and in WotR the respec window can be closed with levels left to spend. In WotR replaces lvl1companions |
 | [Portrait Scroll Fix (gamepad)](wotr-portrait-scroll-fix) | Wrath of the Righteous | The custom portraits list scrolls with the gamepad cursor and the right stick |
 
 Buff It 2 The Limit (Groups), a menu of buff groups for the buff automation mod Buff It 2 The Limit, works with a gamepad, keyboard and mouse in WotR and Kingmaker; it lives in a separate fork: [sergusaev/wrath-epic-buffing](https://github.com/sergusaev/wrath-epic-buffing).
@@ -51,6 +52,16 @@ After installing `gh`, sign in once with `gh auth login`. Mono for Windows does 
 ./kingmaker-gamepad-camera-rotation/build.sh --install  # build and copy into the game's mods folder; the game must be closed
 ```
 
+**Mods for both games.** A mod whose `build.sh` sets `GAMES="kingmaker wotr"` instead of `GAME=` ([Level 1 Companions & Free Respec](level1-companions)) is built from one set of sources for each game:
+
+```bash
+./level1-companions/build.sh                              # every game in turn: build/kingmaker/, build/wotr/
+./level1-companions/build.sh --game wotr                  # one game only
+./level1-companions/build.sh --game kingmaker --install   # build and install into one game
+```
+
+The compiler gets `-define:KINGMAKER` or `-define:WOTR`; `src/*.cs` are shared, `src/kingmaker/` and `src/wotr/` are compiled for that game only. The game's assemblies go to `refs/<game>/`, so both games must be installed with UMM on the game machine for the full build. Without `--game`, `--fetch` and `--install` apply to every game.
+
 All mods share [`build-mod.sh`](build-mod.sh). It finds the game through these variables:
 
 | Variable | Meaning | Default |
@@ -69,6 +80,7 @@ On Windows the game is usually under `C:/Program Files (x86)/Steam/steamapps/com
 
 - `git config core.filemode false` in each clone. Windows has no executable bit, so otherwise git shows every `.sh` file as modified. The setting lives in `.git/config`: copying `.git` from another machine brings back the old value, so set it again.
 - `local.env` copied from another machine keeps that machine's `DECK` and game paths; check it.
+- Line endings. Git for Windows checks text files out with CRLF (`core.autocrlf=true` by default), and Bash fails on a script with CRLF (`$'\r': command not found`). `.gitattributes` keeps `*.sh` in LF on every machine; a clone made before it appeared needs one refresh: `git ls-files -z '*.sh' | xargs -0 rm && git checkout -- '*.sh'` in Git Bash. `release.sh` strips `\r` when it reads `Info.json` and `build.sh`, so CRLF there does no harm.
 
 ## Releasing
 
@@ -77,6 +89,8 @@ On Windows the game is usually under `C:/Program Files (x86)/Steam/steamapps/com
 ./release.sh kingmaker-gamepad-camera-rotation --publish    # the same, then tag and publish a GitHub release
 ./release.sh wotr-portrait-scroll-fix --publish --notes notes.md
 ```
+
+A mod for both games is packed into one zip per game, `dist/<ModId>-<version>-kingmaker.zip` and `dist/<ModId>-<version>-wotr.zip`, attached to the same release (tag `level1-companions-v1.0.0`).
 
 The version comes from the mod's `Info.json`; bump it before publishing, the script refuses to publish a version that is already released, uncommitted changes or an unpushed `main`. The tag is the folder name without the game prefix, e.g. `gamepad-camera-rotation-v1.1.0`. Publishing needs the [GitHub CLI](https://cli.github.com/) (`gh auth login`). `dist/` is not tracked by git.
 
