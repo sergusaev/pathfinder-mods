@@ -10,7 +10,7 @@
 #   --fetch    copy the game's managed assemblies and UMM into ./refs (done automatically when refs is empty)
 #   --install  copy Info.json and the DLL into the game's mods folder (the game must be closed)
 #
-# Sources: src/*.cs, plus src/<game>/*.cs for code of one game only. The compiler gets -define:KINGMAKER or
+# Sources: src/*.cs, plus src/<game>/*.cs for code of one game only, plus ../shared/*.cs for code of every mod. The compiler gets -define:KINGMAKER or
 # -define:WOTR, so shared files can use #if KINGMAKER / #if WOTR. A mod with GAMES keeps refs and build output
 # per game: refs/<game>/, build/<game>/.
 #
@@ -101,7 +101,7 @@ mkdir -p "$OUT"
 } > "$OUT/refs.rsp"
 
 SOURCES=()
-for f in "$HERE"/src/*.cs "$HERE/src/$GAME"/*.cs; do [ -f "$f" ] && SOURCES+=("$(winpath "$f")"); done
+for f in "$HERE"/src/*.cs "$HERE/src/$GAME"/*.cs "$ROOT"/shared/*.cs; do [ -f "$f" ] && SOURCES+=("$(winpath "$f")"); done
 RES=()
 for r in ${RESOURCES[@]+"${RESOURCES[@]}"}; do RES+=("-resource:$(winpath "$HERE/${r%%,*}"),${r#*,}"); done
 mcs -target:library -nostdlib -define:"$DEFINE" -out:"$(winpath "$OUT/$MOD_DLL.dll")" @"$(winpath "$OUT/refs.rsp")" ${RES[@]+"${RES[@]}"} "${SOURCES[@]}"
