@@ -1,0 +1,800 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using Kingmaker;
+using Kingmaker.Blueprints.Console;
+using Kingmaker.Kingdom;
+using Kingmaker.UI;
+using TMPro;
+using UnityEngine;
+using UnityEngine.EventSystems;
+
+namespace TimeControl
+{
+    // A message with up to two actions: the result of a coefficient change, the confirmation of a skip.
+    class MessageWindow : Modal
+    {
+        const int VisibleLines = 18;
+
+        List<string> m_Lines;
+        int m_Offset;
+        TextMeshProUGUI m_Body;
+        Action m_Confirm;
+        Action m_Alt;
+
+        internal static void Show(string title, List<string> lines, string confirmLabel, Action confirm, string altLabel = null, Action alt = null)
+        {
+            var w = Create<MessageWindow>("Message", 980, title, 32300);
+            w.m_Lines = lines;
+            w.m_Confirm = confirm;
+            w.m_Alt = alt;
+            w.m_Body = Ui.Text(w.Panel, "", 21, Theme.Text);
+            w.m_Body.lineSpacing = 4;
+            var hints = new List<Hint>();
+            if (confirm != null) hints.Add(new Hint(RewiredActionType.Confirm, confirmLabel));
+            if (alt != null) hints.Add(new Hint(RewiredActionType.Func02, altLabel));
+            hints.Add(new Hint(RewiredActionType.Decline, confirm != null ? S.HCancel : S.HOk));
+            w.SetHints(hints.ToArray());
+            w.Render();
+            w.Show();
+            Ui.Sound(UISoundType.NewInformation);
+        }
+
+        void Render()
+        {
+            var shown = m_Lines.Skip(m_Offset).Take(VisibleLines).ToList();
+            string text = string.Join("\n", shown.ToArray());
+            if (m_Offset > 0) text = "<color=" + Theme.Muted + ">▲</color>\n" + text;
+            if (m_Offset + VisibleLines < m_Lines.Count) text += "\n<color=" + Theme.Muted + ">" + string.Format(S.More, m_Lines.Count - m_Offset - VisibleLines) + " ▼</color>";
+            m_Body.text = text;
+        }
+
+        protected override void OnConfirm()
+        {
+            var action = m_Confirm;
+            Close();
+            if (action != null) action();
+        }
+
+        protected override void OnFuncY()
+        {
+            var action = m_Alt;
+            if (action == null) return;
+            Close();
+            action();
+        }
+
+        protected override void OnMove(int direction)
+        {
+            int next = Mathf.Clamp(m_Offset + direction, 0, Math.Max(0, m_Lines.Count - VisibleLines));
+            if (next == m_Offset) return;
+            m_Offset = next;
+            Render();
+        }
+
+        protected override void OnWheel(float y)
+        {
+            if (Mathf.Abs(y) > 0.01f) OnMove(y > 0 ? -3 : 3);
+        }
+    }
+
+    // The alert of a tracked deadline: a sheet in the look of the game's notes, the game paused under it.
+    class AlertWindow : Modal
+    {
+        static AlertWindow s_Instance;
+        readonly List<Alert> m_Alerts = new List<Alert>();
+        TextMeshProUGUI m_Body;
+
+        internal static void Show(List<Alert> alerts)
+        {
+            if (s_Instance == null)
+            {
+                s_Instance = Create<AlertWindow>("Alert", 900, S.AlertTitle, 32200);
+                s_Instance.m_Body = Ui.Text(s_Instance.Panel, "", 23, Theme.Text);
+                s_Instance.m_Body.lineSpacing = 6;
+                s_Instance.m_Alerts.AddRange(alerts);
+                s_Instance.Render();
+                s_Instance.Show();
+            }
+            else
+            {
+                s_Instance.m_Alerts.AddRange(alerts);
+                s_Instance.Render();
+            }
+            Ui.Sound(UISoundType.NewInformation);
+        }
+
+        protected override bool PausesGame
+        {
+            get { return Main.Settings.PauseOnAlert; }
+        }
+
+        Alert Single
+        {
+            get { return m_Alerts.Count == 1 && !m_Alerts[0].Final && Tracker.IsTracked(m_Alerts[0].Key) ? m_Alerts[0] : null; }
+        }
+
+        void Render()
+        {
+            var shown = m_Alerts.Skip(Math.Max(0, m_Alerts.Count - 12)).Select(a => "• " + a.Text).ToList();
+            shown.Insert(0, "<color=" + Theme.Muted + ">" + string.Format(S.Today, Timers.Date(Game.Instance.Player.GameTime)) + "</color>");
+            m_Body.text = string.Join("\n", shown.ToArray());
+            var hints = new List<Hint> { new Hint(RewiredActionType.Confirm, S.HOk), new Hint(RewiredActionType.Func01, S.HOpen) };
+            if (Single != null) hints.Add(new Hint(RewiredActionType.Func02, S.HUntrack));
+            SetHints(hints.ToArray());
+        }
+
+        protected override void OnConfirm()
+        {
+            Ui.Sound(UISoundType.ButtonClick);
+            Close();
+        }
+
+        protected override void OnFuncX()
+        {
+            Close();
+            TimersWindow.Open(1);
+        }
+
+        protected override void OnFuncY()
+        {
+            var single = Single;
+            if (single == null) return;
+            Tracker.Untrack(single.Key);
+            Close();
+        }
+
+        protected override void OnClosed()
+        {
+            if (s_Instance == this) s_Instance = null;
+        }
+    }
+
+    // The deadlines window: all countdowns, the tracked ones, the coefficients and the skip; and the tracking setup.
+    class TimersWindow : Modal
+    {
+        enum Page { Timers, Tracked, Time, Setup }
+
+        class Item
+        {
+            public string Text;
+            public string Right;
+            public string Detail;
+            public GameTimer Timer;
+            public bool Header;
+            public Action Confirm;
+            public Action<int> Change;
+        }
+
+        const int VisibleRows = 13;
+        static TimersWindow s_Instance;
+
+        Page m_Page;
+        Page m_SetupBack;
+        string m_SetupKey;
+        int m_Cursor;
+        int m_Top;
+        List<Item> m_Items = new List<Item>();
+        readonly List<Row> m_Rows = new List<Row>();
+        TextMeshProUGUI m_Tabs;
+        TextMeshProUGUI m_Date;
+        TextMeshProUGUI m_Detail;
+        TextMeshProUGUI m_Note;
+        readonly float[] m_Pending = new float[8];
+        int m_SpanDays = 1;
+        int m_SpanHours;
+        float m_NextRefresh;
+
+        internal static bool IsOpen
+        {
+            get { return s_Instance != null; }
+        }
+
+        internal static void Toggle()
+        {
+            if (s_Instance != null) s_Instance.Close();
+            else Open(0);
+        }
+
+        internal static void Open(int page)
+        {
+            if (!Main.InGame) return;
+            if (s_Instance == null)
+            {
+                Tracker.Scan();
+                var w = Create<TimersWindow>("Timers", 1280, S.WindowTitle, 32100);
+                w.Build();
+                s_Instance = w;
+                for (int i = 0; i < 8; i++) w.m_Pending[i] = Main.GetFactor(i);
+                w.Show();
+                Ui.Sound(UISoundType.JournalOpen);
+            }
+            s_Instance.Go((Page)page);
+        }
+
+        void Build()
+        {
+            m_Tabs = Ui.Text(Panel, "", 22, Theme.Text);
+            m_Tabs.alignment = TextAlignmentOptions.Center;
+            m_Tabs.raycastTarget = true;
+            Ui.AddPointer(m_Tabs.gameObject).Click = ClickTabs;
+            m_Date = Ui.Text(Panel, "", 19, Theme.Dim);
+            m_Date.alignment = TextAlignmentOptions.Center;
+            var list = Ui.Vertical(Panel, "Rows", 4);
+            for (int i = 0; i < VisibleRows; i++)
+            {
+                int at = i;
+                var row = MakeRow(list.transform, 20);
+                row.Pointer.Click = e => ClickRow(at, e);
+                row.Pointer.Live = () => m_Top + at < m_Items.Count && !m_Items[m_Top + at].Header;
+                m_Rows.Add(row);
+            }
+            m_Detail = Ui.Text(Panel, "", 19, Theme.Dim);
+            m_Detail.gameObject.AddComponent<UnityEngine.UI.LayoutElement>().minHeight = 52;
+            m_Note = Ui.Text(Panel, "", 18, Theme.Dim);
+        }
+
+        protected override void OnClosed()
+        {
+            if (s_Instance == this) s_Instance = null;
+        }
+
+        void Go(Page page)
+        {
+            m_Page = page;
+            m_Cursor = 0;
+            m_Top = 0;
+            Rebuild();
+            PageHints();
+            MoveTo(0, 1);
+            Ui.Sound(UISoundType.BookPageTurn);
+        }
+
+        static string TabName(int page)
+        {
+            switch ((page % 3 + 3) % 3)
+            {
+                case 0: return S.TabTimers;
+                case 1: return S.TabTracked;
+                default: return S.TabTime;
+            }
+        }
+
+        // LB and RB are named after the tabs they lead to.
+        void PageHints()
+        {
+            int p = (int)m_Page;
+            var prev = new Hint(RewiredActionType.LeftUp, TabName(p - 1));
+            var next = new Hint(RewiredActionType.RightUp, TabName(p + 1));
+            var close = new Hint(RewiredActionType.Decline, S.HClose);
+            switch (m_Page)
+            {
+                case Page.Timers:
+                    SetHints(new Hint(RewiredActionType.DPadVertical, S.HSelect), new Hint(RewiredActionType.Confirm, S.HTrack),
+                        new Hint(RewiredActionType.Func01, S.HSetup),
+                        new Hint(RewiredActionType.Func02, Main.Settings.ShowHidden ? S.HHiddenOff : S.HHiddenOn), prev, next, close);
+                    break;
+                case Page.Tracked:
+                    SetHints(new Hint(RewiredActionType.DPadVertical, S.HSelect), new Hint(RewiredActionType.Confirm, S.HSetup),
+                        new Hint(RewiredActionType.Func02, S.HUntrack), prev, next, close);
+                    break;
+                case Page.Time:
+                    SetHints(new Hint(RewiredActionType.DPadVertical, S.HSelect), new Hint(RewiredActionType.DPadHorizontal, S.HChange),
+                        new Hint(RewiredActionType.Confirm, S.HDo), prev, next, close);
+                    break;
+                case Page.Setup:
+                    SetHints(new Hint(RewiredActionType.DPadVertical, S.HSelect), new Hint(RewiredActionType.DPadHorizontal, S.HChange),
+                        new Hint(RewiredActionType.Confirm, S.HToggle), new Hint(RewiredActionType.Decline, S.HBack));
+                    break;
+            }
+        }
+
+        // The tracking of a timer in short: its alerts and the own deadline.
+        static string AlertsShort(GameTimer t)
+        {
+            var tracked = Tracker.Get(t.Key);
+            if (tracked == null) return "";
+            string alerts = tracked.Alerts.Count == 0 ? S.AlertsNone
+                : string.Format(S.AlertsList, string.Join(", ", tracked.Alerts.OrderByDescending(a => a).Select(a => S.Offset(a)).ToArray()));
+            if (tracked.DeadlineHours > 0) alerts += "; " + string.Format(S.SetupDeadline, S.Span(tracked.DeadlineHours)).ToLowerInvariant();
+            return alerts;
+        }
+
+        // ---------- items ----------
+
+        void Rebuild()
+        {
+            m_Items = new List<Item>();
+            switch (m_Page)
+            {
+                case Page.Timers: TimerItems(false); break;
+                case Page.Tracked: TimerItems(true); break;
+                case Page.Time: TimeItems(); break;
+                case Page.Setup: SetupItems(); break;
+            }
+            Render();
+        }
+
+        string Tags(GameTimer t)
+        {
+            var tags = new List<string>();
+            if (t.Critical) tags.Add("<color=" + Theme.Bad + ">" + S.Critical + "</color>");
+            if (t.Hidden) tags.Add("<color=" + Theme.Note + ">" + S.Hidden + "</color>");
+            if (Tracker.IsTracked(t.Key)) tags.Add("<color=" + Theme.Good + ">" + S.TrackedMark + "</color>");
+            return tags.Count == 0 ? "" : "  <size=17>(" + string.Join(", ", tags.ToArray()) + ")</size>";
+        }
+
+        string TimerDetail(GameTimer t)
+        {
+            var lines = new List<string> { "<color=" + (t.Critical ? Theme.Bad : Theme.Accent) + ">" + t.Name + "</color>. " + string.Format(S.DueDate, Timers.Date(t.Due)) };
+            var tracked = Tracker.Get(t.Key);
+            if (tracked != null)
+            {
+                string deadline = tracked.DeadlineHours > 0
+                    ? string.Format(S.Deadline, S.Span(tracked.DeadlineHours), Timers.Date(t.Due - TimeSpan.FromHours(tracked.DeadlineHours)))
+                    : S.DeadlineSame;
+                string alerts = tracked.Alerts.Count == 0 ? S.AlertsNone
+                    : string.Format(S.AlertsList, string.Join(", ", tracked.Alerts.OrderByDescending(a => a).Select(a => S.Offset(a)).ToArray()));
+                lines.Add(deadline + ". " + alerts + ".");
+            }
+            var notes = new List<string>();
+            if (t.Critical) notes.Add(S.CriticalNote);
+            if (t.Hidden) notes.Add(S.HiddenNote);
+            if (t.Kingdom) notes.Add(S.AffectedNote);
+            if (notes.Count > 0) lines.Add(string.Join(" ", notes.ToArray()));
+            return string.Join("\n", lines.ToArray());
+        }
+
+        void TimerItems(bool trackedOnly)
+        {
+            foreach (var t in Tracker.Current)
+            {
+                if (t.Remaining <= TimeSpan.Zero) continue;
+                bool tracked = Tracker.IsTracked(t.Key);
+                if (trackedOnly ? !tracked : (t.Hidden && !Main.Settings.ShowHidden && !tracked)) continue;
+                var timer = t;
+                m_Items.Add(new Item
+                {
+                    Text = t.Line + (t.Hidden ? "  <size=17><color=" + Theme.Note + ">(" + S.Hidden + ")</color></size>" : ""),
+                    Right = Timers.Date(t.Due),
+                    Detail = AlertsShort(t),
+                    Timer = t,
+                    Confirm = trackedOnly ? (Action)(() => OpenSetup(timer)) : () => ToggleTrack(timer)
+                });
+            }
+            m_Note.text = "";
+            if (m_Items.Count == 0)
+                m_Items.Add(new Item { Text = "<color=" + Theme.Muted + ">" + (trackedOnly ? S.EmptyTracked : S.Empty) + "</color>", Header = true });
+        }
+
+        static readonly string[] CoefNotes = { null, null, null, null, null, "building", "travel", "rest" };
+
+        void TimeItems()
+        {
+            m_Note.text = S.MouseNote;
+            m_Items.Add(new Item { Text = "<color=" + Theme.Accent + ">" + string.Format(S.Section, S.SecCoef) + "</color>", Header = true });
+            string[] names = { S.CoefEvents, S.CoefProjects, S.CoefClaim, S.CoefRankup, S.CoefRuler, S.CoefBuilding, S.CoefTravel, S.CoefRest };
+            for (int i = 0; i < 8; i++)
+            {
+                int at = i;
+                float now = Main.GetFactor(i);
+                string value = "<b>" + Factors.Text(m_Pending[i]) + "</b>";
+                if (!Mathf.Approximately(now, m_Pending[i])) value = string.Format(S.Pending, value, Factors.Text(now));
+                string note = S.CoefNote;
+                if (CoefNotes[i] == "building") note += " " + S.BuildingNote;
+                if (CoefNotes[i] == "travel") note = S.TravelNote + " " + S.CoefNote;
+                if (CoefNotes[i] == "rest") note = S.RestNote + " " + S.CoefNote;
+                m_Items.Add(new Item { Text = names[i], Right = "-   " + value + "   +", Detail = note, Change = d => StepFactor(at, d) });
+            }
+            bool pending = Enumerable.Range(0, 8).Any(i => !Mathf.Approximately(Main.GetFactor(i), m_Pending[i]));
+            m_Items.Add(new Item { Text = (pending ? "<b>" : "") + S.Apply + (pending ? "</b>" : ""), Detail = S.CoefNote, Confirm = ApplyFactors });
+            m_Items.Add(new Item
+            {
+                Text = S.Reset,
+                Confirm = () =>
+                {
+                    for (int i = 0; i < 8; i++) m_Pending[i] = 1f;
+                    Rebuild();
+                }
+            });
+            m_Items.Add(new Item { Text = "<color=" + Theme.Accent + ">" + string.Format(S.Section, S.SecSpan) + "</color>", Header = true });
+            int hours = m_SpanDays * 24 + m_SpanHours;
+            string after = Timers.Date(Game.Instance.Player.GameTime + TimeSpan.FromHours(hours));
+            m_Items.Add(new Item { Text = S.SpanDays, Right = "-   <b>" + S.Days(m_SpanDays) + "</b>   +", Detail = after, Change = d => { m_SpanDays = Mathf.Clamp(m_SpanDays + d, 0, 365); Rebuild(); } });
+            m_Items.Add(new Item { Text = S.SpanHours, Right = "-   <b>" + S.Hours(m_SpanHours) + "</b>   +", Detail = after, Change = d => { m_SpanHours = (m_SpanHours + d + 24) % 24; Rebuild(); } });
+            m_Items.Add(new Item { Text = S.SkipRow + " (" + S.Span(hours) + ")", Detail = after, Confirm = AskSkip });
+            string before = Timers.Date(Game.Instance.Player.GameTime - TimeSpan.FromHours(Math.Min(hours, Rewinder.MaxHours)));
+            m_Items.Add(new Item { Text = S.RewindRow + " (" + S.Span(hours) + ")", Detail = before, Confirm = AskRewind });
+            m_Items.Add(new Item { Text = S.ReminderRow + " (" + S.Span(hours) + ")", Detail = after, Confirm = AddReminder });
+        }
+
+        void SetupItems()
+        {
+            m_Note.text = "";
+            var tracked = Tracker.Get(m_SetupKey);
+            var timer = Tracker.Current.FirstOrDefault(t => t.Key == m_SetupKey);
+            if (tracked == null || timer == null)
+            {
+                m_Items.Add(new Item { Text = "<color=" + Theme.Muted + ">" + S.EmptyTracked + "</color>", Header = true });
+                return;
+            }
+            m_Items.Add(new Item { Text = "<b>" + timer.Line + "</b>", Detail = TimerDetail(timer), Header = true });
+            string deadline = tracked.DeadlineHours > 0 ? string.Format(S.SetupDeadline, S.Span(tracked.DeadlineHours)) : S.SetupDeadlineZero;
+            m_Items.Add(new Item
+            {
+                Text = deadline,
+                Right = "-   +",
+                Detail = TimerDetail(timer),
+                Change = d =>
+                {
+                    int i = Array.IndexOf(Tracker.DeadlinePresets, tracked.DeadlineHours);
+                    if (i < 0) i = 0;
+                    i = Mathf.Clamp(i + d, 0, Tracker.DeadlinePresets.Length - 1);
+                    tracked.DeadlineHours = Tracker.DeadlinePresets[i];
+                    Tracker.Changed(tracked);
+                    Rebuild();
+                }
+            });
+            foreach (int preset in Tracker.AlertPresets)
+            {
+                int a = preset;
+                bool on = tracked.Alerts.Contains(a);
+                m_Items.Add(new Item
+                {
+                    Text = (on ? "<color=" + Theme.Good + ">☑</color> " : "<color=" + Theme.Muted + ">☐</color> ") + string.Format(S.SetupAlert, S.Offset(a)),
+                    Detail = TimerDetail(timer),
+                    Confirm = () =>
+                    {
+                        if (tracked.Alerts.Contains(a)) tracked.Alerts.Remove(a);
+                        else tracked.Alerts.Add(a);
+                        Tracker.Changed(tracked);
+                        Rebuild();
+                    }
+                });
+            }
+            m_Items.Add(new Item
+            {
+                Text = "<color=" + Theme.Bad + ">" + S.SetupStop + "</color>",
+                Confirm = () =>
+                {
+                    Tracker.Untrack(m_SetupKey);
+                    Go(m_SetupBack);
+                }
+            });
+        }
+
+        // ---------- actions ----------
+
+        void ToggleTrack(GameTimer t)
+        {
+            if (Tracker.IsTracked(t.Key)) Tracker.Untrack(t.Key);
+            else Tracker.Add(t, false);
+            Ui.Sound(UISoundType.ButtonClick);
+            Rebuild();
+        }
+
+        void OpenSetup(GameTimer t)
+        {
+            if (!Tracker.IsTracked(t.Key)) Tracker.Add(t, false);
+            m_SetupBack = m_Page == Page.Setup ? m_SetupBack : m_Page;
+            m_SetupKey = t.Key;
+            SetTitle(S.TabSetup);
+            Go(Page.Setup);
+            MoveTo(1, 1);
+        }
+
+        void StepFactor(int i, int d)
+        {
+            float v = m_Pending[i];
+            float step = (d > 0 ? v >= 2f : v > 2f) ? 0.25f : (d > 0 ? v >= 1f : v > 1f) ? 0.1f : 0.05f;
+            m_Pending[i] = Factors.Clamp((float)Math.Round((v + d * step) / step) * step);
+            Rebuild();
+        }
+
+        void ApplyFactors()
+        {
+            Factors.ApplyAndReport((float[])m_Pending.Clone());
+            Tracker.Scan();
+            Rebuild();
+        }
+
+        int SpanHours
+        {
+            get { return m_SpanDays * 24 + m_SpanHours; }
+        }
+
+        void AskSkip()
+        {
+            int hours = SpanHours;
+            if (hours <= 0)
+            {
+                MessageWindow.Show(S.SkipTitle, new List<string> { S.SkipZero }, null, null);
+                return;
+            }
+            if (!Skipper.CanSkipNow)
+            {
+                MessageWindow.Show(S.SkipTitle, new List<string> { S.SkipNotNow }, null, null);
+                return;
+            }
+            var plan = Skipper.Check(hours);
+            var lines = new List<string>();
+            if (!plan.Allowed)
+            {
+                lines.Add(string.Format(S.SkipBlocked, S.Span(hours)));
+                lines.Add("");
+                lines.AddRange(plan.Blockers.Select(b => "<color=" + Theme.Bad + ">• " + b + "</color>"));
+                lines.Add("");
+                lines.Add(plan.MaxSafeHours > 0 ? string.Format(S.SkipMax, S.Span(plan.MaxSafeHours)) : S.SkipNoMax);
+                int safe = plan.MaxSafeHours;
+                if (safe > 0) MessageWindow.Show(S.SkipTitle, lines, string.Format(S.HSkipMax, S.Span(safe)), () => DoSkip(safe));
+                else MessageWindow.Show(S.SkipTitle, lines, null, null);
+                return;
+            }
+            lines.Add(string.Format(S.SkipAsk, S.Span(hours), Timers.Date(Game.Instance.Player.GameTime + TimeSpan.FromHours(hours))));
+            lines.Add("");
+            if (plan.Passed.Count == 0) lines.Add(S.SkipNothing);
+            else
+            {
+                lines.Add(S.SkipWillHappen);
+                lines.AddRange(plan.Passed.Select(t => "• " + t.Name + " — " + Timers.Date(t.Due) + Tags(t)));
+            }
+            MessageWindow.Show(S.SkipTitle, lines, S.HSkip, () => DoSkip(hours));
+        }
+
+        void AskRewind()
+        {
+            int hours = SpanHours;
+            if (hours <= 0)
+            {
+                MessageWindow.Show(S.RewindTitle, new List<string> { S.SkipZero }, null, null);
+                return;
+            }
+            if (!Skipper.CanSkipNow)
+            {
+                MessageWindow.Show(S.RewindTitle, new List<string> { S.SkipNotNow }, null, null);
+                return;
+            }
+            var lines = new List<string>();
+            int max = Rewinder.MaxHours;
+            if (hours > max)
+            {
+                lines.Add(string.Format(S.RewindLimit, S.Span(max)));
+                lines.Add("");
+                hours = max;
+                if (hours <= 0)
+                {
+                    MessageWindow.Show(S.RewindTitle, lines, null, null);
+                    return;
+                }
+            }
+            TimeSpan now = Game.Instance.Player.GameTime;
+            TimeSpan then = now - TimeSpan.FromHours(hours);
+            TimeSpan delta = TimeSpan.FromHours(hours);
+            lines.Add(string.Format(S.RewindAsk, S.Span(hours), Timers.Date(then)));
+            lines.Add("");
+            var shown = Tracker.Current.Where(t => t.Remaining > TimeSpan.Zero)
+                .OrderByDescending(t => Tracker.IsTracked(t.Key) || t.Critical).ThenBy(t => t.Due).Take(12).ToList();
+            if (shown.Count > 0)
+            {
+                lines.Add(string.Format(S.RewindLonger, S.Span(hours)));
+                foreach (var t in shown)
+                    lines.Add(string.Format(S.RewindLine, t.Short, Timers.Period(t.Remaining), Timers.Period(t.Remaining + delta)));
+                lines.Add("");
+            }
+            int waits = Rewinder.KingdomWaitsUntil(then);
+            if (waits >= 0)
+            {
+                lines.Add(string.Format(S.RewindKingdom, Timers.Date(TimeSpan.FromDays(KingdomState.Instance.StartDay + waits))));
+                lines.Add("");
+            }
+            lines.Add(S.RewindPast);
+            lines.Add(S.RewindUnits);
+            int span = hours;
+            MessageWindow.Show(S.RewindTitle, lines, S.HRewind, () => DoRewind(span));
+        }
+
+        void DoRewind(int hours)
+        {
+            Rewinder.Run(hours);
+            Rebuild();
+            MessageWindow.Show(S.RewindTitle, new List<string> { string.Format(S.RewindDone, S.Span(hours), Timers.Date(Game.Instance.Player.GameTime)) }, null, null);
+        }
+
+        void DoSkip(int hours)
+        {
+            Skipper.Run(hours);
+            Rebuild();
+            MessageWindow.Show(S.SkipTitle, new List<string> { string.Format(S.SkipDone, S.Span(hours), Timers.Date(Game.Instance.Player.GameTime)) }, null, null);
+        }
+
+        void AddReminder()
+        {
+            int hours = SpanHours;
+            if (hours <= 0)
+            {
+                MessageWindow.Show(S.SkipTitle, new List<string> { S.SkipZero }, null, null);
+                return;
+            }
+            string name = Tracker.AddReminder(hours);
+            Ui.Sound(UISoundType.ButtonClick);
+            Rebuild();
+            MessageWindow.Show(S.WindowTitle, new List<string> { string.Format(S.ReminderAdded, name, Timers.Date(Game.Instance.Player.GameTime + TimeSpan.FromHours(hours))) }, null, null);
+        }
+
+        // ---------- input ----------
+
+        Item Selected
+        {
+            get { return m_Cursor >= 0 && m_Cursor < m_Items.Count ? m_Items[m_Cursor] : null; }
+        }
+
+        protected override void OnConfirm()
+        {
+            var item = Selected;
+            if (item == null || item.Header) return;
+            if (item.Confirm != null) item.Confirm();
+            else if (item.Change != null) item.Change(1);
+        }
+
+        protected override void OnDecline()
+        {
+            if (m_Page == Page.Setup)
+            {
+                SetTitle(S.WindowTitle);
+                Go(m_SetupBack);
+                return;
+            }
+            base.OnDecline();
+        }
+
+        protected override void OnFuncX()
+        {
+            var item = Selected;
+            if (m_Page == Page.Timers && item != null && item.Timer != null) OpenSetup(item.Timer);
+        }
+
+        protected override void OnFuncY()
+        {
+            var item = Selected;
+            if (m_Page == Page.Timers)
+            {
+                Main.Settings.ShowHidden = !Main.Settings.ShowHidden;
+                Main.Settings.Save(Main.Mod);
+                Rebuild();
+                PageHints();
+            }
+            else if (m_Page == Page.Tracked && item != null && item.Timer != null)
+            {
+                Tracker.Untrack(item.Timer.Key);
+                Rebuild();
+                MoveTo(m_Cursor, 1);
+            }
+        }
+
+        protected override void OnShoulder(int direction)
+        {
+            if (m_Page == Page.Setup) return;
+            int next = ((int)m_Page + direction + 3) % 3;
+            Go((Page)next);
+        }
+
+        protected override void OnMove(int direction)
+        {
+            MoveTo(m_Cursor + direction, direction);
+        }
+
+        protected override void OnChange(int direction)
+        {
+            var item = Selected;
+            if (item != null && item.Change != null) item.Change(direction);
+        }
+
+        protected override void OnWheel(float y)
+        {
+            if (Mathf.Abs(y) < 0.01f) return;
+            int delta = y > 0 ? -3 : 3;
+            m_Top = Mathf.Clamp(m_Top + delta, 0, Math.Max(0, m_Items.Count - VisibleRows));
+            m_Cursor = Mathf.Clamp(m_Cursor, m_Top, Math.Min(m_Items.Count - 1, m_Top + VisibleRows - 1));
+            Render();
+        }
+
+        // To the nearest row that is not a header, in the given direction.
+        void MoveTo(int index, int direction)
+        {
+            if (m_Items.Count == 0) return;
+            index = Mathf.Clamp(index, 0, m_Items.Count - 1);
+            int start = index;
+            while (index >= 0 && index < m_Items.Count && m_Items[index].Header) index += direction >= 0 ? 1 : -1;
+            if (index < 0 || index >= m_Items.Count)
+            {
+                index = start;
+                while (index >= 0 && index < m_Items.Count && m_Items[index].Header) index += direction >= 0 ? -1 : 1;
+                if (index < 0 || index >= m_Items.Count) index = start;
+            }
+            m_Cursor = index;
+            if (m_Cursor < m_Top) m_Top = m_Cursor;
+            if (m_Cursor >= m_Top + VisibleRows) m_Top = m_Cursor - VisibleRows + 1;
+            // Headers above the first row stay in view.
+            if (m_Top > 0 && m_Items.Take(m_Top).All(i => i.Header)) m_Top = 0;
+            Render();
+        }
+
+        void ClickRow(int at, PointerEventData e)
+        {
+            int index = m_Top + at;
+            if (index >= m_Items.Count || m_Items[index].Header) return;
+            var item = m_Items[index];
+            if (item.Change != null)
+            {
+                m_Cursor = index;
+                Vector2 local;
+                var rect = (RectTransform)m_Rows[at].Bg.transform;
+                RectTransformUtility.ScreenPointToLocalPointInRectangle(rect, e.position, null, out local);
+                item.Change(local.x < rect.rect.center.x ? -1 : 1);
+                return;
+            }
+            if (index == m_Cursor) OnConfirm();
+            else
+            {
+                m_Cursor = index;
+                Render();
+            }
+        }
+
+        void ClickTabs(PointerEventData e)
+        {
+            if (m_Page == Page.Setup) return;
+            Vector2 local;
+            var rect = m_Tabs.rectTransform;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(rect, e.position, null, out local);
+            float x = (local.x - rect.rect.xMin) / Math.Max(1f, rect.rect.width);
+            Go(x < 0.4f ? Page.Timers : x < 0.6f ? Page.Tracked : Page.Time);
+        }
+
+        protected override void Tick()
+        {
+            // Time goes on while the window is open on the global map in a cutscene or after a skip: refresh the countdowns.
+            if (Time.unscaledTime < m_NextRefresh) return;
+            m_NextRefresh = Time.unscaledTime + 1f;
+            m_Date.text = string.Format(S.Today, Timers.Date(Game.Instance.Player.GameTime));
+        }
+
+        void Render()
+        {
+            string[] names = { S.TabTimers, S.TabTracked, S.TabTime };
+            if (m_Page == Page.Setup) m_Tabs.text = "<b>" + S.TabSetup + "</b>";
+            else
+            {
+                var parts = new List<string>();
+                for (int i = 0; i < 3; i++)
+                    parts.Add(i == (int)m_Page ? "<b><color=" + Theme.Accent + ">" + names[i] + "</color></b>" : "<color=" + Theme.Muted + ">" + names[i] + "</color>");
+                m_Tabs.text = string.Join("   ·   ", parts.ToArray());
+            }
+            m_Date.text = string.Format(S.Today, Timers.Date(Game.Instance.Player.GameTime));
+            for (int i = 0; i < VisibleRows; i++)
+            {
+                int index = m_Top + i;
+                var row = m_Rows[i];
+                // Empty rows stay in place, so the sheet keeps its size from page to page.
+                if (index >= m_Items.Count)
+                {
+                    row.Text.text = "";
+                    row.Right.text = "";
+                    row.Pointer.Normal = Color.clear;
+                    row.Pointer.Refresh();
+                    continue;
+                }
+                var item = m_Items[index];
+                row.Text.text = item.Text;
+                row.Right.text = item.Right ?? "";
+                row.Text.color = item.Header ? Theme.Dim : Theme.Text;
+                Paint(row, index == m_Cursor && !item.Header);
+            }
+            var selected = Selected;
+            m_Detail.text = selected != null && selected.Detail != null ? selected.Detail : "";
+            if (m_Items.Count > VisibleRows && (m_Page == Page.Time || m_Page == Page.Setup))
+                m_Detail.text += (m_Detail.text.Length > 0 ? "\n" : "") + "<color=" + Theme.Muted + ">" + (m_Top > 0 ? "▲ " : "") + (m_Top + 1) + "–" + Math.Min(m_Items.Count, m_Top + VisibleRows) + " / " + m_Items.Count + (m_Top + VisibleRows < m_Items.Count ? " ▼" : "") + "</color>";
+        }
+    }
+}

@@ -1,0 +1,11 @@
+{
+  "Id": "TimeControl",
+  "DisplayName": "Time Control and Deadlines",
+  "Author": "sergusaev",
+  "Version": "1.0.0",
+  "HomePage": "https://github.com/sergusaev/pathfinder-mods",
+  "ManagerVersion": "0.22.0",
+  "AssemblyName": "TimeControl.dll",
+  "EntryMethod": "TimeControl.Main.Load",
+  "Requirements": []
+}
