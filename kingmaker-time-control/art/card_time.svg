@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 105 133" width="420" height="532"><defs><mask id="m" maskUnits="userSpaceOnUse" x="0" y="0" width="105" height="133"><rect width="105" height="133" fill="#000"/>
+<g fill="#fff" transform="translate(0 12.56) scale(1 0.868)"><rect x="13" y="2" width="79" height="10" rx="2"/><rect x="13" y="121" width="79" height="10" rx="2"/>
+<path d="M21 12H84C84 52 63 62 58.5 66.5C63 71 84 81 84 121H21C21 81 42 71 46.5 66.5C42 62 21 52 21 12Z"/>
+</g><polygon fill="#fff" points="97.0,25.5 98.7,32.3 105.5,34.0 98.7,35.7 97.0,42.5 95.3,35.7 88.5,34.0 95.3,32.3"/>
+<g fill="#000" transform="translate(0 12.56) scale(1 0.868)"><path d="M31 21H74C72 40 62 49 52.5 57C43 49 33 40 31 21Z"/><path d="M30 112H75C73 98 64 89 52.5 83C41 89 32 98 30 112Z"/><rect x="51.0" y="57" width="3" height="26"/></g></mask></defs><rect width="105" height="133" fill="#d8b06a" mask="url(#m)"/></svg>

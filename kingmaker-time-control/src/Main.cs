@@ -62,6 +62,16 @@ namespace TimeControl
             modEntry.OnGUI = OnGUI;
             modEntry.OnSaveGUI = e => Settings.Save(e);
             modEntry.OnUpdate = OnUpdate;
+            MenuCards.Cards.Add(new MenuCard
+            {
+                Id = "TimeControl",
+                Title = () => S.WindowTitle,
+                Open = () => TimersWindow.Open(0),
+                BigResource = "TimeControl.card_time.png",
+                SmallResource = "TimeControl.card_time_small.png",
+                Tint = new Color32(0x5B, 0x6B, 0xB8, 255),
+                Menus = new[] { typeof(Kingmaker.UI._ConsoleUI.InGameMenu.InGameMenuView), typeof(Kingmaker.UI._ConsoleUI.InGameMenu.GlobalMapMenuView) }
+            });
             new Harmony(modEntry.Info.Id).PatchAll(typeof(Main).Assembly);
             return true;
         }
@@ -102,6 +112,7 @@ namespace TimeControl
             {
                 if (!InGame) return;
                 if (KeyPressed()) TimersWindow.Toggle();
+                MenuCards.Tick();
                 Tracker.Tick();
                 BarButton.Ensure();
             }

@@ -3,6 +3,7 @@
 #   MOD_DLL   assembly and Mods folder name, e.g. GamepadCameraRotation
 #   GAME      kingmaker | wotr, for a mod made for one game
 #   GAMES     "kingmaker wotr", for a mod built for both games from the same sources (instead of GAME)
+#   RESOURCES optional array of "path/in/mod,LogicalName" files embedded into the DLL
 #
 # Usage: ./build.sh [--game kingmaker|wotr] [--fetch] [--install]
 #   --game     for a mod with GAMES: build for this game only (without it, every game in GAMES is built in turn)
@@ -101,7 +102,9 @@ mkdir -p "$OUT"
 
 SOURCES=()
 for f in "$HERE"/src/*.cs "$HERE/src/$GAME"/*.cs; do [ -f "$f" ] && SOURCES+=("$(winpath "$f")"); done
-mcs -target:library -nostdlib -define:"$DEFINE" -out:"$(winpath "$OUT/$MOD_DLL.dll")" @"$(winpath "$OUT/refs.rsp")" "${SOURCES[@]}"
+RES=()
+for r in ${RESOURCES[@]+"${RESOURCES[@]}"}; do RES+=("-resource:$(winpath "$HERE/${r%%,*}"),${r#*,}"); done
+mcs -target:library -nostdlib -define:"$DEFINE" -out:"$(winpath "$OUT/$MOD_DLL.dll")" @"$(winpath "$OUT/refs.rsp")" ${RES[@]+"${RES[@]}"} "${SOURCES[@]}"
 cp "$HERE/Info.json" "$OUT/Info.json"
 echo "built: $OUT/$MOD_DLL.dll"
 
