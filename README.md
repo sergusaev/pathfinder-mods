@@ -6,6 +6,7 @@ Small [Unity Mod Manager](https://www.nexusmods.com/site/mods/21) mods that make
 
 | Mod | Game | What it does |
 |---|---|---|
+| [Belt Consumables Refill](belt-consumables-refill) | Kingmaker and Wrath of the Righteous | A used-up belt consumable is replaced from the party inventory and the belt slot shows how many are left; removes the "0 charges" item abilities left by the refill of Bag of Tricks / ToyBox |
 | [Camera Rotation and Compass](kingmaker-gamepad-camera-rotation) | Kingmaker | Gamepad: camera rotation and zoom with the right stick, the WotR compass instead of the hourglass, the WotR console layout for camera mode, turn-based mode and inspect. Keyboard and mouse: rotation with the middle mouse button and Alt+A / Alt+D, the compass in the clock |
 | [Custom Portraits Gamepad Selection Fix](kingmaker-custom-portraits-gamepad) | Kingmaker | Custom portraits from the `Portraits` folder appear in the gamepad character creation |
 | [Level 1 Companions & Free Respec](level1-companions) | Kingmaker and Wrath of the Righteous | Story companions join at level 1 and are leveled entirely by hand; a free respec button back to level 1 keeps the companion's name, voice and looks, and in WotR the respec window can be closed with levels left to spend. In WotR replaces lvl1companions |

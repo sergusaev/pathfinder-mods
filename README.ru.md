@@ -6,6 +6,7 @@
 
 | Мод | Игра | Что делает |
 |---|---|---|
+| [Belt Consumables Refill](belt-consumables-refill/README.ru.md) | Kingmaker и Wrath of the Righteous | Израсходованный расходник на поясе заменяется таким же из инвентаря партии, ячейка показывает остаток; убирает способности «Заряды: 0», оставленные автопополнением Bag of Tricks / ToyBox |
 | [Camera Rotation and Compass](kingmaker-gamepad-camera-rotation/README.ru.md) | Kingmaker | Геймпад: поворот и приближение камеры правым стиком, компас WotR вместо песочных часов, раскладка WotR для режима камеры, пошагового режима и осмотра. Клавиатура и мышь: поворот средней кнопкой мыши и Alt+A / Alt+D, компас в часах |
 | [Custom Portraits Gamepad Selection Fix](kingmaker-custom-portraits-gamepad/README.ru.md) | Kingmaker | Свои портреты из папки `Portraits` появляются при создании персонажа в режиме геймпада |
 | [Level 1 Companions & Free Respec](level1-companions/README.ru.md) | Kingmaker и Wrath of the Righteous | Сюжетные спутники вступают на 1-м уровне, дальше прокачка полностью ручная; бесплатная кнопка респека до 1-го уровня, имя, голос и внешность спутника сохраняются, а окно респека WotR можно закрыть с нераспределёнными уровнями. В WotR заменяет lvl1companions |
