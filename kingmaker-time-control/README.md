@@ -6,7 +6,7 @@ A Unity Mod Manager mod for Kingmaker that controls how game time passes and kee
 
 ## The Time and Deadlines window
 
-Opened with the hourglass button to the right of the Buff It 2 The Limit bar (keyboard and mouse mode; without that mod, at the bar's place above the game's menu buttons), with a hotkey (Alt+T by default, set in the UMM window) or with a button in the mod's UMM window. While it is open the game is paused and travel on the global map stops.
+Opened with the hourglass button to the right of the Buff It 2 The Limit bar (keyboard and mouse mode; without that mod, at the bar's place above the game's menu buttons), with the card of the game's gamepad menu (after the game's cards, on the local and the global map), with a hotkey (Alt+T by default, set in the UMM window) or with a button in the mod's UMM window. While it is open the game is paused and travel on the global map stops.
 
 Tabs switch with LB/RB (keyboard X/C or PageUp/PageDown, mouse: click the tab name).
 
