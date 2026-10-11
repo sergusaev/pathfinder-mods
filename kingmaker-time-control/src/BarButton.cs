@@ -10,24 +10,38 @@ using UnityEngine.UI;
 
 namespace TimeControl
 {
-    // Keyboard and mouse mode: a button with an hourglass in the look of the game's menu buttons, on the same frame as the
-    // quick cast bar of Buff It 2 The Limit and right next to it; without that bar, at the bar's place on top of the game's
-    // menu buttons. A click opens the deadlines window.
+    // Keyboard and mouse mode: a button with an hourglass in the look of the game's menu buttons, in the frame of the game's
+    // button sheet cut to this one button. It stands right of the quick cast bar of Buff It 2 The Limit, level with it;
+    // without that bar (or that mod), alone at the left edge of the screen on top of the game's menu buttons. A click opens
+    // the deadlines window.
     class BarButton : MonoBehaviour
     {
         const float ButtonSize = 48f;
+        // TBM_backButton as the buff bar uses it: its top 4.5 units are empty, so the frame goes that much down onto the
+        // game's sheet; the inner edge of its right side is 17.5 units in; its left end needs only its small ornament.
         const float FrameSink = 4.5f;
+        const int FrameLeft = 2;
         const int FrameRight = 18;
+        const int FrameTop = 18;
         const float FrameLeftBorder = 64f;
-        static readonly Vector2 FallbackPos = new Vector2(12f, 132f);
+        static readonly Vector2 FallbackPos = new Vector2(0f, 132f);
 
         static BarButton s_Instance;
+        static Sprite s_Frame;
+        static bool s_FrameFromHud;
+        float m_NextStyle;
         RectTransform m_Row;
         RectTransform m_Host;
         GameObject m_Tip;
+        bool m_TipPaper;
+        TextMeshProUGUI m_TipTitle;
         TextMeshProUGUI m_TipText;
+        CanvasGroup m_Group;
         float m_NextSearch;
         RectTransform m_BuffRow;
+        float m_NextBuffSearch;
+        float m_NextAnchorSearch;
+        float m_Size = ButtonSize;
         RectTransform m_Anchor;
         bool m_Styled;
 
@@ -56,7 +70,7 @@ namespace TimeControl
             m_Row.anchorMin = m_Row.anchorMax = m_Row.pivot = Vector2.zero;
             MakeFrame(m_Row);
             var layout = rowGo.AddComponent<HorizontalLayoutGroup>();
-            layout.padding = new RectOffset(2, FrameRight, 18, 0);
+            layout.padding = new RectOffset(FrameLeft, FrameRight, FrameTop, 0);
             layout.childControlWidth = false;
             layout.childControlHeight = false;
             layout.childForceExpandWidth = false;
@@ -64,10 +78,17 @@ namespace TimeControl
             var fitter = rowGo.AddComponent<ContentSizeFitter>();
             fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
             fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            m_Group = rowGo.AddComponent<CanvasGroup>();
             MakeButton();
+            MakeTip(transform);
+        }
 
+        // The tooltip on the game's parchment; made again once the parchment is loaded, if it was made before.
+        void MakeTip(Transform parent)
+        {
+            m_TipPaper = Theme.Paper;
             m_Tip = new GameObject("Tip", typeof(RectTransform));
-            m_Tip.transform.SetParent(transform, false);
+            m_Tip.transform.SetParent(parent, false);
             var tipRect = (RectTransform)m_Tip.transform;
             tipRect.anchorMin = tipRect.anchorMax = tipRect.pivot = Vector2.zero;
             var bg = m_Tip.AddComponent<Image>();
@@ -77,11 +98,18 @@ namespace TimeControl
             var tipFit = m_Tip.AddComponent<ContentSizeFitter>();
             tipFit.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
             tipFit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            // As the game's tooltips and the buff bar's: the title centred, the rule, then the deadlines.
+            m_TipTitle = Ui.Text(m_Tip.transform, "", 22, Theme.Title, FontStyles.Bold);
+            m_TipTitle.alignment = TextAlignmentOptions.Center;
+            m_TipTitle.enableWordWrapping = false;
+            Theme.Separator(m_Tip.transform);
             m_TipText = Ui.Text(m_Tip.transform, "", 18, Theme.Text);
             m_TipText.enableWordWrapping = false;
             m_Tip.SetActive(false);
         }
 
+        // The frame of the game's menu buttons cut to one button: the left end with its small ornament, the right end with its
+        // ornament and side, as narrow as the button between them allows (canvas units are pixels at 100 per unit).
         static void MakeFrame(RectTransform parent)
         {
             var go = new GameObject("Frame", typeof(RectTransform));
@@ -94,29 +122,61 @@ namespace TimeControl
             go.AddComponent<LayoutElement>().ignoreLayout = true;
             var image = go.AddComponent<Image>();
             image.raycastTarget = false;
-            var plate = Resources.FindObjectsOfTypeAll<Sprite>().FirstOrDefault(sp => sp.name == "TBM_backButton");
-            if (plate != null)
+            image.sprite = FrameSprite();
+            if (image.sprite != null) image.type = Image.Type.Tiled;
+            else image.color = new Color(0.06f, 0.05f, 0.04f, 0.75f);
+        }
+
+        // The frame sprite, kept for the session: the local map's HUD brings TBM_backButton and takes it away with it, the
+        // global map has only its own sheet (globalmap_leftbackmeny, the same frame), which serves until the HUD is seen.
+        static Sprite FrameSprite()
+        {
+            if (s_Frame != null && s_FrameFromHud) return s_Frame;
+            var sprites = Resources.FindObjectsOfTypeAll<Sprite>();
+            var plate = sprites.FirstOrDefault(sp => sp.name == "TBM_backButton");
+            bool hud = plate != null;
+            if (!hud && s_Frame != null) return s_Frame;
+            if (!hud) plate = sprites.FirstOrDefault(sp => sp.name == "globalmap_leftbackmeny");
+            if (plate == null) return null;
+            try
             {
-                try
-                {
-                    var border = plate.border;
-                    image.sprite = Sprite.Create(plate.texture, plate.textureRect, new Vector2(0.5f, 0.5f), plate.pixelsPerUnit, 0,
-                        SpriteMeshType.FullRect, new Vector4(FrameLeftBorder, 0, border.z, border.w));
-                    image.type = Image.Type.Tiled;
-                    var element = parent.GetComponent<LayoutElement>() ?? parent.gameObject.AddComponent<LayoutElement>();
-                    element.minWidth = (FrameLeftBorder + border.z) * 100f / plate.pixelsPerUnit;
-                }
-                catch (Exception)
-                {
-                    image.sprite = null;
-                }
+                var border = plate.border;
+                float width = (FrameLeft + ButtonSize + FrameRight) * plate.pixelsPerUnit / 100f;
+                float left = Mathf.Min(FrameLeftBorder, width / 2f);
+                float right = Mathf.Min(border.z, width - left);
+                s_Frame = Sprite.Create(plate.texture, plate.textureRect, new Vector2(0.5f, 0.5f), plate.pixelsPerUnit, 0,
+                    SpriteMeshType.FullRect, new Vector4(left, 0, right, border.w));
+                s_FrameFromHud = hud;
+                Main.Log("bar button: frame from " + plate.name + ", " + plate.textureRect.size + " border " + border + " ppu " + plate.pixelsPerUnit);
             }
-            if (image.sprite == null) image.color = new Color(0.06f, 0.05f, 0.04f, 0.75f);
+            catch (Exception e)
+            {
+                Main.Error(e, "bar button frame");
+            }
+            return s_Frame;
+        }
+
+        // The game's sprites come with its screens, not with the mod: until the button and the frame have their look, try
+        // again every second, on whichever map; a frame from the global map's sheet gives way to the HUD's when it comes.
+        void Restyle()
+        {
+            if (Time.unscaledTime < m_NextStyle) return;
+            m_NextStyle = Time.unscaledTime + (m_Styled ? 5f : 1f);
+            var frame = m_Row.Find("Frame");
+            var current = frame == null ? null : frame.GetComponent<Image>().sprite;
+            if (m_Styled && current != null && s_FrameFromHud && current == s_Frame) return;
+            ButtonStyle.Retry();
+            bool styled = ButtonStyle.Get(Hourglass.Texture, ButtonStyle.State.Normal) != null;
+            var sprite = FrameSprite();
+            if (styled == m_Styled && sprite == current) return;
+            for (int i = m_Row.childCount - 1; i >= 0; i--) DestroyImmediate(m_Row.GetChild(i).gameObject);
+            MakeFrame(m_Row);
+            MakeButton();
         }
 
         void MakeButton()
         {
-            var go = new GameObject("Button", typeof(RectTransform));
+            var go = new GameObject("TimeControl_Button", typeof(RectTransform));
             go.transform.SetParent(m_Row, false);
             ((RectTransform)go.transform).sizeDelta = new Vector2(ButtonSize, ButtonSize);
             var image = go.AddComponent<Image>();
@@ -126,6 +186,8 @@ namespace TimeControl
             m_Styled = normal != null;
             image.sprite = normal ?? Sprite.Create(icon, new Rect(0, 0, icon.width, icon.height), new Vector2(0.5f, 0.5f));
             var button = go.AddComponent<Button>();
+            // Not a keyboard target: a clicked button would stay selected, lit, and move with the arrow keys.
+            button.navigation = new Navigation { mode = Navigation.Mode.None };
             if (normal != null)
             {
                 button.transition = Selectable.Transition.SpriteSwap;
@@ -144,12 +206,22 @@ namespace TimeControl
 
         void ShowTip(RectTransform over)
         {
-            var lines = new List<string> { "<b>" + Theme.Initial(S.WindowTitle) + "</b>" };
+            if (m_TipPaper != Theme.Paper)
+            {
+                var parent = m_Tip.transform.parent;
+                DestroyImmediate(m_Tip);
+                MakeTip(parent);
+            }
+            string title = Theme.Initial(S.WindowTitle);
             string key = Main.Settings.Key == KeyCode.None ? "" : (Main.Settings.KeyCtrl ? "Ctrl+" : "") + (Main.Settings.KeyAlt ? "Alt+" : "") + (Main.Settings.KeyShift ? "Shift+" : "") + Main.Settings.Key;
-            if (key.Length > 0) lines[0] += "  <color=" + Theme.Muted + ">[" + key + "]</color>";
-            foreach (var t in Tracker.Current.Where(x => Tracker.IsTracked(x.Key) && x.Remaining > TimeSpan.Zero).Take(5))
-                lines.Add(t.Line);
-            m_TipText.text = string.Join("\n", lines.ToArray());
+            if (key.Length > 0) title += "  <size=18><color=" + Theme.Muted + ">[" + key + "]</color></size>";
+            m_TipTitle.text = title;
+            var lines = Tracker.Current.Where(x => Tracker.IsTracked(x.Key) && x.Remaining > TimeSpan.Zero).Take(5).Select(t => t.Line).ToArray();
+            m_TipText.text = string.Join("\n", lines);
+            // Without deadlines to show, only the title.
+            m_TipText.gameObject.SetActive(lines.Length > 0);
+            foreach (Transform child in m_Tip.transform)
+                if (child.name == "Separator" || child.name == "Rule") child.gameObject.SetActive(lines.Length > 0);
             m_Tip.SetActive(true);
             var tipRect = (RectTransform)m_Tip.transform;
             tipRect.anchoredPosition = new Vector2(m_Row.anchoredPosition.x + over.anchoredPosition.x - ButtonSize / 2, m_Row.anchoredPosition.y + m_Row.rect.height + 8f);
@@ -165,15 +237,30 @@ namespace TimeControl
                     Build();
                 }
                 Attach();
+                Restyle();
                 var game = Game.Instance;
-                bool show = Main.Settings.BarButton && Main.InGame && !game.IsControllerGamepad && !game.CutsceneLock && !Modal.AnyOpen
-                    && (game.CurrentMode == GameModeType.Default || game.CurrentMode == GameModeType.Pause || game.CurrentMode == GameModeType.GlobalMap);
+                bool show = Main.Settings.BarButton && Main.InGame && !game.IsControllerGamepad && !game.CutsceneLock
+                    && (game.CurrentMode == GameModeType.Default || game.CurrentMode == GameModeType.Pause || game.CurrentMode == GameModeType.GlobalMap
+                        || game.CurrentMode == GameModeType.EscMode);
                 if (m_Row.gameObject.activeSelf != show)
                 {
                     m_Row.gameObject.SetActive(show);
                     if (!show) m_Tip.SetActive(false);
                 }
-                if (show) m_Row.anchoredPosition = Position() + new Vector2(Main.Settings.BarOffsetX, Main.Settings.BarOffsetY);
+                // Under the Esc menu the button is seen, as the game's, but not pressed.
+                bool live = game.CurrentMode != GameModeType.EscMode;
+                if (m_Group.blocksRaycasts != live)
+                {
+                    m_Group.blocksRaycasts = m_Group.interactable = live;
+                    if (!live) m_Tip.SetActive(false);
+                }
+                if (show)
+                {
+                    m_Row.anchoredPosition = Position() + new Vector2(Main.Settings.BarOffsetX, Main.Settings.BarOffsetY);
+                    // As large as the game's buttons next to it: 48 on the local map, 56 on the global map.
+                    var button = m_Row.Find("TimeControl_Button") as RectTransform;
+                    if (button != null && button.sizeDelta.x != m_Size) button.sizeDelta = new Vector2(m_Size, m_Size);
+                }
             }
             catch (Exception e)
             {
@@ -198,60 +285,64 @@ namespace TimeControl
             m_Host.SetSiblingIndex(tooltips.GetSiblingIndex());
             m_Row.SetParent(m_Host, false);
             m_Tip.transform.SetParent(m_Host, false);
-            // The game's sprites came with the HUD: the frame and the button get their look now.
-            var frame = m_Row.Find("Frame");
-            if (!m_Styled || frame == null || frame.GetComponent<Image>().sprite == null)
-            {
-                ButtonStyle.Retry();
-                for (int i = m_Row.childCount - 1; i >= 0; i--) DestroyImmediate(m_Row.GetChild(i).gameObject);
-                MakeFrame(m_Row);
-                MakeButton();
-            }
         }
 
-        // Right after the buff bar when it is shown, otherwise where it would be: on top of the game's menu buttons.
+        // The row of Buff It 2 The Limit's quick cast bar when the bar is shown.
+        RectTransform BuffRow()
+        {
+            if (m_BuffRow == null && Time.unscaledTime >= m_NextBuffSearch)
+            {
+                m_NextBuffSearch = Time.unscaledTime + 1f;
+                var host = GameObject.Find("BI2TL_PadBarHost");
+                m_BuffRow = host == null ? null : host.transform.Find("Row") as RectTransform;
+            }
+            return m_BuffRow != null && m_BuffRow.gameObject.activeSelf && m_BuffRow.parent.gameObject.activeInHierarchy ? m_BuffRow : null;
+        }
+
+        // Right of the buff bar, frame to frame and level with it; without the bar, at the left edge of the screen on top of
+        // the game's menu buttons, as the bar would be.
         Vector2 Position()
         {
-            if (Time.unscaledTime >= m_NextSearch - 0.5f)
-            {
-                if (m_BuffRow == null)
-                {
-                    var host = GameObject.Find("BI2TL_PadBarHost");
-                    m_BuffRow = host == null ? null : host.transform.Find("Row") as RectTransform;
-                }
-                if (m_Anchor == null)
-                {
-                    var anchor = GameObject.Find("Menu_Buttons48px");
-                    m_Anchor = anchor == null ? null : anchor.transform as RectTransform;
-                }
-            }
             var root = (RectTransform)m_Row.parent;
             Vector2 local;
-            if (m_BuffRow != null && m_BuffRow.gameObject.activeInHierarchy)
+            m_Size = ButtonSize;
+            var buffRow = BuffRow();
+            if (buffRow != null)
             {
                 var corners = new Vector3[4];
-                m_BuffRow.GetWorldCorners(corners);
-                // Bottom right corner of the buff bar.
-                if (ToLocal(root, m_BuffRow, corners[3], out local)) return local - root.rect.min;
+                buffRow.GetWorldCorners(corners);
+                var screen = RectTransformUtility.WorldToScreenPoint(Cam(buffRow), corners[3]);
+                if (RectTransformUtility.ScreenPointToLocalPointInRectangle(root, screen, Cam(root), out local)) return local - root.rect.min;
+            }
+            // The game's menu buttons: on the local map the HUD's block of buttons, on the global map the sheet under its row of
+            // buttons, whose top edge is its frame.
+            if ((m_Anchor == null || !m_Anchor.gameObject.activeInHierarchy) && Time.unscaledTime >= m_NextAnchorSearch)
+            {
+                m_NextAnchorSearch = Time.unscaledTime + 0.5f;
+                var anchor = GameObject.Find("Menu_Buttons48px") ?? GameObject.Find("GlobalMapCanvas/GameMenu/Background");
+                m_Anchor = anchor == null ? null : anchor.transform as RectTransform;
             }
             if (m_Anchor == null || !m_Anchor.gameObject.activeInHierarchy) return FallbackPos;
-            float left = float.MaxValue, top = float.MinValue;
+            float top = float.MinValue;
             var c = new Vector3[4];
             var cam = Cam(m_Anchor);
+            // The top of the buttons themselves, the block's own rectangle may reach higher; the sheet is measured as it is.
+            bool sheet = m_Anchor.name == "Background";
+            var row = sheet ? m_Anchor.parent.Find("SystemButtons") : null;
+            m_Size = row != null && row.childCount > 0 ? ((RectTransform)row.GetChild(0)).rect.height : ButtonSize;
             foreach (var rect in m_Anchor.GetComponentsInChildren<RectTransform>(false))
             {
-                if (rect != m_Anchor && rect.parent != m_Anchor) continue;
+                if (sheet ? rect != m_Anchor : rect.parent != m_Anchor) continue;
                 rect.GetWorldCorners(c);
                 foreach (var corner in c)
                 {
                     var screen = RectTransformUtility.WorldToScreenPoint(cam, corner);
-                    left = Mathf.Min(left, screen.x);
                     top = Mathf.Max(top, screen.y);
                 }
             }
-            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(root, new Vector2(Mathf.Max(left, 0f), top), Cam(root), out local)) return FallbackPos;
+            if (top == float.MinValue || !RectTransformUtility.ScreenPointToLocalPointInRectangle(root, new Vector2(0f, top), Cam(root), out local)) return FallbackPos;
             local -= root.rect.min;
-            return new Vector2(Mathf.Max(local.x, 0f), local.y - FrameSink);
+            return new Vector2(0f, local.y - FrameSink);
         }
 
         static Camera Cam(Component c)
@@ -260,12 +351,6 @@ namespace TimeControl
             if (canvas == null) return null;
             canvas = canvas.rootCanvas;
             return canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
-        }
-
-        static bool ToLocal(RectTransform root, Component from, Vector3 world, out Vector2 local)
-        {
-            var screen = RectTransformUtility.WorldToScreenPoint(Cam(from), world);
-            return RectTransformUtility.ScreenPointToLocalPointInRectangle(root, screen, Cam(root), out local);
         }
     }
 
@@ -278,6 +363,13 @@ namespace TimeControl
         public void OnPointerClick(PointerEventData e)
         {
             if (e.button == PointerEventData.InputButton.Left && Click != null) Click();
+            Deselect();
+        }
+
+        void Deselect()
+        {
+            var events = EventSystem.current;
+            if (events != null && events.currentSelectedGameObject == gameObject) events.SetSelectedGameObject(null);
         }
 
         public void OnPointerEnter(PointerEventData e)
@@ -287,14 +379,17 @@ namespace TimeControl
 
         public void OnPointerExit(PointerEventData e)
         {
+            Deselect();
             if (Exit != null) Exit();
         }
     }
 
-    // The pictogram, drawn: an hourglass with sand below, light on transparent.
+    // The pictogram: the silhouette of the menu card, white on transparent, scaled down by averaging so that its edges stay
+    // smooth, centred in the button at the height of the game's pictograms.
     static class Hourglass
     {
         const int Size = 106;
+        const int Height = 72;
         static Texture2D s_Texture;
 
         internal static Texture2D Texture
@@ -308,35 +403,36 @@ namespace TimeControl
 
         static Texture2D Draw()
         {
-            var pixels = new Color32[Size * Size];
-            const float cx = 52.5f;
-            for (int y = 0; y < Size; y++)
+            var source = new Texture2D(2, 2, TextureFormat.ARGB32, false);
+            using (var stream = typeof(Hourglass).Assembly.GetManifestResourceStream("TimeControl.card_time.png"))
             {
-                for (int x = 0; x < Size; x++)
+                var memory = new System.IO.MemoryStream();
+                stream.CopyTo(memory);
+                source.LoadImage(memory.ToArray());
+            }
+            var from = source.GetPixels32();
+            int sw = source.width, sh = source.height;
+            float scale = (float)sh / Height;
+            int width = Mathf.RoundToInt(sw / scale);
+            int left = (Size - width) / 2, bottom = (Size - Height) / 2;
+            var pixels = new Color32[Size * Size];
+            for (int y = 0; y < Height; y++)
+            {
+                int y0 = Mathf.FloorToInt(y * scale), y1 = Mathf.Min(sh, Mathf.CeilToInt((y + 1) * scale));
+                for (int x = 0; x < width; x++)
                 {
-                    float a = 0f;
-                    // Rows go bottom up: y 14..20 the base, 86..92 the top plate.
-                    bool plate = (y >= 14 && y <= 20 || y >= 86 && y <= 92) && x >= 22 && x <= 83;
-                    if (plate) a = 1f;
-                    if (y > 20 && y < 86)
-                    {
-                        float t = Mathf.Abs(y - 53f) / 33f;
-                        float half = 4f + 25f * t;
-                        float d = Mathf.Abs(x + 0.5f - cx);
-                        // The glass: a 4 px outline.
-                        if (d <= half && d >= half - 4.5f) a = 1f;
-                        // Sand: a heap at the bottom, a little left at the top, the stream between.
-                        bool inside = d < half - 4.5f;
-                        if (inside && y < 40 && d < (40 - y) * 0.9f + 4f) a = 0.85f;
-                        if (inside && y > 62 && y < 71) a = 0.85f;
-                        if (y >= 40 && y <= 53 && d < 1.6f) a = 0.85f;
-                    }
-                    // The side posts.
-                    if (y > 20 && y < 86 && (x >= 23 && x <= 26 || x >= 79 && x <= 82)) a = 1f;
-                    byte v = (byte)(a > 0 ? 230 : 0);
-                    pixels[y * Size + x] = new Color32(v, v, v, (byte)(a * 255));
+                    int x0 = Mathf.FloorToInt(x * scale), x1 = Mathf.Min(sw, Mathf.CeilToInt((x + 1) * scale));
+                    int sum = 0, count = 0;
+                    for (int sy = y0; sy < y1; sy++)
+                        for (int sx = x0; sx < x1; sx++)
+                        {
+                            sum += from[sy * sw + sx].a;
+                            count++;
+                        }
+                    pixels[(bottom + y) * Size + left + x] = new Color32(255, 255, 255, (byte)(count == 0 ? 0 : sum / count));
                 }
             }
+            UnityEngine.Object.Destroy(source);
             var texture = new Texture2D(Size, Size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
             texture.SetPixels32(pixels);
             texture.Apply();
@@ -437,7 +533,35 @@ namespace TimeControl
                 pick.Sort((a, b) => Lum(a).CompareTo(Lum(b)));
                 result[i] = pick[pick.Count / 2];
             }
+            Smooth(result);
             return result;
+        }
+
+        // The median keeps faint traces of the pictograms inside the square; blurred inside its frame (the frame itself
+        // untouched, samples taken only inside it), the square keeps its shading without them.
+        static void Smooth(Color32[] square)
+        {
+            const int Inner = 13, Radius = 6;
+            var buffer = new Color[Size * Size];
+            for (int pass = 0; pass < 4; pass++)
+            {
+                bool across = pass % 2 == 0;
+                for (int y = Inner; y < Size - Inner; y++)
+                    for (int x = Inner; x < Size - Inner; x++)
+                    {
+                        Color sum = Color.clear;
+                        for (int d = -Radius; d <= Radius; d++)
+                        {
+                            int sx = across ? Mathf.Clamp(x + d, Inner, Size - Inner - 1) : x;
+                            int sy = across ? y : Mathf.Clamp(y + d, Inner, Size - Inner - 1);
+                            sum += square[sy * Size + sx];
+                        }
+                        buffer[y * Size + x] = sum / (2 * Radius + 1);
+                    }
+                for (int y = Inner; y < Size - Inner; y++)
+                    for (int x = Inner; x < Size - Inner; x++)
+                        square[y * Size + x] = buffer[y * Size + x];
+            }
         }
 
         static Sprite Compose(Texture2D icon, Color32[] square, Color top, Color bottom, float bright)
