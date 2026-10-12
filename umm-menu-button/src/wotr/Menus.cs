@@ -51,8 +51,7 @@ namespace UmmMenuButton
                 var t = Traverse.Create(__instance);
                 var options = t.Field("m_OptionsView").GetValue<ContextMenuEntityPCView>();
                 var exit = t.Field("m_ExitView").GetValue<ContextMenuEntityPCView>();
-                Main.DumpPage(options);
-                if (options.transform.parent.Find(Main.ItemName) == null) Main.Squeeze(options.transform.parent);
+                if (options.transform.parent.Find(Main.ItemName) == null) Main.Squeeze(options.transform.parent, options);
                 var item = Main.Item(options, exit);
                 var model = new ContextMenuEntityVM(new ContextMenuCollectionEntity(Main.BookTitle, Main.Open));
                 Main.Keep(__instance, model);
@@ -80,7 +79,7 @@ namespace UmmMenuButton
                 var entities = t.Field("m_Entities").GetValue<List<ContextMenuEntityConsoleView>>();
                 var navigation = t.Field("m_ConsoleNavigation").GetValue<GridConsoleNavigationBehaviour>();
                 var item = Main.Item(options, quit);
-                var model = new ContextMenuEntityVM(new ContextMenuCollectionEntity(Main.Label, Main.Open));
+                var model = new ContextMenuEntityVM(new ContextMenuCollectionEntity(Main.BookTitle, Main.Open));
                 Main.Keep(__instance, model);
                 item.Bind(model);
                 Main.OneLine(item, options);
@@ -109,13 +108,13 @@ namespace UmmMenuButton
                 var exit = t.Field("m_ExitView").GetValue<ContextMenuEntityConsoleView>();
                 var navigation = t.Field("m_Navigation").GetValue<GridConsoleNavigationBehaviour>();
                 var options = t.Field("m_OptionsView").GetValue<ContextMenuEntityConsoleView>();
-                Main.DumpPage(options);
-                if (options.transform.parent.Find(Main.ItemName) == null) Main.Squeeze(options.transform.parent);
+                bool made = options.transform.parent.Find(Main.ItemName) == null;
                 var item = Main.Item(options, exit);
                 var model = new ContextMenuEntityVM(new ContextMenuCollectionEntity(Main.BookTitle, Main.Open));
                 Main.Keep(__instance, model);
                 item.Bind(model);
                 Main.OneLine(item, options);
+                if (made) Main.Fit(options.transform.parent, item, options, false);
                 // The entries in the order the game gives them, this one before Exit.
                 var entities = new List<IConsoleNavigationEntity>();
                 foreach (var name in new[] { "m_ContinueView", "m_NewGameView", "m_LoadView", "m_DLCManagerView", "m_OptionsView", "m_CreditView", "m_LicenseView" })

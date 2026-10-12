@@ -136,12 +136,7 @@ namespace UmmMenuButton
             UnityEngine.Object.Destroy(target);
 
             var pixels = painted.GetPixels32();
-            // Diagnostics: the page around the column, before and after.
-            float r = row.magnitude;
-            var around = Rect.MinMaxRect(longer.xMin - 2 * r, longer.yMin - r, longer.xMax + 3 * r, longer.yMax + r);
-            Save(pixels, w, h, around, "page-before.png");
             Shrink(pixels, w, h, column, longer, at.Value, row, m_Count, moved.Value - at.Value, scale, paper.Value - at.Value);
-            Save(pixels, w, h, around, "page-after.png");
             painted.SetPixels32(pixels);
             painted.wrapMode = source.wrapMode;
             painted.filterMode = source.filterMode;
@@ -214,21 +209,6 @@ namespace UmmMenuButton
                     pixels[y * w + x] = Color32.Lerp(source[y * w + x], result, keep);
                 }
             }
-        }
-
-        static void Save(Color32[] pixels, int w, int h, Rect area, string name)
-        {
-            int x0 = Mathf.Clamp((int)area.xMin, 0, w - 1), y0 = Mathf.Clamp((int)area.yMin, 0, h - 1);
-            int x1 = Mathf.Clamp((int)area.xMax, x0 + 1, w), y1 = Mathf.Clamp((int)area.yMax, y0 + 1, h);
-            var crop = new Texture2D(x1 - x0, y1 - y0, TextureFormat.RGBA32, false);
-            var part = new Color32[(x1 - x0) * (y1 - y0)];
-            for (int y = y0; y < y1; y++)
-                Array.Copy(pixels, y * w + x0, part, (y - y0) * (x1 - x0), x1 - x0);
-            crop.SetPixels32(part);
-            crop.Apply();
-            System.IO.File.WriteAllBytes(System.IO.Path.Combine(Main.Path, name), crop.EncodeToPNG());
-            UnityEngine.Object.Destroy(crop);
-            Main.Log.Log("main menu: saved " + name + " of " + x0 + ".." + x1 + " x " + y0 + ".." + y1);
         }
 
         // How much darker the page is around the given pixel than the paper at the offset: the difference of their

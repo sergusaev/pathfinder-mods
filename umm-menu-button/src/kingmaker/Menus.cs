@@ -117,14 +117,18 @@ namespace UmmMenuButton
                 var exit = t.Field("m_BtnExitView").GetValue<ContextMenuEntityView>();
                 var navigation = t.Field("m_NavigationBehavior").GetValue<ConsoleNavigationBehavior>();
                 var item = Main.Item(options, exit);
-                var model = new ContextMenuEntityVM(new ContextMenuCollectionEntity(Main.Label, Main.Open));
+                var model = new ContextMenuEntityVM(new ContextMenuCollectionEntity(Main.BookTitle, Main.Open));
                 Main.Keep(__instance, model);
                 item.Bind(model);
                 Main.OneLine(item, options);
-                if (exit != null && exit.gameObject.activeSelf && navigation.Entities.Contains(exit))
-                    navigation.InsertEntityBefore(exit, item);
-                else
-                    navigation.AddEntity(item);
+                Main.Separate(item);
+                // The game's InsertEntityBefore puts the entry one place too high, so the entries are given again.
+                var entities = new List<IConsoleNavigationEntity>(navigation.Entities);
+                entities.Remove(item);
+                int at = entities.IndexOf(exit);
+                entities.Insert(at < 0 ? entities.Count : at, item);
+                navigation.SetEntities(entities);
+                navigation.SelectFirstItem();
             }
             catch (Exception e)
             {
@@ -137,7 +141,9 @@ namespace UmmMenuButton
     [HarmonyPatch(typeof(MainMenuSideBarView), "Bind")]
     static class MainMenuPad
     {
-        static void Postfix(MainMenuSideBarView __instance)
+        static ContextMenuEntityVM s_Model;
+
+        static void Postfix(MainMenuSideBarView __instance, MainMenuSideBarVM viewModel)
         {
             try
             {
@@ -145,11 +151,23 @@ namespace UmmMenuButton
                 var options = t.Field("m_OptionsView").GetValue<ContextMenuEntityView>();
                 var exit = t.Field("m_ExitView").GetValue<ContextMenuEntityView>();
                 var navigation = t.Field("m_NavigationBehavior").GetValue<ConsoleMultiNavigationCollection>();
+                bool made = options.transform.parent.Find(Main.ItemName) == null;
                 var item = Main.Item(options, exit);
                 var model = new ContextMenuEntityVM(new ContextMenuCollectionEntity(Main.BookTitle, Main.Open));
                 Main.Keep(__instance, model);
                 item.Bind(model);
+                // The menu confirms the entry of its own list that is selected, so the entry is one of them.
+                var models = Traverse.Create(viewModel).Field("m_Entities").GetValue<List<ContextMenuEntityVM>>();
+                if (models != null)
+                {
+                    models.Remove(s_Model);
+                    models.Add(model);
+                }
+                s_Model = model;
                 Main.OneLine(item, options);
+                Main.Separate(item);
+                Main.Run(Widen(item, options));
+                if (made) Main.Fit(options.transform.parent, item, options, true);
                 var entities = new List<IConsoleMultiNavigationEntity>(navigation.EntitiesList);
                 entities.Remove(item);
                 int at = entities.IndexOf(exit);
@@ -160,6 +178,132 @@ namespace UmmMenuButton
             catch (Exception e)
             {
                 Main.Error(e, "MainMenuPad");
+            }
+        }
+
+        // The frame's picture made longer where it has no ornament: the runs of columns of pixels each like the next
+        // one, the plain stretches of its edges, are repeated, the more the longer they are; the ornament stays as it is.
+        static Sprite s_Long;
+
+        static Sprite Lengthen(Sprite sprite, int width)
+        {
+            if (s_Long != null && s_Long.rect.width == width) return s_Long;
+            var source = sprite.textureRect;
+            int w = Mathf.RoundToInt(source.width), h = Mathf.RoundToInt(source.height);
+            var target = new RenderTexture(sprite.texture.width, sprite.texture.height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+            var active = RenderTexture.active;
+            Graphics.Blit(sprite.texture, target);
+            RenderTexture.active = target;
+            var read = new Texture2D(w, h, TextureFormat.RGBA32, false, false);
+            read.ReadPixels(new Rect(source.x, source.y, w, h), 0, 0, false);
+            RenderTexture.active = active;
+            target.Release();
+            UnityEngine.Object.Destroy(target);
+            var pixels = read.GetPixels32();
+            UnityEngine.Object.Destroy(read);
+
+            // Plain: a column of pixels hardly different from the next one.
+            var plain = new bool[w];
+            for (int x = 0; x + 1 < w; x++)
+            {
+                int most = 0;
+                for (int y = 0; y < h; y++)
+                {
+                    Color32 a = pixels[y * w + x], b = pixels[y * w + x + 1];
+                    most = Math.Max(most, Math.Max(Math.Max(Math.Abs(a.r - b.r), Math.Abs(a.g - b.g)), Math.Max(Math.Abs(a.b - b.b), Math.Abs(a.a - b.a))));
+                }
+                plain[x] = most <= 12;
+            }
+            // The runs of plain columns long enough to be stretches of an edge, not gaps in the ornament.
+            var runs = new List<int[]>();
+            int total = 0;
+            for (int x = 0; x < w; )
+            {
+                if (!plain[x]) { x++; continue; }
+                int start = x;
+                while (x < w && plain[x]) x++;
+                if (x - start >= 6)
+                {
+                    runs.Add(new[] { start, x - start });
+                    total += x - start;
+                }
+            }
+            if (total == 0 || width <= w) return null;
+            // How many times each column is drawn: the extra width shared among the runs by their length, each run's
+            // share spread evenly over its columns.
+            var times = new int[w];
+            for (int x = 0; x < w; x++) times[x] = 1;
+            int extra = width - w, given = 0;
+            for (int r = 0; r < runs.Count; r++)
+            {
+                int share = r + 1 < runs.Count ? extra * runs[r][1] / total : extra - given;
+                given += share;
+                for (int k = 0; k < share; k++) times[runs[r][0] + k * runs[r][1] / Math.Max(1, share) % runs[r][1]]++;
+            }
+            var longer = new Color32[width * h];
+            int to = 0;
+            for (int x = 0; x < w; x++)
+            {
+                for (int n = 0; n < times[x]; n++, to++)
+                    for (int y = 0; y < h; y++)
+                        longer[y * width + to] = pixels[y * w + x];
+            }
+            var texture = new Texture2D(width, h, TextureFormat.RGBA32, false, false);
+            texture.wrapMode = TextureWrapMode.Clamp;
+            texture.SetPixels32(longer);
+            texture.Apply(false, true);
+            if (s_Long != null) UnityEngine.Object.Destroy(s_Long.texture);
+            s_Long = Sprite.Create(texture, new Rect(0, 0, width, h), new Vector2(0.5f, 0.5f), sprite.pixelsPerUnit, 0, SpriteMeshType.FullRect);
+            s_Long.name = sprite.name + "_Long";
+            var stretches = new System.Text.StringBuilder();
+            foreach (var run in runs) stretches.Append(' ').Append(run[0]).Append('+').Append(run[1]);
+            Main.Log.Log("selection frame picture " + w + "x" + h + " made " + width + " long at the plain stretches" + stretches);
+            return s_Long;
+        }
+
+        // Once the item is laid out: the frame shown on the selected item long enough for the label, with the frame's
+        // height on each side for its corners, its picture made longer where it has no ornament. The frame's width and
+        // picture are the ones of the neighbour's, so that the item shown again is not made wider again.
+        internal static IEnumerator Widen(ContextMenuEntityView item, ContextMenuEntityView neighbour)
+        {
+            for (int frame = 0; frame < 120; frame++)
+            {
+                yield return null;
+                if (item == null) yield break;
+                var rect = item.transform as RectTransform;
+                if (rect != null && rect.rect.width > 1) break;
+            }
+            if (item == null) yield break;
+            try
+            {
+                var text = item.GetComponentInChildren<TextMeshProUGUI>(true);
+                var frames = Traverse.Create(item).Field("m_SelectEntities").GetValue<List<GameObject>>();
+                var like = Traverse.Create(neighbour).Field("m_SelectEntities").GetValue<List<GameObject>>();
+                if (text == null || frames == null || like == null) yield break;
+                float width = text.GetPreferredValues(text.text, float.PositiveInfinity, float.PositiveInfinity).x;
+                for (int i = 0; i < frames.Count && i < like.Count; i++)
+                {
+                    var rect = frames[i] != null ? frames[i].transform as RectTransform : null;
+                    var game = like[i] != null ? like[i].transform as RectTransform : null;
+                    if (rect == null || game == null) continue;
+                    float wide = Mathf.Max(width + 2 * game.rect.height, game.rect.width);
+                    if (wide <= game.rect.width) continue;
+                    var image = frames[i].GetComponent<Image>();
+                    var original = like[i].GetComponent<Image>();
+                    if (image == null || original == null || original.sprite == null) continue;
+                    // The picture's pixels to the frame's units, as the game draws it.
+                    float pixels = original.sprite.rect.width / game.rect.width;
+                    var sprite = Lengthen(original.sprite, Mathf.RoundToInt(wide * pixels));
+                    if (sprite == null) continue;
+                    image.sprite = sprite;
+                    image.type = Image.Type.Simple;
+                    rect.sizeDelta += new Vector2(wide - rect.rect.width, 0);
+                    Main.Log.Log("selection frame " + rect.name + " " + game.rect.size + " made " + wide + " wide, label " + width);
+                }
+            }
+            catch (Exception e)
+            {
+                Main.Error(e, "Widen");
             }
         }
     }

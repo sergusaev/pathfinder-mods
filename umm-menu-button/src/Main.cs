@@ -16,12 +16,10 @@ namespace UmmMenuButton
         internal const string ItemName = "UmmMenuButton_Item";
 
         internal static UnityModManager.ModEntry.ModLogger Log;
-        internal static string Path;
 
         public static bool Load(UnityModManager.ModEntry modEntry)
         {
             Log = modEntry.Logger;
-            Path = modEntry.Path;
             // Unchecked in the mod list, the mod checks itself again.
             modEntry.OnUpdate = (entry, delta) => { if (!entry.Enabled) entry.Enabled = true; };
             NoWindowOnStart();
@@ -64,13 +62,25 @@ namespace UmmMenuButton
                 text.fontSize *= Mathf.Max(0.75f, room / width);
         }
 
+        // The items of a list: its shown children that are items as the given one is, not the separators between them.
+        static List<RectTransform> Items(Transform list, Component like)
+        {
+            var items = new List<RectTransform>();
+            foreach (Transform child in list)
+            {
+                var rect = child as RectTransform;
+                if (rect != null && child.gameObject.activeSelf && child.GetComponent(like.GetType()) != null) items.Add(rect);
+            }
+            return items;
+        }
+
         // The list of items made smaller as a whole by the share of the added item, so that it takes the height it took
         // without it; the top left corner stays where it was. Done once, when the item is added.
-        internal static void Squeeze(Transform list)
+        internal static void Squeeze(Transform list, Component like)
         {
             int shown = 0;
-            foreach (Transform child in list)
-                if (child.gameObject.activeSelf && child.name != ItemName) shown++;
+            foreach (var item in Items(list, like))
+                if (item.name != ItemName) shown++;
             if (shown == 0) return;
             var rect = list as RectTransform;
             var before = new Vector3[4];
@@ -84,78 +94,117 @@ namespace UmmMenuButton
             Log.Log("list " + list.name + " squeezed to " + shown + "/" + (shown + 1));
         }
 
-        // Once per menu, before the item is added: the page around the menu's items, for laying the item out.
-        static readonly HashSet<string> s_Dumped = new HashSet<string>();
-
-        internal static void DumpPage(Component item)
+        // The list made smaller as Squeeze makes it, the middle of its items kept where it is, or put where the middle
+        // of the game's items was. The list is to be laid out.
+        internal static void SqueezeToMiddle(Transform list, Component like, bool toGame)
         {
-            var page = item.transform;
-            for (int up = 0; up < 3 && page.parent != null; up++) page = page.parent;
-            if (!s_Dumped.Add(page.name)) return;
-            Log.Log("menu page:\n" + Dump(page, ""));
+            var items = Items(list, like);
+            RectTransform lastGame = null;
+            int shown = 0;
+            foreach (var item in items)
+            {
+                if (item.name == ItemName) continue;
+                lastGame = item;
+                shown++;
+            }
+            if (lastGame == null || items.Count < 2) return;
+            var first = items[0];
+            var last = items[items.Count - 1];
+            var corners = new Vector3[4];
+            first.GetWorldCorners(corners);
+            var top = corners[1];
+            var down = (Middle(last) - Middle(first)).normalized;
+            // The items stand one row apart; the game's ones took a row less.
+            var row = (Middle(last) - Middle(first)) / (items.Count - 1);
+            var all = Middle(first) + row * (items.Count - 1) / 2;
+            // The page of Kingmaker's menu has more room above the game's items than below them: the list goes higher
+            // than their middle by a little more than half a row.
+            var target = toGame ? Middle(first) + row * ((shown - 1) / 2f - 0.6f) : all;
+            float scale = (float)shown / (shown + 1);
+            Free(list);
+            list.localScale *= scale;
+            list.position = top + (list.position - top) * scale;
+            list.position += down * Vector3.Dot(target - (top + (all - top) * scale), down);
+            Log.Log("list " + list.name + " squeezed to " + shown + "/" + (shown + 1) + " around " + (toGame ? "the game's middle" : "its middle"));
         }
 
-        // The scene around a menu drawn on a 3D page: every object with a renderer, its material and texture.
-        internal static void DumpScene(Component item)
+        // The list out of the layout of the object it lies in, staying where it is, so that it can be moved.
+        static void Free(Transform list)
         {
-            if (!s_Dumped.Add("scene")) return;
-            var s = new System.Text.StringBuilder("menu scene:\n");
-            var roots = new List<GameObject>();
-            for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCount; i++)
-            {
-                var scene = UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);
-                if (scene.isLoaded) roots.AddRange(scene.GetRootGameObjects());
-            }
-            s.Append("item canvas at ").Append(item.transform.position).Append(", scene ").Append(item.gameObject.scene.name).Append('\n');
-            foreach (var root in roots)
-                foreach (var renderer in root.GetComponentsInChildren<Renderer>(true))
-                {
-                    var t = renderer.transform;
-                    string path = t.name;
-                    for (var p = t.parent; p != null; p = p.parent) path = p.name + "/" + path;
-                    s.Append(path).Append(renderer.gameObject.activeInHierarchy ? "" : " (off)").Append(" ").Append(renderer.GetType().Name)
-                        .Append(" pos=").Append(t.position).Append(" scale=").Append(t.lossyScale).Append(" bounds=").Append(renderer.bounds.size);
-                    foreach (var m in renderer.sharedMaterials)
-                    {
-                        if (m == null) continue;
-                        s.Append(" [").Append(m.name).Append(" shader=").Append(m.shader != null ? m.shader.name : "-");
-                        if (m.mainTexture != null)
-                            s.Append(" tex=").Append(m.mainTexture.name).Append(" ").Append(m.mainTexture.width).Append("x").Append(m.mainTexture.height)
-                                .Append(" tiling=").Append(m.mainTextureScale).Append(" offset=").Append(m.mainTextureOffset);
-                        s.Append("]");
-                    }
-                    s.Append('\n');
-                }
-            Log.Log(s.ToString());
+            if (list.parent == null || list.parent.GetComponent<UnityEngine.UI.LayoutGroup>() == null) return;
+            var element = list.GetComponent<UnityEngine.UI.LayoutElement>() ?? list.gameObject.AddComponent<UnityEngine.UI.LayoutElement>();
+            element.ignoreLayout = true;
         }
 
-        static string Dump(Transform t, string indent)
+        static Vector3 Middle(RectTransform rect)
         {
-            var s = new System.Text.StringBuilder();
-            var r = t as RectTransform;
-            s.Append(indent).Append(t.name).Append(t.gameObject.activeSelf ? "" : " (off)");
-            if (r != null)
-                s.Append(" pos=").Append(r.anchoredPosition).Append(" size=").Append(r.rect.size).Append(" min=").Append(r.anchorMin)
-                    .Append(" max=").Append(r.anchorMax).Append(" pivot=").Append(r.pivot).Append(" scale=").Append(r.localScale).Append(" rot=").Append(r.localEulerAngles);
-            var image = t.GetComponent<UnityEngine.UI.Image>();
-            if (image != null)
-                s.Append(" image=").Append(image.sprite != null ? image.sprite.name : "-").Append(" type=").Append(image.type).Append(" color=").Append(ColorUtility.ToHtmlStringRGBA(image.color));
-            foreach (var c in t.GetComponents<Component>())
+            return rect.TransformPoint(rect.rect.center);
+        }
+
+        // Once the game has laid the list out: the label made to fit its item, and the list made smaller, keeping its top
+        // (middle null), its middle (false) or putting it at the middle of the game's items (true). Items are not laid
+        // out yet when the gamepad menus are bound.
+        internal static void Fit(Transform list, Component item, Component neighbour, bool? middle)
+        {
+            Run(Fitting(list, item, neighbour, middle));
+        }
+
+        static System.Collections.IEnumerator Fitting(Transform list, Component item, Component neighbour, bool? middle)
+        {
+            for (int frame = 0; frame < 120; frame++)
             {
-                var group = c as UnityEngine.UI.HorizontalOrVerticalLayoutGroup;
-                if (group != null)
-                    s.Append(" ").Append(c.GetType().Name).Append("(spacing ").Append(group.spacing).Append(", pad ").Append(group.padding).Append(", control h ").Append(group.childControlHeight).Append(")");
-                else if (c is UnityEngine.UI.LayoutGroup || c is UnityEngine.UI.LayoutElement || c is UnityEngine.UI.ContentSizeFitter || c is UnityEngine.UI.Mask || c is UnityEngine.UI.RectMask2D)
-                    s.Append(" ").Append(c.GetType().Name);
+                yield return null;
+                if (item == null) yield break;
+                var rect = item.transform as RectTransform;
+                if (rect != null && rect.rect.width > 1 && rect.rect.height > 1) break;
             }
-            var text = t.GetComponent<TMPro.TextMeshProUGUI>();
-            if (text != null)
-                s.Append(" text=\"").Append(text.text.Length > 60 ? text.text.Substring(0, 60) : text.text).Append("\" size=").Append(text.fontSize)
-                    .Append(" auto=").Append(text.enableAutoSizing).Append(" wrap=").Append(text.enableWordWrapping).Append(" align=").Append(text.alignment);
-            s.Append('\n');
-            foreach (Transform child in t)
-                s.Append(Dump(child, indent + "  "));
-            return s.ToString();
+            try
+            {
+                OneLine(item, neighbour);
+                if (middle == null) Squeeze(list, neighbour);
+                else SqueezeToMiddle(list, neighbour, middle.Value);
+            }
+            catch (Exception e)
+            {
+                Error(e, "Fit");
+            }
+        }
+
+        // The item between the game's items, the separator before it repeated after it when the game's items have
+        // separators between them.
+        internal static void Separate(Component item)
+        {
+            var t = item.transform;
+            var parent = t.parent;
+            var separator = parent.Find(ItemName + "_Separator");
+            if (separator != null) separator.SetAsLastSibling();
+            int at = t.GetSiblingIndex();
+            if (at == 0 || at + 1 >= parent.childCount) return;
+            var before = parent.GetChild(at - 1);
+            if (before.GetComponent(item.GetType()) != null) return;
+            if (separator == null)
+            {
+                separator = UnityEngine.Object.Instantiate(before.gameObject, parent, false).transform;
+                separator.name = ItemName + "_Separator";
+            }
+            separator.gameObject.SetActive(before.gameObject.activeSelf);
+            separator.SetSiblingIndex(t.GetSiblingIndex() + 1);
+        }
+
+        // Coroutines of the mod run on an object of its own, not on the menus, which may be inactive or go away.
+        class Runner : MonoBehaviour { }
+
+        static Runner s_Runner;
+
+        internal static void Run(System.Collections.IEnumerator routine)
+        {
+            if (s_Runner == null)
+            {
+                var host = new GameObject("UmmMenuButton");
+                UnityEngine.Object.DontDestroyOnLoad(host);
+                s_Runner = host.AddComponent<Runner>();
+            }
+            s_Runner.StartCoroutine(routine);
         }
 
         // The title of the main menus, with the large first letter the game gives its own.
