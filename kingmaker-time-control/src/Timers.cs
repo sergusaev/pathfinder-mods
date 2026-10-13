@@ -31,7 +31,6 @@ namespace TimeControl
         public bool Critical;
         // Follows the kingdom duration coefficients.
         public bool Kingdom;
-        public bool Reminder;
 
         public TimeSpan Remaining
         {
@@ -106,7 +105,6 @@ namespace TimeControl
             {
                 Main.Error(e, "kingdom timers");
             }
-            Tracker.AddReminders(list);
             list.Sort((a, b) => a.Due.CompareTo(b.Due));
             return list;
         }

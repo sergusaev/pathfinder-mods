@@ -15,7 +15,7 @@ The idea comes from [Level 1 Companions](https://www.nexusmods.com/pathfinderwra
 
    The two DLLs are not interchangeable: each is compiled against its own game.
 3. Unpack it into the mods folder, so the result is `Mods/Level1Companions/Info.json` (`mods/` in the Steam Deck guide for WotR, which runs through Proton and ignores case).
-4. Start the game. The UMM window (Shift+F10, R4 in the Steam Deck layout) lists "Level 1 Companions & Free Respec" with a green status; its settings show the respec button and the list of patched companion blueprints.
+4. Start the game. The UMM window (the "Unity Mod Manager" item of the game's menus) lists "Level 1 Companions & Free Respec" with a green status; its settings show the respec button and the list of patched companion blueprints.
 
 When updating, delete `*.cache` in the mod folder before starting the game.
 

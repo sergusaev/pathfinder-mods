@@ -32,7 +32,7 @@ A Unity Mod Manager mod that lets you rotate the camera in Pathfinder: Kingmaker
 
 - The keys are set in the mod settings (UMM window). A key that the game also uses is shown there with the game's action, so a conflict is visible at once.
 - The compass takes the place of the hourglass in the round window of the clock next to the system buttons; its scale and offset are set in the settings.
-- The keys do nothing during cutscenes and dialogues, while typing, with the UMM window or the buff menu of Buff It 2 The Limit (Groups) open.
+- The keys do nothing during cutscenes and dialogues, while typing, with the UMM window or a window of another mod of this collection open.
 - The PC local map gets the same rotated outline of the visible area as the console map.
 
 ## Compass
@@ -59,7 +59,7 @@ In Kingmaker the local map follows the camera direction but only re-renders when
 
 ## On the Steam Deck
 
-The mod uses the standard gamepad buttons, so it needs no Steam Input changes. Its settings live in the UMM window, which needs the mouse: bind R4 to the UMM hotkey and the right trackpad to the mouse as described in [the Steam Deck guide](../docs/steam-deck.md#2-steam-input-layout). The compass is found automatically when WotR is in any Steam library of the deck.
+The mod uses the standard gamepad buttons, so it needs no Steam Input changes. Its settings live in the UMM window. The compass is found automatically when WotR is in any Steam library of the deck.
 
 ## Compatibility
 

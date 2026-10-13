@@ -60,14 +60,10 @@ Copy-Item "$P\package\winhttp_x64.dll" "$KM\winhttp.dll"
 </Config>
 '@ | Set-Content "$UMM\Config.xml" -Encoding UTF8
 
-# The UMM window opens with Shift+F10 and shows on start (modifiers: 1 Ctrl, 2 Shift, 4 Alt).
+# The UMM window shows on start.
 @'
 <?xml version="1.0" encoding="utf-8"?>
 <Param xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  <Hotkey>
-    <keyCode>F10</keyCode>
-    <modifiers>2</modifiers>
-  </Hotkey>
   <CheckUpdates>0</CheckUpdates>
   <ShowOnStart>1</ShowOnStart>
 </Param>
@@ -106,7 +102,7 @@ The WotR step of the Steam Deck guide that writes `startup.json` is for the Stea
 
 ### 1.4 Check
 
-Start the game. The UMM window shows on start with an empty Mods tab; later it opens and closes with Shift+F10. If it does not appear, see `<game>\<Game>_Data\Managed\UnityModManager\Log.txt` and the game log (`%USERPROFILE%\AppData\LocalLow\Owlcat Games\<game>\output_log.txt` for Kingmaker, `Player.log` for WotR).
+Start the game. The UMM window shows on start with an empty Mods tab. If it does not appear, see `<game>\<Game>_Data\Managed\UnityModManager\Log.txt` and the game log (`%USERPROFILE%\AppData\LocalLow\Owlcat Games\<game>\output_log.txt` for Kingmaker, `Player.log` for WotR).
 
 ## 2. Installing the mods
 
@@ -120,13 +116,16 @@ tar -xf PortraitScrollFix-1.1.0.zip -C "$WOTR\Mods"         # example for WotR
 
 When a mod is updated, delete the `*.cache` files in its folder before starting the game: UMM loads its cached copy of the DLL.
 
-| Mod | Game | Folder | Windows notes |
+| Mod | Game | Folder | Notes |
 |---|---|---|---|
-| [Camera Rotation and Compass](../kingmaker-gamepad-camera-rotation) | Kingmaker | `Mods\GamepadCameraRotation` | With keyboard and mouse: the middle mouse button rotates, Alt + middle mouse moves the camera, Alt+A / Alt+D rotate, F1 turns north; the compass is next to the system buttons. The compass needs WotR installed (found automatically in the Steam libraries) |
+| [Unity Mod Manager in Game Menus](../umm-menu-button) | Kingmaker, WotR | `Mods\UmmMenuButton` | a separate zip per game |
+| [Time Control and Deadlines](../kingmaker-time-control) | Kingmaker | `Mods\TimeControl` | |
+| [Belt Consumables Refill](../belt-consumables-refill) | Kingmaker, WotR | `Mods\BeltConsumablesRefill` | a separate zip per game |
+| [Camera Rotation and Compass](../kingmaker-gamepad-camera-rotation) | Kingmaker | `Mods\GamepadCameraRotation` | the compass needs WotR installed (found automatically in the Steam libraries) |
 | [Custom Portraits Gamepad Selection Fix](../kingmaker-custom-portraits-gamepad) | Kingmaker | `Mods\ConsoleCustomPortraits` | only matters with a gamepad; portraits go to `%USERPROFILE%\AppData\LocalLow\Owlcat Games\Pathfinder Kingmaker\Portraits\` |
-| [Level 1 Companions & Free Respec](../level1-companions) | Kingmaker, WotR | `Mods\Level1Companions` | a separate zip per game (`-kingmaker`, `-wotr`). Respec button in the UMM window (Shift+F10). In WotR move `lvl1companions` out of `Mods` first |
+| [Level 1 Companions & Free Respec](../level1-companions) | Kingmaker, WotR | `Mods\Level1Companions` | a separate zip per game (`-kingmaker`, `-wotr`). In WotR move `lvl1companions` out of `Mods` first |
 | [Portrait Scroll Fix (gamepad)](../wotr-portrait-scroll-fix) | WotR | `Mods\PortraitScrollFix` | only matters with a gamepad |
 | [Buff It 2 The Limit (Groups)](https://github.com/sergusaev/wrath-epic-buffing) | WotR | `Mods\BuffIt2TheLimit` | replaces the original Buff It 2 The Limit and BubbleBuffs: move those out of `Mods` first. The settings of Buff It 2 The Limit stay (same id and files); the settings of BubbleBuffs (`bubblebuff-*.json`) are not read |
-| [Buff It 2 The Limit (Groups) for Kingmaker](https://github.com/sergusaev/wrath-epic-buffing) | Kingmaker | `Mods\PadBuffsKingmaker` | the menu opens with F7 |
+| [Buff It 2 The Limit (Groups) for Kingmaker](https://github.com/sergusaev/wrath-epic-buffing) | Kingmaker | `Mods\PadBuffsKingmaker` | |
 
 **Kingmaker and a connected gamepad.** With a controller connected, Kingmaker may start in the gamepad (console) interface. For the keyboard and mouse interface turn the controller off before starting the game.

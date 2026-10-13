@@ -2,23 +2,23 @@
 
 [Русская версия](README.ru.md)
 
-Small [Unity Mod Manager](https://www.nexusmods.com/site/mods/21) mods that make **Pathfinder: Kingmaker** and **Pathfinder: Wrath of the Righteous** more comfortable with a gamepad (console interface) and, where noted, with keyboard and mouse; written and tested on the Steam Deck and Windows.
+Small [Unity Mod Manager](https://www.nexusmods.com/site/mods/21) mods for **Pathfinder: Kingmaker** and **Pathfinder: Wrath of the Righteous**, written and tested on the Steam Deck and Windows. They work with a gamepad as well as with keyboard and mouse and open from the game's own menus.
 
 | Mod | Game | What it does |
 |---|---|---|
 | [Belt Consumables Refill](belt-consumables-refill) | Kingmaker and Wrath of the Righteous | A used-up belt consumable is replaced from the party inventory and the belt slot shows how many are left; removes the "0 charges" item abilities left by the refill of Bag of Tricks / ToyBox |
-| [Camera Rotation and Compass](kingmaker-gamepad-camera-rotation) | Kingmaker | Gamepad: camera rotation and zoom with the right stick, the WotR compass instead of the hourglass, the WotR console layout for camera mode, turn-based mode and inspect. Keyboard and mouse: rotation with the middle mouse button and Alt+A / Alt+D, the compass in the clock |
+| [Camera Rotation and Compass](kingmaker-gamepad-camera-rotation) | Kingmaker | Gamepad: camera rotation and zoom with the right stick, the WotR compass instead of the hourglass, the WotR console layout for camera mode, turn-based mode and inspect. Keyboard and mouse: rotation with the middle mouse button, the compass in the clock |
 | [Custom Portraits Gamepad Selection Fix](kingmaker-custom-portraits-gamepad) | Kingmaker | Custom portraits from the `Portraits` folder appear in the gamepad character creation |
 | [Level 1 Companions & Free Respec](level1-companions) | Kingmaker and Wrath of the Righteous | Story companions join at level 1 and are leveled entirely by hand; a free respec button back to level 1 keeps the companion's name, voice and looks, and in WotR the respec window can be closed with levels left to spend. In WotR replaces lvl1companions |
 | [Time Control and Deadlines](kingmaker-time-control) | Kingmaker | Fractional multipliers for kingdom durations, travel and camping time; a list of all countdowns, hidden ones included ("N days H hours left until X"); tracking with your own deadline and alerts in the game's look; time skip that refuses to pass a deadline after which something fails |
-| [Unity Mod Manager in Game Menus](umm-menu-button) | Kingmaker and Wrath of the Righteous | A "Unity Mod Manager" item in the main menu and the Esc menu, for mouse and gamepad, in the game's look: the mod manager opens without a hotkey on any platform |
+| [Unity Mod Manager in Game Menus](umm-menu-button) | Kingmaker and Wrath of the Righteous | A "Unity Mod Manager" item in the main menu and the Esc menu, in the game's look: the mod manager opens from the game's menus on any platform |
 | [Portrait Scroll Fix (gamepad)](wotr-portrait-scroll-fix) | Wrath of the Righteous | The custom portraits list scrolls with the gamepad cursor and the right stick |
 
-Buff It 2 The Limit (Groups), a menu of buff groups for the buff automation mod Buff It 2 The Limit, works with a gamepad, keyboard and mouse in WotR and Kingmaker; it lives in a separate fork: [sergusaev/wrath-epic-buffing](https://github.com/sergusaev/wrath-epic-buffing).
+Buff It 2 The Limit (Groups), a menu of buff groups for the buff automation mod Buff It 2 The Limit, for WotR and Kingmaker, lives in a separate fork: [sergusaev/wrath-epic-buffing](https://github.com/sergusaev/wrath-epic-buffing).
 
 ## Installing
 
-**Steam Deck:** follow [docs/steam-deck.md](docs/steam-deck.md) — Unity Mod Manager for both games, the Steam Input layout (UMM window on R4, buff menu on L5, mouse on the right trackpad) and the mods, step by step.
+**Steam Deck:** follow [docs/steam-deck.md](docs/steam-deck.md) — Unity Mod Manager for both games and the mods, step by step.
 
 **Windows without the UMM installer** (e.g. over SSH): [docs/windows.md](docs/windows.md) — UMM for both games with PowerShell commands, and the mods.
 

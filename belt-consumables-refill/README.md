@@ -14,7 +14,7 @@ A Unity Mod Manager mod for both Pathfinder games. A belt (quick) slot holds one
 
   Each removal is written to the UMM log (`Player.log`), and the mod window shows the last result.
 
-Each part can be turned off in the mod window (Shift+F10).
+Each part can be turned off in the mod's UMM window.
 
 ## Why: the refill of Bag of Tricks and ToyBox
 

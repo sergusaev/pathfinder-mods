@@ -25,6 +25,8 @@ namespace TimeControl
         internal static string TabTracked { get { return P("Отслеживаемые", "Tracked"); } }
         internal static string TabTime { get { return P("Время", "Time"); } }
         internal static string TabSetup { get { return P("Настройка отслеживания", "Tracking Setup"); } }
+        internal static string TabHelp { get { return P("Справка", "Help"); } }
+        internal static string HScroll { get { return P("Прокрутка", "Scroll"); } }
         internal static string Today { get { return P("Сегодня: {0}", "Today: {0}"); } }
         internal static string Empty { get { return P("Сроков нет.", "No deadlines."); } }
         internal static string EmptyTracked { get { return P("Ничего не отслеживается. На вкладке «Сроки» выберите событие и нажмите «Отслеживать».", "Nothing is tracked. Pick an event on the Deadlines tab and choose Track."); } }
@@ -68,7 +70,6 @@ namespace TimeControl
         internal static string Month { get { return P("Новый месяц королевства", "New kingdom month"); } }
         internal static string IgnoredEvent { get { return P("Провал проигнорированного события: {0}", "Ignored event fails: {0}"); } }
         internal static string Raven { get { return P("Доклад ворона", "Raven's report"); } }
-        internal static string ReminderName { get { return P("Напоминание {0}", "Reminder {0}"); } }
 
         // Time page
         internal static string CoefEvents { get { return P("Решение событий королевства", "Kingdom event resolution"); } }
@@ -91,21 +92,19 @@ namespace TimeControl
         internal static string RewindLonger { get { return P("Все сроки станут дальше на {0}:", "Every deadline moves {0} further away:"); } }
         internal static string RewindLine { get { return P("• {0}: было {1}, станет {2}", "• {0}: was {1}, will be {2}"); } }
         internal static string RewindKingdom { get { return P("Королевство уже прожило дни до {0}: пока календарь не дойдёт до этой даты, в королевстве ничего не произойдёт — ни событий, ни дохода, ни нового месяца. Дела королевства продлятся на тот же срок.", "The kingdom has already lived the days up to {0}: until the calendar is there again nothing happens in the kingdom — no events, no income, no new month. Its tasks last that much longer."); } }
-        internal static string RewindPast { get { return P("Прошедшее не вернётся: выполненные и проваленные задания, сработавшие события заданий, решённые события королевства и закончившиеся эффекты остаются как есть.", "What has happened stays: finished and failed quests, fired quest events, resolved kingdom events and expired effects remain as they are."); } }
-        internal static string RewindUnits { get { return P("Эффекты на персонажах, усталость, привал и случайные встречи отматываются вместе с часами: их оставшееся время не меняется.", "Effects on characters, fatigue, camping and random encounters go back with the clock: their remaining time stays the same."); } }
+        internal static string RewindPast { get { return P("Уже случившееся не вернётся: выполненные и проваленные задания, сработавшие события заданий, решённые события королевства и закончившиеся эффекты останутся как есть.", "What has happened stays: finished and failed quests, fired quest events, resolved kingdom events and expired effects remain as they are."); } }
+        internal static string RewindUnits { get { return P("Отматывание не затрагивает эффекты на персонажах, временные чары предметов, усталость, отдых и случайные встречи: они останутся в нынешнем состоянии, с тем же оставшимся временем.", "Turning back does not touch effects on characters, temporary item enchantments, fatigue, rest and random encounters: they stay as they are now, with the same time left."); } }
         internal static string RewindLimit { get { return P("Раньше начала игры отмотать нельзя: не более чем на {0}.", "The clock cannot go back before the start of the game: at most {0}."); } }
         internal static string RewindDone { get { return P("Время отмотано на {0}. Сейчас {1}.", "Turned back by {0}. It is now {1}."); } }
         internal static string HRewind { get { return P("Отмотать", "Turn back"); } }
-        internal static string ReminderRow { get { return P("Напомнить через этот срок", "Remind me after this span"); } }
         internal static string Section { get { return P("— {0} —", "— {0} —"); } }
         internal static string SecCoef { get { return P("Коэффициенты длительности", "Duration coefficients"); } }
-        internal static string SecSpan { get { return P("Перемотка и напоминания", "Skipping and reminders"); } }
+        internal static string SecSpan { get { return P("Перемотка", "Skipping"); } }
         internal static string CoefNote { get { return P("Множитель длительности: ×0.5 — вдвое быстрее, ×2 — вдвое дольше. Изменение вступает в силу по «Применить».", "Duration multiplier: ×0.5 is twice as fast, ×2 twice as long. Takes effect on Apply."); } }
         internal static string BuildingNote { get { return P("Действует на здания, заложенные после изменения.", "Applies to buildings started after the change."); } }
         internal static string TravelNote { get { return P("Сколько игрового времени уходит на путь: ×0.5 — дни идут вдвое медленнее.", "Game time spent travelling: ×0.5 makes days pass half as fast."); } }
         internal static string RestNote { get { return P("Сколько игрового времени уходит на привал и сон.", "Game time spent camping and sleeping."); } }
         internal static string MouseNote { get { return P("Мышь: клик по левой/правой половине строки — меньше/больше.", "Mouse: click the left/right half of the row for less/more."); } }
-        internal static string ReminderAdded { get { return P("Напоминание «{0}» создано: {1}.", "Reminder «{0}» set: {1}."); } }
 
         // Setup page
         internal static string SetupDeadline { get { return P("Свой срок: за {0} до события", "Own deadline: {0} before the event"); } }
@@ -155,6 +154,84 @@ namespace TimeControl
         internal static string SkipDone { get { return P("Время перемотано на {0}. Сейчас {1}.", "Skipped {0}. It is now {1}."); } }
         internal static string SkipZero { get { return P("Задайте срок больше нуля.", "Set a span above zero."); } }
         internal static string TrackedDeadline { get { return P("свой срок", "own deadline"); } }
+
+        internal static string HelpBody { get { return Ru ? HelpRu : HelpEn; } }
+
+        const string HelpRu =
+@"# Вкладки
+- **Сроки** — все счётчики игры, ближайшие сверху. Метка «провал» — по истечении срока что-то будет провалено, «скрытый» — игра этот таймер не показывает. Глаз перед датой — срок отслеживается.
+- **Отслеживаемые** — только отслеживаемые сроки.
+- **Время** — коэффициенты длительности, перемотка и отматывание назад.
+- **Справка** — эта страница.
+# Сроки и отслеживание
+{A}| начать или прекратить отслеживание срока
+{X}| настройка: свой срок и оповещения
+{Y}| показать или убрать скрытые таймеры
+- Сроки, после которых что-то будет провалено, мод начинает отслеживать сам, как только они появляются (отключается в окне UMM). Если снять такой срок с отслеживания, мод больше его не добавит.
+- **Свой срок** — за сколько до события вам нужно успеть: от часа до двух недель. Оповещения отсчитываются от него.
+- **Оповещение** — окно «Напоминание» на пергаменте со звуком, игра встаёт на паузу. Оповещения, время которых прошло до начала отслеживания, не показываются.
+- Отслеживание хранится отдельно для каждого прохождения и общее для всех его сохранений.
+# Коэффициенты
+- Множитель длительности: ×0.5 — вдвое быстрее, ×2 — вдвое дольше, от ×0.1 до ×10. Новое значение вступает в силу по «Применить коэффициенты».
+- **Дела королевства** (события, проекты, регионы, ранги советников, время правителя) пересчитываются сразу, в том числе уже идущие. После применения окно «Проверка сроков» покажет, какие сроки сдвинулись.
+- **Строительство** — только для зданий, заложенных после изменения.
+- **Время в пути** — сколько игрового времени уходит на путь по глобальной карте: при ×0.5 дни в пути идут вдвое медленнее.
+- **Время привала** — сколько игрового времени уходит на привал, охоту и сон.
+# Перемотка
+- Задайте срок в днях и часах и выберите «Перемотать». Перемотка работает на локации и на глобальной карте, вне боя, диалога и сценки.
+- Время идёт по суткам, как в игре: королевство проживает каждый день, сроки заданий проверяются после каждых суток.
+- Если за этот срок наступит срок с провалом или ваш свой срок, перемотка не начнётся: мод покажет, что мешает, и предложит перемотать на наибольший безопасный срок — до часа перед первым таким сроком.
+# Отматывание назад
+- «Отмотать время назад» переводит часы игры назад, но не раньше начала игры. Всё, что привязано к календарю, становится дальше на этот срок: сроки заданий, события заданий и королевства.
+- Уже случившееся не вернётся: выполненные и проваленные задания, сработавшие события, решённые события королевства, доход и начало месяца не повторятся.
+- Королевство живёт только вперёд: пока календарь снова не дойдёт до уже прожитого дня, в королевстве ничего не происходит.
+- **Отматывание не затрагивает** эффекты на персонажах, временные чары предметов, усталость, отдых и случайные встречи: они остаются в нынешнем состоянии, с тем же оставшимся временем.
+# Управление
+@pad {UP} {DOWN}| выбор строки; в справке — прокрутка
+@pad {LEFT} {RIGHT}| изменить значение
+{LB} {RB}| соседняя вкладка
+{B}| назад, закрыть окно
+@pad {START}| меню игры поверх окна мода, как над окнами игры; после него окно возвращается
+@kb - W/S/A/D или стрелки — выбор и изменение, E, Enter или пробел — действие, Q или Backspace — назад, Esc — меню игры поверх окна мода, X и C — вкладки, R и F — как кнопки X и Y геймпада.
+- Мышь: клик выбирает строку, второй клик выполняет её; клик по левой или правой половине строки со значением уменьшает или увеличивает его; колесо прокручивает; клик по подсказке внизу делает то же, что её кнопка.";
+
+        const string HelpEn =
+@"# Tabs
+- **Deadlines** — every countdown of the game, soonest first. ""failure"" — something fails when it runs out, ""hidden"" — the game does not show this timer. The eye before the date — the deadline is tracked.
+- **Tracked** — tracked deadlines only.
+- **Time** — duration coefficients, the time skip and turning the clock back.
+- **Help** — this page.
+# Deadlines and tracking
+{A}| start or stop tracking a deadline
+{X}| setup: your own deadline and alerts
+{Y}| show or hide hidden timers
+- Deadlines after which something fails are tracked as soon as they appear (can be turned off in UMM). Once you stop tracking one, the mod does not add it again.
+- **Own deadline** — how long before the event you need to be done: an hour to two weeks. Alerts count from it.
+- **Alert** — a ""Reminder"" window on the parchment with a sound, the game paused. Alerts whose time passed before tracking began are not shown.
+- Tracking is kept per playthrough, shared by all its saves.
+# Coefficients
+- Duration multiplier: ×0.5 is twice as fast, ×2 twice as long, from ×0.1 to ×10. A new value takes effect on Apply coefficients.
+- **Kingdom tasks** (events, projects, regions, advisor ranks, ruler's time) are recomputed at once, the ones under way too. After Apply the Deadline Check window shows which deadlines moved.
+- **Building construction** — buildings started after the change only.
+- **Travel time** — game time spent travelling on the global map: at ×0.5 days pass half as fast on the road.
+- **Camping time** — game time spent camping, hunting and sleeping.
+# Time skip
+- Set a span in days and hours and choose Skip. It works in an area or on the global map, out of combat, dialogue and cutscenes.
+- Time goes day by day, as in play: the kingdom lives every day, quest deadlines are checked after each day.
+- If a deadline after which something fails, or your own deadline, comes during the span, the skip does not start: the mod shows what is in the way and offers the longest safe span, up to an hour before the first such deadline.
+# Turning the clock back
+- Turn the clock back moves the game clock back, not before the start of the game. Everything tied to the calendar moves that much further away: quest deadlines, quest and kingdom events.
+- What has happened does not come back: finished and failed quests, fired events, resolved kingdom events, income and the start of a month are not repeated.
+- The kingdom lives only forward: until the calendar reaches the day it has already lived, nothing happens in it.
+- **Turning back does not touch** effects on characters, temporary item enchantments, fatigue, rest and random encounters: they stay as they are now, with the same time left.
+# Controls
+@pad {UP} {DOWN}| select a row; in the help, scroll
+@pad {LEFT} {RIGHT}| change a value
+{LB} {RB}| next tab
+{B}| back, close the window
+@pad {START}| the game's menu over the mod's window, as over the game's windows; the window comes back after it
+@kb - W/S/A/D or arrows select and change, E, Enter or Space act, Q or Backspace go back, Esc opens the game's menu over the mod's window, X and C switch tabs, R and F work as the gamepad's X and Y.
+- Mouse: a click selects a row, a second click acts; on rows with a value a click on the left or right half lowers or raises it; the wheel scrolls; a click on a hint at the bottom does what its button does.";
 
         internal static string Days(int n)
         {

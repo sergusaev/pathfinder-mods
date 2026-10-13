@@ -212,10 +212,7 @@ namespace TimeControl
                 DestroyImmediate(m_Tip);
                 MakeTip(parent);
             }
-            string title = Theme.Initial(S.WindowTitle);
-            string key = Main.Settings.Key == KeyCode.None ? "" : (Main.Settings.KeyCtrl ? "Ctrl+" : "") + (Main.Settings.KeyAlt ? "Alt+" : "") + (Main.Settings.KeyShift ? "Shift+" : "") + Main.Settings.Key;
-            if (key.Length > 0) title += "  <size=18><color=" + Theme.Muted + ">[" + key + "]</color></size>";
-            m_TipTitle.text = title;
+            m_TipTitle.text = Theme.Initial(S.WindowTitle);
             var lines = Tracker.Current.Where(x => Tracker.IsTracked(x.Key) && x.Remaining > TimeSpan.Zero).Take(5).Select(t => t.Line).ToArray();
             m_TipText.text = string.Join("\n", lines);
             // Without deadlines to show, only the title.
@@ -237,11 +234,12 @@ namespace TimeControl
                     Build();
                 }
                 Attach();
-                Restyle();
                 var game = Game.Instance;
                 bool show = Main.Settings.BarButton && Main.InGame && !game.IsControllerGamepad && !game.CutsceneLock
                     && (game.CurrentMode == GameModeType.Default || game.CurrentMode == GameModeType.Pause || game.CurrentMode == GameModeType.GlobalMap
                         || game.CurrentMode == GameModeType.EscMode);
+                // Only for a button that is seen: in gamepad mode the game's menu buttons never load, the search would go on forever.
+                if (show) Restyle();
                 if (m_Row.gameObject.activeSelf != show)
                 {
                     m_Row.gameObject.SetActive(show);
@@ -455,6 +453,7 @@ namespace TimeControl
         static readonly Color BottomGold = new Color32(146, 133, 69, 255);
 
         static bool s_Tried;
+        static bool s_Missing;
         static Color32[] s_Normal;
         static Color32[] s_Hover;
         static readonly Dictionary<State, Sprite> s_Cache = new Dictionary<State, Sprite>();
@@ -497,7 +496,9 @@ namespace TimeControl
             s_Normal = Square(sprites, "Normal");
             s_Hover = Square(sprites, "Hover");
             if (s_Normal == null || s_Hover == null) s_Normal = s_Hover = null;
-            Main.Log("bar button: Kingmaker style " + (s_Normal != null ? "built" : "unavailable"));
+            // Tried again every second until the sprites come: said once.
+            if (s_Normal != null || !s_Missing) Main.Log("bar button: Kingmaker style " + (s_Normal != null ? "built" : "unavailable"));
+            s_Missing = s_Normal == null;
             return s_Normal != null;
         }
 

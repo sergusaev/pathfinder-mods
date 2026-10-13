@@ -20,12 +20,6 @@ namespace TimeControl
         public float TravelFactor = 1f;
         public float RestFactor = 1f;
 
-        // Opens the deadlines window.
-        public KeyCode Key = KeyCode.T;
-        public bool KeyAlt = true;
-        public bool KeyCtrl;
-        public bool KeyShift;
-
         // Button next to the buff bar in keyboard and mouse mode.
         public bool BarButton = true;
         public float BarOffsetX;
@@ -52,7 +46,6 @@ namespace TimeControl
 
         static readonly string[] s_FactorNames = { "EventFactor", "ProjectFactor", "ClaimFactor", "RankupFactor", "RulerFactor", "BuildingFactor", "TravelFactor", "RestFactor" };
         static readonly string[] s_Edit = new string[8];
-        static bool s_Capturing;
 
         public static bool Load(UnityModManager.ModEntry modEntry)
         {
@@ -110,8 +103,8 @@ namespace TimeControl
         {
             try
             {
+                Modal.TickHold();
                 if (!InGame) return;
-                if (KeyPressed()) TimersWindow.Toggle();
                 MenuCards.Tick();
                 Tracker.Tick();
                 BarButton.Ensure();
@@ -120,24 +113,6 @@ namespace TimeControl
             {
                 Error(e, "OnUpdate");
             }
-        }
-
-        static bool KeyPressed()
-        {
-            if (Settings.Key == KeyCode.None || !Input.GetKeyDown(Settings.Key)) return false;
-            bool alt = Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
-            bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
-            bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
-            return alt == Settings.KeyAlt && ctrl == Settings.KeyCtrl && shift == Settings.KeyShift;
-        }
-
-        static string KeyText()
-        {
-            string text = Settings.Key.ToString();
-            if (Settings.KeyShift) text = "Shift+" + text;
-            if (Settings.KeyAlt) text = "Alt+" + text;
-            if (Settings.KeyCtrl) text = "Ctrl+" + text;
-            return text;
         }
 
         static void OnGUI(UnityModManager.ModEntry modEntry)
@@ -185,24 +160,7 @@ namespace TimeControl
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("Open the deadlines window", GUILayout.Width(260)) && InGame)
                 TimersWindow.Open(0);
-            GUILayout.Label("Hotkey:", GUILayout.Width(60));
-            if (GUILayout.Button(s_Capturing ? "press a key…" : KeyText(), GUILayout.Width(140))) s_Capturing = !s_Capturing;
             GUILayout.EndHorizontal();
-            Event e = Event.current;
-            if (s_Capturing && e.type == EventType.KeyDown && e.keyCode != KeyCode.None
-                && e.keyCode != KeyCode.LeftAlt && e.keyCode != KeyCode.RightAlt && e.keyCode != KeyCode.LeftControl
-                && e.keyCode != KeyCode.RightControl && e.keyCode != KeyCode.LeftShift && e.keyCode != KeyCode.RightShift)
-            {
-                if (e.keyCode != KeyCode.Escape)
-                {
-                    Settings.Key = e.keyCode;
-                    Settings.KeyAlt = e.alt;
-                    Settings.KeyCtrl = e.control;
-                    Settings.KeyShift = e.shift;
-                }
-                s_Capturing = false;
-                e.Use();
-            }
             Settings.BarButton = GUILayout.Toggle(Settings.BarButton, " Button to the right of the buff bar (keyboard and mouse mode)");
             GUILayout.BeginHorizontal();
             GUILayout.Label("Button offset X: " + Settings.BarOffsetX.ToString("0"), GUILayout.Width(150));

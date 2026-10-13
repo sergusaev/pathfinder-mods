@@ -120,13 +120,14 @@ namespace GamepadCameraRotation
             rig.transform.rotation = Quaternion.Euler(0f, Main.MapYaw, 0f);
         }
 
-        // Not during cutscenes and dialogues, while typing, with the UMM window or the buff menu open.
+        // Not during cutscenes and dialogues, while typing, with the UMM window or a mod window open.
         static bool InputAllowed()
         {
             if (!Main.CameraControllable()) return false;
             var ui = UnityModManager.UI.Instance;
             if (ui != null && ui.Opened) return false;
-            if (GameObject.Find(BuffMenuName) != null) return false;
+            // A window of a mod of this collection (shared ModWindows), or the buff menu of a version that does not tell.
+            if (ModWindows.ModWindow.AnyOpen || GameObject.Find(BuffMenuName) != null) return false;
             GameObject selected = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
             if (selected != null)
             {

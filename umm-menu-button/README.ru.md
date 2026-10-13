@@ -2,7 +2,7 @@
 
 [English version](README.md)
 
-Мод Unity Mod Manager для обеих игр Pathfinder. Он добавляет пункт «Unity Mod Manager» в главное меню и Esc-меню игры. Менеджер модов открывается из меню при любом управлении: клавиатура и мышь, геймпад Xbox или PlayStation, Steam Deck. Знать или назначать его горячую клавишу больше не нужно.
+Мод Unity Mod Manager для обеих игр Pathfinder. Он добавляет пункт «Unity Mod Manager» в главное меню и Esc-меню игры. Менеджер модов открывается из меню при любом управлении: клавиатура и мышь, геймпад Xbox или PlayStation, Steam Deck.
 
 ## Что делает
 

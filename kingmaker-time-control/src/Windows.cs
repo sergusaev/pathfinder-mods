@@ -45,8 +45,8 @@ namespace TimeControl
         {
             var shown = m_Lines.Skip(m_Offset).Take(VisibleLines).ToList();
             string text = string.Join("\n", shown.ToArray());
-            if (m_Offset > 0) text = "<color=" + Theme.Muted + ">▲</color>\n" + text;
-            if (m_Offset + VisibleLines < m_Lines.Count) text += "\n<color=" + Theme.Muted + ">" + string.Format(S.More, m_Lines.Count - m_Offset - VisibleLines) + " ▼</color>";
+            if (m_Offset > 0) text = "<color=" + Theme.Muted + ">· · ·</color>\n" + text;
+            if (m_Offset + VisibleLines < m_Lines.Count) text += "\n<color=" + Theme.Muted + ">" + string.Format(S.More, m_Lines.Count - m_Offset - VisibleLines) + "</color>";
             m_Body.text = text;
         }
 
@@ -154,7 +154,8 @@ namespace TimeControl
     // The deadlines window: all countdowns, the tracked ones, the coefficients and the skip; and the tracking setup.
     class TimersWindow : Modal
     {
-        enum Page { Timers, Tracked, Time, Setup }
+        enum Page { Timers, Tracked, Time, Help, Setup }
+        const int Tabs = 4;
 
         class Item
         {
@@ -163,6 +164,8 @@ namespace TimeControl
             public string Detail;
             public GameTimer Timer;
             public bool Header;
+            // The eye before the date: a tracked deadline.
+            public bool Eye;
             public Action Confirm;
             public Action<int> Change;
         }
@@ -181,6 +184,12 @@ namespace TimeControl
         TextMeshProUGUI m_Date;
         TextMeshProUGUI m_Detail;
         TextMeshProUGUI m_Note;
+        GameObject m_RowsBox;
+        GameObject m_HelpBox;
+        TextMeshProUGUI m_HelpText;
+        float m_HelpOffset;
+        // The label the A hint shows on the deadlines tab: Track or Stop tracking, after the selected row.
+        bool m_HintUntrack;
         readonly float[] m_Pending = new float[8];
         int m_SpanDays = 1;
         int m_SpanHours;
@@ -222,6 +231,7 @@ namespace TimeControl
             m_Date = Ui.Text(Panel, "", 19, Theme.Dim);
             m_Date.alignment = TextAlignmentOptions.Center;
             var list = Ui.Vertical(Panel, "Rows", 4);
+            m_RowsBox = list;
             for (int i = 0; i < VisibleRows; i++)
             {
                 int at = i;
@@ -230,6 +240,20 @@ namespace TimeControl
                 row.Pointer.Live = () => m_Top + at < m_Items.Count && !m_Items[m_Top + at].Header;
                 m_Rows.Add(row);
             }
+            // The help in the rows' place, as high, scrolled inside it.
+            m_HelpBox = new GameObject("Help", typeof(RectTransform));
+            m_HelpBox.transform.SetParent(Panel, false);
+            var helpSize = m_HelpBox.AddComponent<UnityEngine.UI.LayoutElement>();
+            helpSize.preferredHeight = helpSize.minHeight = VisibleRows * 34 + (VisibleRows - 1) * 4 + 52 + 10;
+            m_HelpBox.AddComponent<UnityEngine.UI.RectMask2D>();
+            m_HelpText = Ui.Text(m_HelpBox.transform, "", 19, Theme.Text);
+            var helpRect = m_HelpText.rectTransform;
+            helpRect.anchorMin = new Vector2(0, 1);
+            helpRect.anchorMax = new Vector2(1, 1);
+            helpRect.pivot = new Vector2(0.5f, 1);
+            helpRect.sizeDelta = Vector2.zero;
+            m_HelpText.gameObject.AddComponent<UnityEngine.UI.ContentSizeFitter>().verticalFit = UnityEngine.UI.ContentSizeFitter.FitMode.PreferredSize;
+            m_HelpBox.SetActive(false);
             m_Detail = Ui.Text(Panel, "", 19, Theme.Dim);
             m_Detail.gameObject.AddComponent<UnityEngine.UI.LayoutElement>().minHeight = 52;
             m_Note = Ui.Text(Panel, "", 18, Theme.Dim);
@@ -245,6 +269,18 @@ namespace TimeControl
             m_Page = page;
             m_Cursor = 0;
             m_Top = 0;
+            bool help = page == Page.Help;
+            m_RowsBox.SetActive(!help);
+            m_Detail.gameObject.SetActive(!help);
+            m_Note.gameObject.SetActive(!help);
+            m_HelpBox.SetActive(help);
+            if (help)
+            {
+                m_HelpText.spriteAsset = Help.IconAsset;
+                m_HelpText.text = Help.Build();
+                m_HelpOffset = 0;
+                ScrollHelp(0);
+            }
             Rebuild();
             PageHints();
             MoveTo(0, 1);
@@ -253,11 +289,12 @@ namespace TimeControl
 
         static string TabName(int page)
         {
-            switch ((page % 3 + 3) % 3)
+            switch ((page % Tabs + Tabs) % Tabs)
             {
                 case 0: return S.TabTimers;
                 case 1: return S.TabTracked;
-                default: return S.TabTime;
+                case 2: return S.TabTime;
+                default: return S.TabHelp;
             }
         }
 
@@ -271,7 +308,8 @@ namespace TimeControl
             switch (m_Page)
             {
                 case Page.Timers:
-                    SetHints(new Hint(RewiredActionType.DPadVertical, S.HSelect), new Hint(RewiredActionType.Confirm, S.HTrack),
+                    m_HintUntrack = SelectedTracked;
+                    SetHints(new Hint(RewiredActionType.DPadVertical, S.HSelect), new Hint(RewiredActionType.Confirm, m_HintUntrack ? S.HUntrack : S.HTrack),
                         new Hint(RewiredActionType.Func01, S.HSetup),
                         new Hint(RewiredActionType.Func02, Main.Settings.ShowHidden ? S.HHiddenOff : S.HHiddenOn), prev, next, close);
                     break;
@@ -282,6 +320,9 @@ namespace TimeControl
                 case Page.Time:
                     SetHints(new Hint(RewiredActionType.DPadVertical, S.HSelect), new Hint(RewiredActionType.DPadHorizontal, S.HChange),
                         new Hint(RewiredActionType.Confirm, S.HDo), prev, next, close);
+                    break;
+                case Page.Help:
+                    SetHints(new Hint(RewiredActionType.DPadVertical, S.HScroll), prev, next, close);
                     break;
                 case Page.Setup:
                     SetHints(new Hint(RewiredActionType.DPadVertical, S.HSelect), new Hint(RewiredActionType.DPadHorizontal, S.HChange),
@@ -312,6 +353,7 @@ namespace TimeControl
                 case Page.Tracked: TimerItems(true); break;
                 case Page.Time: TimeItems(); break;
                 case Page.Setup: SetupItems(); break;
+                case Page.Help: m_Note.text = ""; break;
             }
             Render();
         }
@@ -358,6 +400,7 @@ namespace TimeControl
                 {
                     Text = t.Line + (t.Hidden ? "  <size=17><color=" + Theme.Note + ">(" + S.Hidden + ")</color></size>" : ""),
                     Right = Timers.Date(t.Due),
+                    Eye = tracked,
                     Detail = AlertsShort(t),
                     Timer = t,
                     Confirm = trackedOnly ? (Action)(() => OpenSetup(timer)) : () => ToggleTrack(timer)
@@ -368,11 +411,9 @@ namespace TimeControl
                 m_Items.Add(new Item { Text = "<color=" + Theme.Muted + ">" + (trackedOnly ? S.EmptyTracked : S.Empty) + "</color>", Header = true });
         }
 
-        static readonly string[] CoefNotes = { null, null, null, null, null, "building", "travel", "rest" };
-
         void TimeItems()
         {
-            m_Note.text = S.MouseNote;
+            m_Note.text = "";
             m_Items.Add(new Item { Text = "<color=" + Theme.Accent + ">" + string.Format(S.Section, S.SecCoef) + "</color>", Header = true });
             string[] names = { S.CoefEvents, S.CoefProjects, S.CoefClaim, S.CoefRankup, S.CoefRuler, S.CoefBuilding, S.CoefTravel, S.CoefRest };
             for (int i = 0; i < 8; i++)
@@ -381,14 +422,10 @@ namespace TimeControl
                 float now = Main.GetFactor(i);
                 string value = "<b>" + Factors.Text(m_Pending[i]) + "</b>";
                 if (!Mathf.Approximately(now, m_Pending[i])) value = string.Format(S.Pending, value, Factors.Text(now));
-                string note = S.CoefNote;
-                if (CoefNotes[i] == "building") note += " " + S.BuildingNote;
-                if (CoefNotes[i] == "travel") note = S.TravelNote + " " + S.CoefNote;
-                if (CoefNotes[i] == "rest") note = S.RestNote + " " + S.CoefNote;
-                m_Items.Add(new Item { Text = names[i], Right = "-   " + value + "   +", Detail = note, Change = d => StepFactor(at, d) });
+                m_Items.Add(new Item { Text = names[i], Right = "-   " + value + "   +", Change = d => StepFactor(at, d) });
             }
             bool pending = Enumerable.Range(0, 8).Any(i => !Mathf.Approximately(Main.GetFactor(i), m_Pending[i]));
-            m_Items.Add(new Item { Text = (pending ? "<b>" : "") + S.Apply + (pending ? "</b>" : ""), Detail = S.CoefNote, Confirm = ApplyFactors });
+            m_Items.Add(new Item { Text = (pending ? "<b>" : "") + S.Apply + (pending ? "</b>" : ""), Confirm = ApplyFactors });
             m_Items.Add(new Item
             {
                 Text = S.Reset,
@@ -406,7 +443,6 @@ namespace TimeControl
             m_Items.Add(new Item { Text = S.SkipRow + " (" + S.Span(hours) + ")", Detail = after, Confirm = AskSkip });
             string before = Timers.Date(Game.Instance.Player.GameTime - TimeSpan.FromHours(Math.Min(hours, Rewinder.MaxHours)));
             m_Items.Add(new Item { Text = S.RewindRow + " (" + S.Span(hours) + ")", Detail = before, Confirm = AskRewind });
-            m_Items.Add(new Item { Text = S.ReminderRow + " (" + S.Span(hours) + ")", Detail = after, Confirm = AddReminder });
         }
 
         void SetupItems()
@@ -442,7 +478,7 @@ namespace TimeControl
                 bool on = tracked.Alerts.Contains(a);
                 m_Items.Add(new Item
                 {
-                    Text = (on ? "<color=" + Theme.Good + ">☑</color> " : "<color=" + Theme.Muted + ">☐</color> ") + string.Format(S.SetupAlert, S.Offset(a)),
+                    Text = (on ? "<color=" + Theme.Good + ">+</color> " : "<color=" + Theme.Muted + ">–</color> ") + string.Format(S.SetupAlert, S.Offset(a)),
                     Detail = TimerDetail(timer),
                     Confirm = () =>
                     {
@@ -608,20 +644,6 @@ namespace TimeControl
             MessageWindow.Show(S.SkipTitle, new List<string> { string.Format(S.SkipDone, S.Span(hours), Timers.Date(Game.Instance.Player.GameTime)) }, null, null);
         }
 
-        void AddReminder()
-        {
-            int hours = SpanHours;
-            if (hours <= 0)
-            {
-                MessageWindow.Show(S.SkipTitle, new List<string> { S.SkipZero }, null, null);
-                return;
-            }
-            string name = Tracker.AddReminder(hours);
-            Ui.Sound(UISoundType.ButtonClick);
-            Rebuild();
-            MessageWindow.Show(S.WindowTitle, new List<string> { string.Format(S.ReminderAdded, name, Timers.Date(Game.Instance.Player.GameTime + TimeSpan.FromHours(hours))) }, null, null);
-        }
-
         // ---------- input ----------
 
         Item Selected
@@ -675,13 +697,32 @@ namespace TimeControl
         protected override void OnShoulder(int direction)
         {
             if (m_Page == Page.Setup) return;
-            int next = ((int)m_Page + direction + 3) % 3;
+            int next = ((int)m_Page + direction + Tabs) % Tabs;
             Go((Page)next);
         }
 
         protected override void OnMove(int direction)
         {
-            MoveTo(m_Cursor + direction, direction);
+            if (m_Page == Page.Help) ScrollHelp(direction * 60f);
+            else MoveTo(m_Cursor + direction, direction);
+        }
+
+        bool SelectedTracked
+        {
+            get
+            {
+                var item = Selected;
+                return item != null && item.Timer != null && Tracker.IsTracked(item.Timer.Key);
+            }
+        }
+
+        void ScrollHelp(float delta)
+        {
+            Canvas.ForceUpdateCanvases();
+            float box = ((RectTransform)m_HelpBox.transform).rect.height;
+            float max = Mathf.Max(0, m_HelpText.preferredHeight - box);
+            m_HelpOffset = Mathf.Clamp(m_HelpOffset + delta, 0, max);
+            m_HelpText.rectTransform.anchoredPosition = new Vector2(0, m_HelpOffset);
         }
 
         protected override void OnChange(int direction)
@@ -693,6 +734,11 @@ namespace TimeControl
         protected override void OnWheel(float y)
         {
             if (Mathf.Abs(y) < 0.01f) return;
+            if (m_Page == Page.Help)
+            {
+                ScrollHelp(y > 0 ? -90f : 90f);
+                return;
+            }
             int delta = y > 0 ? -3 : 3;
             m_Top = Mathf.Clamp(m_Top + delta, 0, Math.Max(0, m_Items.Count - VisibleRows));
             m_Cursor = Mathf.Clamp(m_Cursor, m_Top, Math.Min(m_Items.Count - 1, m_Top + VisibleRows - 1));
@@ -748,9 +794,30 @@ namespace TimeControl
             Vector2 local;
             var rect = m_Tabs.rectTransform;
             RectTransformUtility.ScreenPointToLocalPointInRectangle(rect, e.position, null, out local);
-            float x = (local.x - rect.rect.xMin) / Math.Max(1f, rect.rect.width);
-            Go(x < 0.4f ? Page.Timers : x < 0.6f ? Page.Tracked : Page.Time);
+            // The names are centred and of different lengths: the tab whose name is nearest to the click.
+            string[] names = { S.TabTimers, S.TabTracked, S.TabTime, S.TabHelp };
+            var info = m_Tabs.textInfo;
+            int start = 0, best = -1;
+            float bestDistance = float.MaxValue;
+            for (int i = 0; i < Tabs; i++)
+            {
+                int end = start + names[i].Length - 1;
+                if (end < info.characterCount)
+                {
+                    float left = info.characterInfo[start].bottomLeft.x, right = info.characterInfo[end].topRight.x;
+                    float distance = local.x < left ? left - local.x : local.x > right ? local.x - right : 0f;
+                    if (distance < bestDistance)
+                    {
+                        bestDistance = distance;
+                        best = i;
+                    }
+                }
+                start += names[i].Length + TabSeparator.Length;
+            }
+            if (best >= 0) Go((Page)best);
         }
+
+        const string TabSeparator = "   ·   ";
 
         protected override void Tick()
         {
@@ -762,14 +829,14 @@ namespace TimeControl
 
         void Render()
         {
-            string[] names = { S.TabTimers, S.TabTracked, S.TabTime };
+            string[] names = { S.TabTimers, S.TabTracked, S.TabTime, S.TabHelp };
             if (m_Page == Page.Setup) m_Tabs.text = "<b>" + S.TabSetup + "</b>";
             else
             {
                 var parts = new List<string>();
-                for (int i = 0; i < 3; i++)
+                for (int i = 0; i < Tabs; i++)
                     parts.Add(i == (int)m_Page ? "<b><color=" + Theme.Accent + ">" + names[i] + "</color></b>" : "<color=" + Theme.Muted + ">" + names[i] + "</color>");
-                m_Tabs.text = string.Join("   ·   ", parts.ToArray());
+                m_Tabs.text = string.Join(TabSeparator, parts.ToArray());
             }
             m_Date.text = string.Format(S.Today, Timers.Date(Game.Instance.Player.GameTime));
             for (int i = 0; i < VisibleRows; i++)
@@ -781,6 +848,7 @@ namespace TimeControl
                 {
                     row.Text.text = "";
                     row.Right.text = "";
+                    row.Icon.gameObject.SetActive(false);
                     row.Pointer.Normal = Color.clear;
                     row.Pointer.Refresh();
                     continue;
@@ -788,13 +856,20 @@ namespace TimeControl
                 var item = m_Items[index];
                 row.Text.text = item.Text;
                 row.Right.text = item.Right ?? "";
+                if (item.Eye)
+                {
+                    row.Icon.sprite = Icons.Eye;
+                    row.Icon.color = Theme.Dim;
+                }
+                row.Icon.gameObject.SetActive(item.Eye);
                 row.Text.color = item.Header ? Theme.Dim : Theme.Text;
                 Paint(row, index == m_Cursor && !item.Header);
             }
             var selected = Selected;
             m_Detail.text = selected != null && selected.Detail != null ? selected.Detail : "";
-            if (m_Items.Count > VisibleRows && (m_Page == Page.Time || m_Page == Page.Setup))
-                m_Detail.text += (m_Detail.text.Length > 0 ? "\n" : "") + "<color=" + Theme.Muted + ">" + (m_Top > 0 ? "▲ " : "") + (m_Top + 1) + "–" + Math.Min(m_Items.Count, m_Top + VisibleRows) + " / " + m_Items.Count + (m_Top + VisibleRows < m_Items.Count ? " ▼" : "") + "</color>";
+            if (m_Page == Page.Timers && m_HintUntrack != SelectedTracked) PageHints();
+            if (m_Items.Count > VisibleRows && m_Page == Page.Setup)
+                m_Detail.text += (m_Detail.text.Length > 0 ? "\n" : "") + "<color=" + Theme.Muted + ">" + (m_Top + 1) + "–" + Math.Min(m_Items.Count, m_Top + VisibleRows) + " / " + m_Items.Count + "</color>";
         }
     }
 }

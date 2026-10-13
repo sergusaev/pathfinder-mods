@@ -23,21 +23,11 @@ namespace TimeControl
         public bool Critical;
     }
 
-    class Reminder
-    {
-        public int Id;
-        public string Name;
-        // Player.GameTime in hours.
-        public double DueHours;
-    }
-
     class TrackingData
     {
         public List<TrackedTimer> Tracked = new List<TrackedTimer>();
-        public List<Reminder> Reminders = new List<Reminder>();
         // Auto-tracked deadlines the player stopped tracking.
         public List<string> Dismissed = new List<string>();
-        public int NextReminder = 1;
     }
 
     // Tracked deadlines and their alerts, kept per playthrough (Player.GameId) in the mod folder.
@@ -83,7 +73,8 @@ namespace TimeControl
             }
             // An earlier save of the same playthrough: alerts already passed there are not shown again.
             if (player.GameTime < s_LastTime - TimeSpan.FromHours(1)) s_Rebase = true;
-            if (Time.unscaledTime < s_NextScan || Skipper.Running) return;
+            // Under a window of another mod of the collection alerts wait: they come once it closes.
+            if (Time.unscaledTime < s_NextScan || Skipper.Running || ModWindows.ModWindow.OtherOpen(Main.Mod.Info.Id)) return;
             s_NextScan = Time.unscaledTime + ScanInterval;
             Scan();
         }
@@ -151,13 +142,7 @@ namespace TimeControl
                 else
                     text = tracked.DeadlineHours > 0 ? string.Format(S.LeftToDeadline, t.Short, Timers.Period(TimeSpan.FromHours(left))) : t.Line;
                 if (t.Name != t.Short) text += "\n    <size=19>" + t.Name + "</size>";
-                alerts.Add(new Alert { Key = tracked.Key, Text = text, Final = left <= 0 && t.Reminder });
-            }
-            // A reminder is over once it has been shown.
-            foreach (var a in alerts.Where(x => x.Key.StartsWith("rm:") && x.Final))
-            {
-                s_Data.Reminders.RemoveAll(r => "rm:" + r.Id == a.Key);
-                Remove(a.Key);
+                alerts.Add(new Alert { Key = tracked.Key, Text = text });
             }
             s_Rebase = false;
             if (changed || alerts.Count > 0) Save();
@@ -191,7 +176,7 @@ namespace TimeControl
             {
                 Key = t.Key,
                 Name = t.Name,
-                Alerts = (t.Reminder ? new List<int> { 0 } : Main.Settings.DefaultAlerts.ToList()),
+                Alerts = Main.Settings.DefaultAlerts.ToList(),
                 Critical = t.Critical,
                 LastRemaining = t.Remaining.TotalHours
             };
@@ -214,7 +199,6 @@ namespace TimeControl
             if (tracked == null) return;
             Remove(key);
             if (tracked.Critical && !s_Data.Dismissed.Contains(key)) s_Data.Dismissed.Add(key);
-            if (key.StartsWith("rm:")) s_Data.Reminders.RemoveAll(r => "rm:" + r.Id == key);
             Save();
         }
 
@@ -224,36 +208,20 @@ namespace TimeControl
             Save();
         }
 
-        internal static string AddReminder(int hours)
-        {
-            var reminder = new Reminder
-            {
-                Id = s_Data.NextReminder++,
-                DueHours = (Game.Instance.Player.GameTime + TimeSpan.FromHours(hours)).TotalHours
-            };
-            reminder.Name = string.Format(S.ReminderName, reminder.Id);
-            s_Data.Reminders.Add(reminder);
-            var timer = ReminderTimer(reminder);
-            Add(timer, false);
-            Current.Add(timer);
-            Current.Sort((a, b) => a.Due.CompareTo(b.Due));
-            return reminder.Name;
-        }
-
-        static GameTimer ReminderTimer(Reminder r)
-        {
-            return new GameTimer { Key = "rm:" + r.Id, Name = r.Name, Due = TimeSpan.FromHours(r.DueHours), Reminder = true };
-        }
-
-        internal static void AddReminders(List<GameTimer> list)
-        {
-            foreach (var r in s_Data.Reminders) list.Add(ReminderTimer(r));
-        }
-
         static string Folder
         {
             get { return Path.Combine(Main.Mod.Path, "Tracking"); }
         }
+
+        // The game sets JsonConvert.DefaultSettings to its own (only its marked members, references by $id): with them our
+        // classes come out empty. Our own settings, every public field.
+        static readonly JsonSerializerSettings Json = new JsonSerializerSettings
+        {
+            ContractResolver = new Newtonsoft.Json.Serialization.DefaultContractResolver(),
+            PreserveReferencesHandling = PreserveReferencesHandling.None,
+            TypeNameHandling = TypeNameHandling.None,
+            ObjectCreationHandling = ObjectCreationHandling.Replace,
+        };
 
         static void Load(string gameId)
         {
@@ -262,13 +230,15 @@ namespace TimeControl
             try
             {
                 string file = Path.Combine(Folder, gameId + ".json");
-                if (File.Exists(file)) s_Data = JsonConvert.DeserializeObject<TrackingData>(File.ReadAllText(file)) ?? new TrackingData();
+                if (File.Exists(file)) s_Data = JsonConvert.DeserializeObject<TrackingData>(File.ReadAllText(file), Json) ?? new TrackingData();
             }
             catch (Exception e)
             {
                 Main.Error(e, "loading tracked deadlines");
             }
-            Main.Log(string.Format("playthrough {0}: {1} tracked, {2} reminders", gameId, s_Data.Tracked.Count, s_Data.Reminders.Count));
+            // Reminders of earlier versions ("rm:" keys) are gone with them.
+            if (s_Data.Tracked.RemoveAll(t => t.Key != null && t.Key.StartsWith("rm:")) > 0) Save();
+            Main.Log(string.Format("playthrough {0}: {1} tracked", gameId, s_Data.Tracked.Count));
         }
 
         static void Save()
@@ -277,7 +247,7 @@ namespace TimeControl
             try
             {
                 Directory.CreateDirectory(Folder);
-                File.WriteAllText(Path.Combine(Folder, s_GameId + ".json"), JsonConvert.SerializeObject(s_Data, Formatting.Indented));
+                File.WriteAllText(Path.Combine(Folder, s_GameId + ".json"), JsonConvert.SerializeObject(s_Data, Formatting.Indented, Json));
             }
             catch (Exception e)
             {

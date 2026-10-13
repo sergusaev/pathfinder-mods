@@ -2,7 +2,7 @@
 
 [English version](steam-deck.md)
 
-Справка настраивает Unity Mod Manager (UMM) для **Pathfinder: Kingmaker** и **Pathfinder: Wrath of the Righteous** на Steam Deck, назначает задние кнопки и ставит моды для геймпада из этого репозитория и форк [Buff It 2 The Limit (Groups)](https://github.com/sergusaev/wrath-epic-buffing). Каждый шаг выполнен и проверен на Steam Deck со SteamOS, Kingmaker 2.1.7b и UMM 0.32.4.
+Справка настраивает Unity Mod Manager (UMM) для **Pathfinder: Kingmaker** и **Pathfinder: Wrath of the Righteous** на Steam Deck и ставит моды из этого репозитория и форк [Buff It 2 The Limit (Groups)](https://github.com/sergusaev/wrath-epic-buffing). Каждый шаг выполнен и проверен на Steam Deck со SteamOS, Kingmaker 2.1.7b и UMM 0.32.4.
 
 Игры настраиваются по-разному:
 
@@ -69,14 +69,10 @@ cat > "$UMM/Config.xml" <<'EOF'
 </Config>
 EOF
 
-# The UMM window opens with Shift+F10 (see 1.4) and shows on start.
+# The UMM window shows on start.
 cat > "$UMM/Params.xml" <<'EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <Param xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  <Hotkey>
-    <keyCode>F10</keyCode>
-    <modifiers>2</modifiers>
-  </Hotkey>
   <CheckUpdates>0</CheckUpdates>
   <ShowOnStart>1</ShowOnStart>
 </Param>
@@ -114,9 +110,9 @@ cat > "$UMM/Config.xml" <<'EOF'
 </Config>
 EOF
 cp "$HOME/.local/share/Steam/steamapps/common/Pathfinder Kingmaker/Kingmaker_Data/Managed/UnityModManager/Params.xml" "$UMM/" 2>/dev/null \
-  || printf '<?xml version="1.0" encoding="utf-8"?>\n<Param>\n  <Hotkey>\n    <keyCode>F10</keyCode>\n    <modifiers>2</modifiers>\n  </Hotkey>\n  <CheckUpdates>0</CheckUpdates>\n  <ShowOnStart>1</ShowOnStart>\n</Param>\n' > "$UMM/Params.xml"
+  || printf '<?xml version="1.0" encoding="utf-8"?>\n<Param>\n  <CheckUpdates>0</CheckUpdates>\n  <ShowOnStart>1</ShowOnStart>\n</Param>\n' > "$UMM/Params.xml"
 
-# Keep WotR in gamepad mode: otherwise every key sent by a back button pops up
+# Keep WotR in gamepad mode: otherwise any keyboard key (the Steam on-screen keyboard too) pops up
 # "Switch to keyboard and mouse?". The mouse and keyboard interface of WotR is unavailable while this is set.
 [ -f "$WOTR/startup.json" ] && cp "$WOTR/startup.json" "$WOTR/startup.json.bak"
 echo '{"ForceControllerMode":"gamepad"}' > "$WOTR/startup.json"
@@ -124,45 +120,13 @@ echo '{"ForceControllerMode":"gamepad"}' > "$WOTR/startup.json"
 
 В Steam: Wrath of the Righteous → ⚙ → Свойства → Параметры запуска: `WINEDLLOVERRIDES="winhttp=n,b" %command%`.
 
-`startup.json` держит WotR в режиме геймпада: без него на каждую клавишу от задней кнопки игра спрашивает «Перейти на клавиатуру и мышь?». Интерфейс клавиатуры и мыши в WotR при этом недоступен. «Проверка целостности файлов» в Steam может вернуть исходный `startup.json` — тогда записать его снова.
+`startup.json` держит WotR в режиме геймпада: без него на любую клавишу (в том числе с экранной клавиатуры Steam) игра спрашивает «Перейти на клавиатуру и мышь?». Интерфейс клавиатуры и мыши в WotR при этом недоступен. «Проверка целостности файлов» в Steam может вернуть исходный `startup.json` — тогда записать его снова.
 
-### 1.4 Горячая клавиша окна UMM
+### 1.4 Проверка
 
-По умолчанию UMM открывает окно по Ctrl+F10, но в режиме рабочего стола Ctrl+F10 занимает KDE («Показать все окна»), а Ctrl+F11, Shift+Tab и F12 принадлежат Steam. `Params.xml` выше меняет клавишу на **Shift+F10** (`modifiers`: 1 Ctrl, 2 Shift, 4 Alt). UMM перезаписывает `Params.xml` при выходе из игры, поэтому править его только при закрытой игре. Клавишу можно сменить и в самом окне UMM (вкладка Settings).
+Запустить игру в игровом режиме. При старте появится окно UMM (`ShowOnStart`), вкладка Mods пока пустая. Если окно не появилось — см. [Неполадки](#4-неполадки).
 
-UMM реагирует на сочетание, только если клавиши удерживаются примерно 0,2 с; короткое нажатие кнопки, которая шлёт обе клавиши разом, игнорируется. Это учтено в назначении R4 в следующем разделе.
-
-### 1.5 Проверка
-
-Запустить игру в игровом режиме. При старте появится окно UMM (`ShowOnStart`), вкладка Mods пока пустая. Окном UMM управляют мышью — правым трекпадом (следующий раздел). Если окно не появилось — см. [Неполадки](#5-неполадки).
-
-## 2. Раскладка Steam Input
-
-Настраивается для каждой игры отдельно: страница игры → значок контроллера → Изменить раскладку (или кнопка Steam → Настройки контроллера во время игры). Раскладка Kingmaker хранится в Steam Cloud, WotR — локально; Steam делает всё сам.
-
-| Кнопка | Назначение | Зачем |
-|---|---|---|
-| **R4** | две команды: Left Shift, затем F10 с задержками (ниже) | окно UMM |
-| **L5** | клавиша F7, обычное одиночное нажатие без задержек | меню Buff It 2 The Limit (Groups); нажатие, удержание и двойное нажатие распознаёт сам мод |
-| **Правый трекпад** | мышь, клик = левая кнопка мыши | окно UMM и настройки модов |
-| **R5** | правая кнопка мыши | действия в окне UMM |
-| **L4** | Enter (по желанию) | подтверждение диалогов в режиме мыши; с `startup.json` не нужно |
-
-R4 по шагам:
-
-1. Задние кнопки → R4 → Клавиатура → Left Shift. В настройках команды (шестерёнка) **задержка окончания** (Fire end delay) 400 мс.
-2. На R4 «Добавить команду» → Клавиатура → F10. В её настройках **задержка начала** (Fire start delay) 120 мс и **задержка окончания** 250 мс.
-
-Нажатие R4 держит Shift 0,4 с и F10 0,25 с внутри него — этого UMM хватает.
-
-Чего избегать:
-
-- **Сочетаний с Shift на L5.** При коротком нажатии Steam Input не досылает клавишу с задержкой начала, приходит только Shift, поэтому клавиша меню — одна клавиша без задержек.
-- **Активаторов Steam «Долгое нажатие» и «Двойное нажатие» на L5.** С долгим нажатием Steam шлёт ещё и клавишу обычного нажатия, а двойное до игры не доходило. Эти жесты мод баффов делает сам.
-- **L3+R3 в WotR**: это сочетание открывает окно отчёта об ошибке.
-- Имена задних кнопок в файле раскладки, если когда-нибудь будете его править: L4 = `button_back_left_upper`, L5 = `button_back_left`, R4 = `button_back_right_upper`, R5 = `button_back_right`. Имён `…_lower` не существует, Steam такой блок молча пропускает.
-
-## 3. Установка модов
+## 2. Установка модов
 
 Скачать zip-архивы со страниц релизов: [релизы pathfinder-mods](https://github.com/sergusaev/pathfinder-mods/releases) и [релизы Buff It 2 The Limit (Groups)](https://github.com/sergusaev/wrath-epic-buffing/releases). В каждом архиве одна папка с `Info.json` и DLL; распаковать её в папку модов игры, чтобы получилось `Mods/<ModId>/Info.json`:
 
@@ -176,36 +140,19 @@ python3 -m zipfile -e PortraitScrollFix-1.1.0.zip "$WOTR/mods/"              # e
 
 При обновлении мода удалить файлы `*.cache` в его папке до запуска игры.
 
-| Мод | Игра | Папка | На Steam Deck |
+| Мод | Игра | Папка | Примечания |
 |---|---|---|---|
-| [Camera Rotation and Compass](../kingmaker-gamepad-camera-rotation/README.ru.md) | Kingmaker | `Mods/GamepadCameraRotation` | R3 переключает режим камеры, крестовина вверх — пошаговый режим. Компасу нужна установленная WotR (находится сама). В Bag of Tricks выключить поворот камеры |
+| [Unity Mod Manager in Game Menus](../umm-menu-button/README.ru.md) | Kingmaker, WotR | `Mods/UmmMenuButton`, `mods/UmmMenuButton` | отдельный zip для каждой игры |
+| [Time Control and Deadlines](../kingmaker-time-control/README.ru.md) | Kingmaker | `Mods/TimeControl` | |
+| [Belt Consumables Refill](../belt-consumables-refill/README.ru.md) | Kingmaker, WotR | `Mods/BeltConsumablesRefill`, `mods/BeltConsumablesRefill` | отдельный zip для каждой игры |
+| [Camera Rotation and Compass](../kingmaker-gamepad-camera-rotation/README.ru.md) | Kingmaker | `Mods/GamepadCameraRotation` | компасу нужна установленная WotR (находится сама). В Bag of Tricks выключить поворот камеры |
 | [Custom Portraits Gamepad Selection Fix](../kingmaker-custom-portraits-gamepad/README.ru.md) | Kingmaker | `Mods/ConsoleCustomPortraits` | портреты кладутся в `~/.config/unity3d/Owlcat Games/Pathfinder Kingmaker/Portraits/` |
-| [Level 1 Companions & Free Respec](../level1-companions/README.ru.md) | Kingmaker, WotR | `Mods/Level1Companions`, `mods/Level1Companions` | отдельный zip для каждой игры (`-kingmaker`, `-wotr`). Кнопка респека — в окне UMM (R4). В WotR сначала удалить `mods/lvl1companions` |
+| [Level 1 Companions & Free Respec](../level1-companions/README.ru.md) | Kingmaker, WotR | `Mods/Level1Companions`, `mods/Level1Companions` | отдельный zip для каждой игры (`-kingmaker`, `-wotr`). В WotR сначала удалить `mods/lvl1companions` |
 | [Portrait Scroll Fix (gamepad)](../wotr-portrait-scroll-fix/README.ru.md) | WotR | `mods/PortraitScrollFix` | портреты — в папку `Portraits` внутри префикса Proton, см. README мода |
-| [Buff It 2 The Limit (Groups)](https://github.com/sergusaev/wrath-epic-buffing/blob/gamepad/pad-docs/README.ru.md) | WotR | `mods/BuffIt2TheLimit` | заменяет оригинальные Buff It 2 The Limit и BubbleBuffs — их сначала удалить. Меню на L5, см. ниже |
-| [Buff It 2 The Limit (Groups) для Kingmaker](https://github.com/sergusaev/wrath-epic-buffing/blob/gamepad/pad-docs/README.ru.md#kingmaker) | Kingmaker | `Mods/PadBuffsKingmaker` | то же меню; клавиша меню — F7 сразу, нужно только L5 → F7. Заклинания, классовые способности, переключаемые, песни; без свитков, зелий и жезлов |
+| [Buff It 2 The Limit (Groups)](https://github.com/sergusaev/wrath-epic-buffing/blob/gamepad/pad-docs/README.ru.md) | WotR | `mods/BuffIt2TheLimit` | заменяет оригинальные Buff It 2 The Limit и BubbleBuffs — их сначала удалить |
+| [Buff It 2 The Limit (Groups) для Kingmaker](https://github.com/sergusaev/wrath-epic-buffing/blob/gamepad/pad-docs/README.ru.md#kingmaker) | Kingmaker | `Mods/PadBuffsKingmaker` | |
 
-**Клавиша меню Buff It 2 The Limit (Groups) в WotR.** В Kingmaker клавиша меню — F7 сразу. В WotR это клавиша «открыть меню баффов» оригинального мода, а задаётся она в PC-экране книги заклинаний, недоступном в режиме геймпада. Запустить WotR с модом, загрузить сохранение и выйти, затем прописать клавиши в файлы настроек (меню = F7, группа Long = F6, группа Important = F9):
-
-```bash
-WOTR="$HOME/.local/share/Steam/steamapps/common/Pathfinder Second Adventure"
-cd "$WOTR/mods/BuffIt2TheLimit/UserSettings" && python3 - bi2tl-*.json <<'EOF'
-import json, sys
-for path in sys.argv[1:]:
-    raw = open(path, 'rb').read()
-    bom = raw.startswith(b'\xef\xbb\xbf')
-    data = json.loads(raw.decode('utf-8-sig'))
-    key = lambda k: {'Key': k, 'Ctrl': False, 'Shift': False, 'Alt': False}
-    data['OpenBuffMenuKey'] = key('F7')
-    data['ShortcutKeys'] = {'Long': key('F6'), 'Quick': key('None'), 'Important': key('F9')}
-    open(path, 'wb').write((b'\xef\xbb\xbf' if bom else b'') + json.dumps(data, ensure_ascii=False, indent=2).encode())
-    print('updated', path)
-EOF
-```
-
-У каждого прохождения свой файл настроек, для новой игры команду повторить.
-
-## 4. Логи
+## 3. Логи
 
 | Что | Где |
 |---|---|
@@ -214,7 +161,7 @@ EOF
 
 Строки модов начинаются с id мода в скобках, например `[GamepadCameraRotation]`; меню баффов пишет `[PAD]`.
 
-## 5. Неполадки
+## 4. Неполадки
 
 | Признак | Причина и решение |
 |---|---|
@@ -222,8 +169,8 @@ EOF
 | Kingmaker: моды грузятся, а окно UMM не появляется | в `Config.xml` есть `UIStartingPoint`; убрать (1.2) |
 | WotR: в логах нет следов UMM | в параметрах запуска нет `WINEDLLOVERRIDES="winhttp=n,b"`, или в папке игры нет `winhttp.dll` / `doorstop_config.ini` |
 | WotR предлагает перейти на клавиатуру и мышь | нет `startup.json` или его вернула проверка файлов (1.3) |
-| R4 не открывает окно UMM | задержки на R4 (раздел 2), или в `Params.xml` клавиша не Shift+F10 |
-| Меню баффов не открывается по L5 | L5 должна слать одну F7 без задержек; в WotR клавиша должна быть ещё и прописана в файле настроек (раздел 3) |
+| В меню нет пункта «Unity Mod Manager» | Unity Mod Manager in Game Menus нет в папке модов этой игры, или игра запустилась без UMM (см. строки выше) |
+| Мод не загрузился | см. его статус в окне UMM и лог (раздел 3) |
 | Kingmaker не видит папку мода | на Linux папка называется `Mods` с заглавной M, а файл — `Info.json` |
 
 ## Удаление

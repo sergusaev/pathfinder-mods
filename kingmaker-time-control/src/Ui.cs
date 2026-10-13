@@ -11,6 +11,10 @@ using Kingmaker.GameModes;
 using Kingmaker.UI;
 using Kingmaker.UI.Common;
 using Kingmaker.UI._ConsoleUI;
+using Kingmaker.UI.ServiceWindow;
+using Kingmaker.PubSubSystem;
+using ModWindows;
+using TurnBased.Controllers;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -306,6 +310,7 @@ namespace TimeControl
         public Image Bg;
         public TextMeshProUGUI Text;
         public TextMeshProUGUI Right;
+        public Image Icon;
         public Pointer Pointer;
     }
 
@@ -324,12 +329,18 @@ namespace TimeControl
     // A window of the mod: a parchment sheet in the middle of the screen over a click blocker, with the game's button
     // hints at the bottom. Gamepad buttons come through an input layer of the game's console input (the world and the
     // HUD do not get them while the window is open), the keyboard keys are those of the buff menu, the mouse clicks rows
-    // and hints, the right button goes back. The game is paused and travel on the global map stops while it is open.
+    // and hints, the right button goes back. Start and Esc open the game's menu over them, as over the game's own
+    // windows: they hide under it and come back. The game is paused in real time and travel on the
+    // global map stops while one is open; the camera and the game's triggers do nothing behind it (shared ModWindows).
     abstract class Modal : MonoBehaviour
     {
         static readonly List<Modal> s_Stack = new List<Modal>();
         static bool s_Paused;
         static KeyboardAccess s_Keyboard;
+        // After the last window closes, its input layer and the keyboard lock stay until the buttons are let go:
+        // the press that closed it (Start, Esc, B) does not reach the game as well, nor its release.
+        static IDisposable s_HeldLayer;
+        static int s_HeldFrame;
 
         internal static bool AnyOpen
         {
@@ -346,6 +357,7 @@ namespace TimeControl
         protected TextMeshProUGUI TitleText;
         protected Transform HintHolder;
         IDisposable m_Layer;
+        Canvas m_Canvas;
         readonly Dictionary<RewiredActionType, int> m_Fired = new Dictionary<RewiredActionType, int>();
         int m_HeldV, m_HeldH;
         float m_NextRepeat;
@@ -358,13 +370,14 @@ namespace TimeControl
 
         static readonly RewiredActionType[] Buttons = {
             RewiredActionType.Confirm, RewiredActionType.Decline, RewiredActionType.Func01, RewiredActionType.Func02,
-            RewiredActionType.LeftUp, RewiredActionType.RightUp
+            RewiredActionType.LeftUp, RewiredActionType.RightUp, RewiredActionType.Options
         };
         static readonly RewiredActionType[] DPad = {
             RewiredActionType.DPadUp, RewiredActionType.DPadDown, RewiredActionType.DPadLeft, RewiredActionType.DPadRight
         };
         static readonly KeyCode[] KeysConfirm = { KeyCode.E, KeyCode.Return, KeyCode.KeypadEnter, KeyCode.Space };
-        static readonly KeyCode[] KeysDecline = { KeyCode.Q, KeyCode.Escape, KeyCode.Backspace };
+        static readonly KeyCode[] KeysDecline = { KeyCode.Q, KeyCode.Backspace };
+        static readonly KeyCode[] KeysClose = { KeyCode.Escape };
         static readonly KeyCode[] KeysX = { KeyCode.R };
         static readonly KeyCode[] KeysY = { KeyCode.F };
         static readonly KeyCode[] KeysLB = { KeyCode.X, KeyCode.PageUp };
@@ -380,6 +393,7 @@ namespace TimeControl
                 case RewiredActionType.Func02: return KeysY;
                 case RewiredActionType.LeftUp: return KeysLB;
                 case RewiredActionType.RightUp: return KeysRB;
+                case RewiredActionType.Options: return KeysClose;
             }
             return new KeyCode[0];
         }
@@ -390,11 +404,29 @@ namespace TimeControl
             {
                 case RewiredActionType.DPadVertical: return "W/S";
                 case RewiredActionType.DPadHorizontal: return "A/D";
-                case RewiredActionType.Decline: return "Esc";
+                case RewiredActionType.Options: return "Esc";
                 case RewiredActionType.Confirm: return "E";
             }
             var keys = Keys(button);
             return keys.Length > 0 ? keys[0].ToString() : button.ToString();
+        }
+
+        // The key or the pad button of an action, as the help names it.
+        internal static string KeyName(RewiredActionType button)
+        {
+            switch (button)
+            {
+                case RewiredActionType.DPadUp: return "W";
+                case RewiredActionType.DPadDown: return "S";
+                case RewiredActionType.DPadLeft: return "A";
+                case RewiredActionType.DPadRight: return "D";
+            }
+            return KeyLabel(button);
+        }
+
+        internal static string PadName(RewiredActionType button)
+        {
+            return PadLabel(button);
         }
 
         static string PadLabel(RewiredActionType button)
@@ -407,6 +439,7 @@ namespace TimeControl
                 case RewiredActionType.Func02: return "Y";
                 case RewiredActionType.LeftUp: return "LB";
                 case RewiredActionType.RightUp: return "RB";
+                case RewiredActionType.Options: return "Start";
             }
             return "D-pad";
         }
@@ -443,6 +476,7 @@ namespace TimeControl
             var modal = root.AddComponent<T>();
             overlay.AddComponent<Wheel>().Scroll = modal.OnWheel;
             modal.Overlay = overlay;
+            modal.m_Canvas = canvas;
             modal.Panel = rect;
             modal.TitleText = Ui.Text(root.transform, Theme.Initial(title), 30, Theme.Title, FontStyles.Bold);
             modal.TitleText.alignment = TextAlignmentOptions.Center;
@@ -518,13 +552,23 @@ namespace TimeControl
             text.enableWordWrapping = false;
             text.overflowMode = TextOverflowModes.Ellipsis;
             text.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
+            // A mark before the right column (the eye of a tracked deadline), off by default.
+            var iconGo = new GameObject("Icon", typeof(RectTransform));
+            iconGo.transform.SetParent(go.transform, false);
+            var icon = iconGo.AddComponent<Image>();
+            icon.raycastTarget = false;
+            icon.preserveAspect = true;
+            var iconSize = iconGo.AddComponent<LayoutElement>();
+            iconSize.preferredWidth = iconSize.minWidth = size * 1.4f;
+            iconSize.preferredHeight = size;
+            iconGo.SetActive(false);
             var right = Ui.Text(go.transform, "", size, Theme.Dim);
             right.enableWordWrapping = false;
             right.alignment = TextAlignmentOptions.Right;
             var pointer = go.AddComponent<Pointer>();
             pointer.Tint = bg;
             pointer.Normal = Color.clear;
-            return new Row { Bg = bg, Text = text, Right = right, Pointer = pointer };
+            return new Row { Bg = bg, Text = text, Right = right, Icon = icon, Pointer = pointer };
         }
 
         protected static void Paint(Row row, bool selected)
@@ -546,31 +590,143 @@ namespace TimeControl
             {
                 var game = Game.Instance;
                 s_Paused = false;
-                if (PausesGame && game.CurrentMode == GameModeType.Default && !game.IsPaused)
+                // Real time only: turn-based combat waits for the player anyway.
+                if (PausesGame && game.CurrentMode == GameModeType.Default && !game.IsPaused && !CombatController.IsInTurnBasedCombat())
                 {
                     game.IsPaused = true;
                     s_Paused = true;
                 }
-                s_Keyboard = game.Keyboard;
-                if (s_Keyboard != null) s_Keyboard.Disabled.Value = true;
+                // The lock still held from the last window carries over.
+                DropHeldLayer();
+                s_ShownBefore = null;
+                LockKeyboard(true);
             }
             PushLayer();
+            ModWindow.Opened(Main.Mod.Info.Id, Overlay);
         }
 
         internal void Close()
         {
-            PopLayer();
             s_Stack.Remove(this);
+            ModWindow.Closed(Overlay);
             if (s_Stack.Count == 0)
             {
-                if (s_Keyboard != null) s_Keyboard.Disabled.Value = false;
-                s_Keyboard = null;
+                DropHeldLayer();
+                s_HeldLayer = m_Layer;
+                m_Layer = null;
+                s_HeldFrame = Time.frameCount;
                 if (s_Paused && Game.Instance != null && Game.Instance.IsPaused) Game.Instance.IsPaused = false;
                 s_Paused = false;
                 VirtualCursor.Restore();
             }
+            else PopLayer();
             OnClosed();
             if (Overlay != null) Destroy(Overlay);
+        }
+
+        // Every window of the mod, from the top.
+        static void CloseAll(bool sound = true)
+        {
+            if (sound) Ui.Sound(UISoundType.JournalClose);
+            while (s_Stack.Count > 0) s_Stack[s_Stack.Count - 1].Close();
+        }
+
+        // The game's hotkeys, its Esc among them, are off while a window is up (s_Keyboard set) and under the game's menu on.
+        static void LockKeyboard(bool on)
+        {
+            if (on == (s_Keyboard != null)) return;
+            if (on)
+            {
+                s_Keyboard = Game.Instance != null ? Game.Instance.Keyboard : null;
+                if (s_Keyboard != null) s_Keyboard.Disabled.Value = true;
+            }
+            else
+            {
+                s_Keyboard.Disabled.Value = false;
+                s_Keyboard = null;
+            }
+        }
+
+        // The game's menu over the mod's windows, as over the game's own: Start with the gamepad (the game's base layer
+        // opens it), Esc with the keyboard (opened here). The windows hide under it and wait; with the keyboard the
+        // game's keys are back meanwhile, for the menu and the windows it opens (options, saves).
+        static int s_CoverFrame = -1;
+        static bool s_Covered;
+        static int s_MenuFrame = -10;
+        static HashSet<UIWindow> s_ShownBefore;
+
+        static void OpenGameMenu()
+        {
+            s_ShownBefore = new HashSet<UIWindow>(UnityEngine.Object.FindObjectsOfType<UIWindow>().Where(w => w.IsShow));
+            s_MenuFrame = Time.frameCount;
+            LockKeyboard(false);
+            EventBus.RaiseEvent<IEscMenuWindowUIHandler>(h => h.HandleOpen());
+        }
+
+        static bool Covered
+        {
+            get
+            {
+                if (s_CoverFrame == Time.frameCount) return s_Covered;
+                s_CoverFrame = Time.frameCount;
+                if (!Ui.Keyboard)
+                {
+                    var layer = GamePad.HasInstance ? GamePad.Instance.CurrentInputLayer : null;
+                    s_Covered = layer != null && (layer.ContextName == null || !layer.ContextName.StartsWith("TimeControl_"));
+                    return s_Covered;
+                }
+                if (s_ShownBefore == null) return s_Covered = false;
+                // The menu takes a frame or two to show.
+                s_Covered = Time.frameCount <= s_MenuFrame + 2 || GameUiShown();
+                if (!s_Covered)
+                {
+                    s_ShownBefore = null;
+                    if (s_Stack.Count > 0) LockKeyboard(true);
+                }
+                return s_Covered;
+            }
+        }
+
+        static readonly System.Reflection.FieldInfo s_SaveLoadShown = AccessTools.Field(typeof(Kingmaker.UI.SaveLoadWindow.SaveLoadWindow), "m_IsShown");
+
+        // The menu and what it opens: the windows (options and the like), the list of saves and the confirmations,
+        // which are not windows of the game's kind, and a load under way.
+        static bool GameUiShown()
+        {
+            if (Kingmaker.EntitySystem.Persistence.LoadingProcess.Instance.IsLoadingInProcess) return true;
+            if (UnityEngine.Object.FindObjectsOfType<UIWindow>().Any(w => w.IsShow && !s_ShownBefore.Contains(w))) return true;
+            if (UnityEngine.Object.FindObjectsOfType<Kingmaker.UI.SaveLoadWindow.SaveLoadWindow>().Any(w => s_SaveLoadShown != null && (bool)s_SaveLoadShown.GetValue(w))) return true;
+            return UnityEngine.Object.FindObjectsOfType<DialogMessageBox>().Any(w => w.IsShown);
+        }
+
+        // Each frame: the held layer and keyboard lock go once no button of the windows is down.
+        internal static void TickHold()
+        {
+            if (s_Stack.Count > 0 || (s_HeldLayer == null && s_Keyboard == null)) return;
+            if (Time.frameCount <= s_HeldFrame + 1 || Held()) return;
+            DropHeldLayer();
+            LockKeyboard(false);
+        }
+
+        static bool Held()
+        {
+            foreach (var b in Buttons)
+                if (Keys(b).Any(Input.GetKey)) return true;
+            try
+            {
+                var player = GamePad.HasInstance ? GamePad.Instance.Player : null;
+                if (player != null)
+                    foreach (var b in Buttons)
+                        if (player.GetButton((int)b)) return true;
+            }
+            catch (Exception) { }
+            return false;
+        }
+
+        static void DropHeldLayer()
+        {
+            if (s_HeldLayer != null) s_HeldLayer.Dispose();
+            s_HeldLayer = null;
         }
 
         protected virtual void OnClosed() { }
@@ -586,11 +742,8 @@ namespace TimeControl
             {
                 PopLayer();
                 s_Stack.Remove(this);
-                if (s_Stack.Count == 0 && s_Keyboard != null)
-                {
-                    s_Keyboard.Disabled.Value = false;
-                    s_Keyboard = null;
-                }
+                ModWindow.Closed(Overlay);
+                if (s_Stack.Count == 0) LockKeyboard(false);
             }
         }
 
@@ -598,7 +751,8 @@ namespace TimeControl
         {
             if (Ui.Keyboard || !GamePad.HasInstance) return;
             var layer = new InputLayer { ContextName = "TimeControl_" + GetType().Name };
-            foreach (var b in Buttons)
+            // Start stays with the game's base layer: its menu.
+            foreach (var b in Buttons.Where(b => b != RewiredActionType.Options))
             {
                 var button = b;
                 layer.AddButton(_ => Fire(button, "layer"), (int)button);
@@ -644,6 +798,7 @@ namespace TimeControl
                     case RewiredActionType.Func02: OnFuncY(); break;
                     case RewiredActionType.LeftUp: OnShoulder(-1); break;
                     case RewiredActionType.RightUp: OnShoulder(1); break;
+                    case RewiredActionType.Options: if (Ui.Keyboard) OpenGameMenu(); break;
                     case RewiredActionType.DPadUp: OnMove(-1); break;
                     case RewiredActionType.DPadDown: OnMove(1); break;
                     case RewiredActionType.DPadLeft: OnChange(-1); break;
@@ -665,10 +820,19 @@ namespace TimeControl
         protected virtual void OnChange(int direction) { }
         protected virtual void OnWheel(float y) { }
         protected virtual void Tick() { }
-
         void Update()
         {
-            if (!Top) return;
+            // The game's menu loaded a save or went to the main menu: the windows have nothing to show.
+            if (!Main.InGame)
+            {
+                if (Top) CloseAll(false);
+                return;
+            }
+            bool covered = Covered;
+            if (m_Canvas != null && m_Canvas.enabled == covered) m_Canvas.enabled = !covered;
+            // The press that closes the game's menu is not also a press in the window.
+            if (covered) m_OpenFrame = Time.frameCount;
+            if (covered || !Top) return;
             if (!MouseUsed && (Input.mousePosition - s_MouseAt).sqrMagnitude > 4f)
             {
                 MouseUsed = true;
@@ -680,7 +844,7 @@ namespace TimeControl
             {
                 Rewired.Player player = GamePad.HasInstance ? GamePad.Instance.Player : null;
                 if (player != null)
-                    foreach (var b in Buttons)
+                    foreach (var b in Buttons.Where(b => b != RewiredActionType.Options))
                     {
                         bool down = false;
                         try { down = player.GetButtonDown((int)b); } catch (Exception) { }

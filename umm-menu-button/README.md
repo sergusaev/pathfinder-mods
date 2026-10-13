@@ -2,7 +2,7 @@
 
 [Русская версия](README.ru.md)
 
-A Unity Mod Manager mod for both Pathfinder games. It adds a "Unity Mod Manager" item to the game's main menu and Esc menu, so the mod manager opens from the menus with whatever you play with: keyboard and mouse, an Xbox or PlayStation gamepad, the Steam Deck. You no longer need to know or bind its hotkey.
+A Unity Mod Manager mod for both Pathfinder games. It adds a "Unity Mod Manager" item to the game's main menu and Esc menu, so the mod manager opens from the menus with whatever you play with: keyboard and mouse, an Xbox or PlayStation gamepad, the Steam Deck.
 
 ## What it does
 

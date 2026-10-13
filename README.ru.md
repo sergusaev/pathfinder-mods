@@ -2,23 +2,23 @@
 
 [English version](README.md)
 
-Небольшие моды для [Unity Mod Manager](https://www.nexusmods.com/site/mods/21), которые делают **Pathfinder: Kingmaker** и **Pathfinder: Wrath of the Righteous** удобнее на геймпаде (консольный интерфейс), а где указано — и с клавиатурой и мышью. Написаны и проверены на Steam Deck и Windows.
+Небольшие моды для [Unity Mod Manager](https://www.nexusmods.com/site/mods/21) для **Pathfinder: Kingmaker** и **Pathfinder: Wrath of the Righteous**, написаны и проверены на Steam Deck и Windows. Работают и с геймпадом, и с клавиатурой и мышью и открываются из меню самой игры.
 
 | Мод | Игра | Что делает |
 |---|---|---|
 | [Belt Consumables Refill](belt-consumables-refill/README.ru.md) | Kingmaker и Wrath of the Righteous | Израсходованный расходник на поясе заменяется таким же из инвентаря партии, ячейка показывает остаток; убирает способности «Заряды: 0», оставленные автопополнением Bag of Tricks / ToyBox |
-| [Camera Rotation and Compass](kingmaker-gamepad-camera-rotation/README.ru.md) | Kingmaker | Геймпад: поворот и приближение камеры правым стиком, компас WotR вместо песочных часов, раскладка WotR для режима камеры, пошагового режима и осмотра. Клавиатура и мышь: поворот средней кнопкой мыши и Alt+A / Alt+D, компас в часах |
+| [Camera Rotation and Compass](kingmaker-gamepad-camera-rotation/README.ru.md) | Kingmaker | Геймпад: поворот и приближение камеры правым стиком, компас WotR вместо песочных часов, раскладка WotR для режима камеры, пошагового режима и осмотра. Клавиатура и мышь: поворот средней кнопкой мыши, компас в часах |
 | [Custom Portraits Gamepad Selection Fix](kingmaker-custom-portraits-gamepad/README.ru.md) | Kingmaker | Свои портреты из папки `Portraits` появляются при создании персонажа в режиме геймпада |
 | [Level 1 Companions & Free Respec](level1-companions/README.ru.md) | Kingmaker и Wrath of the Righteous | Сюжетные спутники вступают на 1-м уровне, дальше прокачка полностью ручная; бесплатная кнопка респека до 1-го уровня, имя, голос и внешность спутника сохраняются, а окно респека WotR можно закрыть с нераспределёнными уровнями. В WotR заменяет lvl1companions |
 | [Time Control and Deadlines](kingmaker-time-control/README.ru.md) | Kingmaker | Дробные коэффициенты длительности дел королевства, времени в пути и на привале; список всех таймеров, в том числе скрытых («До события X осталось D дней H часов»); отслеживание со своим сроком и оповещениями в стиле игры; перемотка времени, которая не перескакивает срок провала |
-| [Unity Mod Manager in Game Menus](umm-menu-button/README.ru.md) | Kingmaker и Wrath of the Righteous | Пункт «Unity Mod Manager» в главном меню и Esc-меню, для мыши и геймпада, в стиле игры: менеджер модов открывается без горячей клавиши на любой платформе |
+| [Unity Mod Manager in Game Menus](umm-menu-button/README.ru.md) | Kingmaker и Wrath of the Righteous | Пункт «Unity Mod Manager» в главном меню и Esc-меню, в стиле игры: менеджер модов открывается из меню игры на любой платформе |
 | [Portrait Scroll Fix (gamepad)](wotr-portrait-scroll-fix/README.ru.md) | Wrath of the Righteous | Список своих портретов прокручивается за курсором геймпада и правым стиком |
 
-Buff It 2 The Limit (Groups) — меню групп баффов для мода автобаффов Buff It 2 The Limit; работает с геймпадом, клавиатурой и мышью в WotR и Kingmaker. Живёт в отдельном форке: [sergusaev/wrath-epic-buffing](https://github.com/sergusaev/wrath-epic-buffing).
+Buff It 2 The Limit (Groups) — меню групп баффов для мода автобаффов Buff It 2 The Limit, для WotR и Kingmaker. Живёт в отдельном форке: [sergusaev/wrath-epic-buffing](https://github.com/sergusaev/wrath-epic-buffing).
 
 ## Установка
 
-**Steam Deck:** по шагам в [docs/steam-deck.ru.md](docs/steam-deck.ru.md) — Unity Mod Manager для обеих игр, раскладка Steam Input (окно UMM на R4, меню баффов на L5, мышь на правом трекпаде) и моды.
+**Steam Deck:** по шагам в [docs/steam-deck.ru.md](docs/steam-deck.ru.md) — Unity Mod Manager для обеих игр и моды.
 
 **Windows без установщика UMM** (например, по SSH): [docs/windows.ru.md](docs/windows.ru.md) — UMM для обеих игр командами PowerShell и моды.
 
