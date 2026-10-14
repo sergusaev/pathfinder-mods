@@ -71,6 +71,20 @@ namespace KingmakerFixes
         }
     }
 
+    // RuleAttackRoll.IsSuccessRoll(d20) adds the rule's own Roll instead of the d20 it is given. The attack roll itself
+    // calls it with Roll, so attacks are not affected; but "reroll only if failed" (ModifyD20) asks it about the
+    // pre-rolled die before Roll is set, so every die but a natural 20 counted as failed: the reroll was made on hits
+    // too, and a single-use reroll was spent on a hit. Wrath of the Righteous uses the d20 here.
+    [HarmonyPatch(typeof(RuleAttackRoll), nameof(RuleAttackRoll.IsSuccessRoll))]
+    static class AttackSuccessRollUsesTheDie
+    {
+        static bool Prefix(RuleAttackRoll __instance, int d20, ref bool __result)
+        {
+            __result = d20 > 1 && (d20 == 20 || d20 + __instance.AttackBonus >= __instance.TargetAC);
+            return false;
+        }
+    }
+
     // The arrows that point back to the party on the gamepad global map start updating every frame before the global
     // map rules exist, and throw NullReferenceException (a burst of "Error in Observer" in the log on entering the map).
     // Skip the update until the rules, the party pawn and the camera are there; then it runs as before.

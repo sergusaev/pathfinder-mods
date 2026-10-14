@@ -30,6 +30,14 @@ A Unity Mod Manager mod that collects small fixes of the game's own bugs. Each f
 
 **Fix.** A prefix skips a voiced line while the character has no view, leaving both marks untouched; the line plays the next time it is asked. Lines without sound are not affected.
 
+### "Reroll if failed" on attacks rerolled hits too
+
+**Symptom.** An ability that rerolls an attack roll only when it misses also rerolled hits; a single-use one was spent on an attack that had already hit.
+
+**Cause.** `RuleAttackRoll.IsSuccessRoll(d20)` adds the attack's own roll instead of the die it is given. "Reroll only if failed" (`ModifyD20`) asks it about the first die before the attack's roll is set, so every die but a natural 20 counted as a miss. Wrath of the Righteous tests the die here.
+
+**Fix.** A prefix makes the test use the die it is given. The attack roll itself is not changed: it already asks with its own roll.
+
 ### Custom portraits in the gamepad character creation
 
 **Symptom.** With the gamepad interface, character creation offers only the built-in portraits: the game does not read the `Portraits` folder there, although the mouse interface does.
