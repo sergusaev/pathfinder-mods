@@ -141,10 +141,10 @@ When a mod is updated, delete `*.cache` files in its folder before starting the 
 | Mod | Game | Folder | Notes |
 |---|---|---|---|
 | [Unity Mod Manager in Game Menus](../umm-menu-button) | Kingmaker, WotR | `Mods/UmmMenuButton`, `mods/UmmMenuButton` | a separate zip per game |
+| [Kingmaker Fixes](../kingmaker-fixes) | Kingmaker | `Mods/KingmakerFixes` | replaces `Mods/ConsoleCustomPortraits`, delete that folder; portraits go to `~/.config/unity3d/Owlcat Games/Pathfinder Kingmaker/Portraits/` |
 | [Time Control and Deadlines](../kingmaker-time-control) | Kingmaker | `Mods/TimeControl` | |
 | [Belt Consumables Refill](../belt-consumables-refill) | Kingmaker, WotR | `Mods/BeltConsumablesRefill`, `mods/BeltConsumablesRefill` | a separate zip per game |
 | [Camera Rotation and Compass](../kingmaker-gamepad-camera-rotation) | Kingmaker | `Mods/GamepadCameraRotation` | the compass needs WotR installed (found automatically). Turn off camera rotation in Bag of Tricks |
-| [Custom Portraits Gamepad Selection Fix](../kingmaker-custom-portraits-gamepad) | Kingmaker | `Mods/ConsoleCustomPortraits` | portraits go to `~/.config/unity3d/Owlcat Games/Pathfinder Kingmaker/Portraits/` |
 | [Level 1 Companions & Free Respec](../level1-companions) | Kingmaker, WotR | `Mods/Level1Companions`, `mods/Level1Companions` | a separate zip per game (`-kingmaker`, `-wotr`). In WotR delete `mods/lvl1companions` first |
 | [Portrait Scroll Fix (gamepad)](../wotr-portrait-scroll-fix) | WotR | `mods/PortraitScrollFix` | portraits go to the `Portraits` folder inside the Proton prefix, see the mod README |
 | [Buff It 2 The Limit (Groups)](https://github.com/sergusaev/wrath-epic-buffing) | WotR | `mods/BuffIt2TheLimit` | replaces the original Buff It 2 The Limit and BubbleBuffs: remove those first |

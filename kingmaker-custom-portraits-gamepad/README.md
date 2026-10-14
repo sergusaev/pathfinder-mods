@@ -2,6 +2,8 @@
 
 [Русская версия](README.ru.md)
 
+> **Moved into [Kingmaker Fixes](../kingmaker-fixes).** This mod is no longer developed: install Kingmaker Fixes and delete `Mods/ConsoleCustomPortraits`. The text below describes the last separate version.
+
 A Unity Mod Manager mod. In the gamepad (console) interface the character creation of Kingmaker offers only the built-in portraits: the game does not read the `Portraits` folder with custom portraits there. The mod appends all portraits from that folder to the end of the console portrait list.
 
 ## Where portraits go

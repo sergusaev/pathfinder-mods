@@ -119,10 +119,10 @@ tar -xf PortraitScrollFix-1.1.0.zip -C "$WOTR\Mods"         # пример дл�
 | Мод | Игра | Папка | Примечания |
 |---|---|---|---|
 | [Unity Mod Manager in Game Menus](../umm-menu-button/README.ru.md) | Kingmaker, WotR | `Mods\UmmMenuButton` | отдельный zip для каждой игры |
+| [Kingmaker Fixes](../kingmaker-fixes/README.ru.md) | Kingmaker | `Mods\KingmakerFixes` | заменяет `Mods\ConsoleCustomPortraits`, ту папку удалить; портреты кладутся в `%USERPROFILE%\AppData\LocalLow\Owlcat Games\Pathfinder Kingmaker\Portraits\` |
 | [Time Control and Deadlines](../kingmaker-time-control/README.ru.md) | Kingmaker | `Mods\TimeControl` | |
 | [Belt Consumables Refill](../belt-consumables-refill/README.ru.md) | Kingmaker, WotR | `Mods\BeltConsumablesRefill` | отдельный zip для каждой игры |
 | [Camera Rotation and Compass](../kingmaker-gamepad-camera-rotation) | Kingmaker | `Mods\GamepadCameraRotation` | компасу нужна установленная WotR (находится сама в библиотеках Steam) |
-| [Custom Portraits Gamepad Selection Fix](../kingmaker-custom-portraits-gamepad) | Kingmaker | `Mods\ConsoleCustomPortraits` | нужен только с геймпадом; портреты кладутся в `%USERPROFILE%\AppData\LocalLow\Owlcat Games\Pathfinder Kingmaker\Portraits\` |
 | [Level 1 Companions & Free Respec](../level1-companions/README.ru.md) | Kingmaker, WotR | `Mods\Level1Companions` | отдельный zip для каждой игры (`-kingmaker`, `-wotr`). В WotR сначала вынести `lvl1companions` из `Mods` |
 | [Portrait Scroll Fix (gamepad)](../wotr-portrait-scroll-fix) | WotR | `Mods\PortraitScrollFix` | нужен только с геймпадом |
 | [Buff It 2 The Limit (Groups)](https://github.com/sergusaev/wrath-epic-buffing) | WotR | `Mods\BuffIt2TheLimit` | заменяет оригинальные Buff It 2 The Limit и BubbleBuffs: сначала уберите их из `Mods`. Настройки Buff It 2 The Limit сохраняются (один id и одни файлы); настройки BubbleBuffs (`bubblebuff-*.json`) не читаются |
