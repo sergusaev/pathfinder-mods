@@ -31,6 +31,19 @@ namespace TimeControl
         const string FontName = "NexusSerif-Regular SDF";
         internal static readonly RectOffset PanelPadding = new RectOffset(58, 58, 48, 44);
 
+        // The button hints under a window, as under the game's Formation window: one tiled plate under the sheet,
+        // the hints far apart on it, the console icon and a white label in small capitals.
+        const string HintPlateName = "backHintTile";
+        internal const float HintPlateHeight = 90f;
+        internal const float HintGap = 12f;
+        internal const float HintSpacing = 50f;
+        internal const float HintIconSize = 36f;
+        internal const float HintLabelSize = 20f;
+        internal const FontStyles HintLabelStyle = FontStyles.Bold | FontStyles.UpperCase | FontStyles.SmallCaps;
+        internal static readonly Color HintLabel = Color.white;
+        internal static readonly RectOffset HintPadding = new RectOffset(60, 60, 0, 0);
+        static Sprite s_HintPlate;
+
         static bool s_Resolved;
         static float s_NextTry;
         static Sprite s_Sheet;
@@ -59,6 +72,40 @@ namespace TimeControl
         internal static string Good { get { return Paper ? "#2F6420" : "#9AD08A"; } }
         internal static string Muted { get { return Paper ? "#6E5743" : "#8A847A"; } }
         internal static string Note { get { return Paper ? "#2E4A66" : "#9FC3D9"; } }
+
+        // The plate under the hints; without the game's sprite a dark translucent panel.
+        internal static void HintPlate(Image image)
+        {
+            image.raycastTarget = false;
+            if (s_HintPlate == null)
+            {
+                try
+                {
+                    var sprite = Resources.FindObjectsOfTypeAll<Sprite>().FirstOrDefault(s => s.name == HintPlateName);
+                    // The game draws the tile 90 high whatever its pixels: a copy with that pixel density keeps the
+                    // tiled borders the size the game shows them.
+                    if (sprite != null)
+                        s_HintPlate = Sprite.Create(sprite.texture, sprite.textureRect, new Vector2(0.5f, 0.5f),
+                            100f * sprite.rect.height / HintPlateHeight, 0, SpriteMeshType.FullRect, sprite.border);
+                }
+                catch (Exception e)
+                {
+                    Main.Error(e, "hint plate");
+                }
+            }
+            if (s_HintPlate != null)
+            {
+                image.sprite = s_HintPlate;
+                image.type = Image.Type.Tiled;
+                image.fillCenter = true;
+                image.color = Color.white;
+            }
+            else
+            {
+                image.sprite = null;
+                image.color = new Color(0.05f, 0.04f, 0.03f, 0.85f);
+            }
+        }
 
         internal static void Sheet(Image image)
         {
@@ -489,13 +536,25 @@ namespace TimeControl
             TitleText.text = Theme.Initial(title);
         }
 
-        // The hint bar: the console icon of each button (or its key), then its label; a click does what the button does.
+        // The hint bar on a plate under the sheet, as under the game's Formation window: the console icon of each button
+        // (or its key), then its label; a click does what the button does.
         protected void SetHints(params Hint[] hints)
         {
             if (HintHolder == null)
             {
-                Ui.Rule(Panel);
-                HintHolder = Ui.Horizontal(Panel, "Hints", 26, TextAnchor.MiddleCenter).transform;
+                var row = Ui.Horizontal(Panel, "Hints", Theme.HintSpacing, TextAnchor.MiddleCenter);
+                row.AddComponent<LayoutElement>().ignoreLayout = true;
+                var rect = (RectTransform)row.transform;
+                rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0);
+                rect.pivot = new Vector2(0.5f, 1);
+                rect.anchoredPosition = new Vector2(0, -Theme.HintGap);
+                rect.sizeDelta = new Vector2(0, Theme.HintPlateHeight);
+                Theme.HintPlate(row.AddComponent<Image>());
+                row.GetComponent<HorizontalLayoutGroup>().padding = Theme.HintPadding;
+                row.AddComponent<ContentSizeFitter>().horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+                HintHolder = row.transform;
+                // The sheet and the plate under it are centred together.
+                Panel.anchoredPosition += new Vector2(0, (Theme.HintGap + Theme.HintPlateHeight) / 2);
             }
             for (int i = HintHolder.childCount - 1; i >= 0; i--) Destroy(HintHolder.GetChild(i).gameObject);
             foreach (var hint in hints)
@@ -519,14 +578,14 @@ namespace TimeControl
                     image.preserveAspect = true;
                     image.raycastTarget = false;
                     var size = icon.AddComponent<LayoutElement>();
-                    size.preferredWidth = size.preferredHeight = 30;
+                    size.preferredWidth = size.preferredHeight = Theme.HintIconSize;
                 }
                 else
                 {
-                    var key = Ui.Text(item.transform, "[" + (Ui.Keyboard ? KeyLabel(hint.Button) : PadLabel(hint.Button)) + "]", 19, Theme.Title, FontStyles.Bold);
+                    var key = Ui.Text(item.transform, "[" + (Ui.Keyboard ? KeyLabel(hint.Button) : PadLabel(hint.Button)) + "]", 19, Theme.HintLabel, FontStyles.Bold);
                     key.enableWordWrapping = false;
                 }
-                var label = Ui.Text(item.transform, hint.Label, 19, Theme.Dim);
+                var label = Ui.Text(item.transform, hint.Label, Theme.HintLabelSize, Theme.HintLabel, Theme.HintLabelStyle);
                 label.enableWordWrapping = false;
                 var button = hint.Button;
                 Ui.AddPointer(item).Click = e => Fire(button, "mouse");
