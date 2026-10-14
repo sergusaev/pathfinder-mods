@@ -1,3 +1,5 @@
+using System;
+using System.Reflection;
 using HarmonyLib;
 using Kingmaker.EntitySystem.Entities;
 using Kingmaker.Visual.Sound;
@@ -12,15 +14,26 @@ namespace KingmakerFixes
     [HarmonyPatch(typeof(UnitAsksComponent.Bark), "Play")]
     static class BarkWithoutView
     {
-        static readonly AccessTools.FieldRef<UnitAsksComponent, UnitEntityData> Unit =
-            AccessTools.FieldRefAccess<UnitAsksComponent, UnitEntityData>("m_Unit");
+        // Plain reflection: a FieldRefAccess delegate threw InvalidCastException on the game's Mono.
+        static readonly FieldInfo UnitField = AccessTools.Field(typeof(UnitAsksComponent), "m_Unit");
+        static bool s_Failed;
 
         static bool Prefix(UnitAsksComponent.Bark __instance, UnitAsksComponent.BarkEntry entry)
         {
-            if (entry == null || string.IsNullOrEmpty(entry.AkEvent)) return true;
-            var owner = __instance.Owner;
-            var unit = owner != null ? Unit(owner) : null;
-            return unit != null && unit.View != null;
+            // Whatever goes wrong here, the line goes on as in the game: a voiced line also plays when a unit is selected.
+            try
+            {
+                if (entry == null || string.IsNullOrEmpty(entry.AkEvent)) return true;
+                var owner = __instance.Owner;
+                var unit = owner != null ? UnitField.GetValue(owner) as UnitEntityData : null;
+                return unit != null && unit.View != null;
+            }
+            catch (Exception e)
+            {
+                if (!s_Failed) Main.Log.Error("bark without view: " + e);
+                s_Failed = true;
+                return true;
+            }
         }
     }
 }
