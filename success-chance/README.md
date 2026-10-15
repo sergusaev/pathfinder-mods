@@ -1,8 +1,8 @@
-# Success Chance (Pathfinder: Kingmaker)
+# Success Chance (Pathfinder: Kingmaker and Wrath of the Righteous)
 
 [Русская версия](README.ru.md)
 
-A Unity Mod Manager mod that shows, in turn-based combat, the chance that an attack or a spell succeeds and the damage it does, over the enemy you point at, before you act. It works with a gamepad as well as with keyboard and mouse.
+A Unity Mod Manager mod for Kingmaker and Wrath of the Righteous that shows, in turn-based combat, the chance that an attack or a spell succeeds and the damage it does, over the enemy you point at, before you act. It works with a gamepad as well as with keyboard and mouse.
 
 ## What it shows
 
@@ -20,7 +20,9 @@ The mod does not repeat the game's formulas: it runs the game's own rules "dry" 
 
 Results are cached and calculated again only when something that can change them happens to the attacker or the target (a buff, equipment, a new round, a turn-based mode change), not every frame.
 
-## Overtips
+In Wrath of the Righteous the same is counted by that game's rules: rerolls of the d20 add up with their sign (a "take the better" and a "take the worse" cancel out), conditions of a reroll test the first die, the attack roll's own bonuses go to the attack bonus, a natural 1 can hit with the feature that allows it, a persistent spell makes the target save twice, and buffs put on right before an attack with a weapon (Power Attack, Deadly Aim) count for the first attack.
+
+## Overtips (Kingmaker)
 
 With both controls the overtip over a unit (name, hit points, action, cooldown) now follows the rules of the keyboard-and-mouse interface and its settings; the gamepad settings' "always show hit points" checkboxes still apply. With keyboard and mouse the floating texts stand a little higher over the overtip, so they do not stick to its edge.
 
@@ -30,8 +32,8 @@ With both controls the overtip over a unit (name, hit points, action, cooldown) 
 
 ## Not counted yet
 
-Combat maneuvers and skill checks; spells cast through activatable abilities.
+Combat maneuvers and skill checks; spells cast through activatable abilities. In Wrath of the Righteous: the damage of buffs put on at the attack (the first attack's damage shows without Power Attack's bonus), a skill check that replaces the caster level against spell resistance, and "a 1 counts as the maximum" on the d20.
 
 ## Building
 
-`./build.sh [--install]`, see [Building](../README.md#building).
+`./build.sh [--game kingmaker|wotr] [--install]` builds for both games (or one), see [Building](../README.md#building).

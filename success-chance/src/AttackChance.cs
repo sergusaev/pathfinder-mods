@@ -18,6 +18,15 @@ using Kingmaker.UnitLogic.FactLogic;
 using Kingmaker.UnitLogic.Mechanics;
 using Kingmaker.UnitLogic.Mechanics.Components;
 using Kingmaker.Designers.Mechanics.Buffs;
+using Kingmaker.UnitLogic.Buffs.Blueprints;
+#if WOTR
+using Kingmaker.UnitLogic.Mechanics.Actions;
+using Kingmaker.Blueprints.Items.Weapons;
+using Kingmaker.Utility;
+#endif
+#if WOTR
+using DamageGracePart = Kingmaker.UnitLogic.Parts.UnitPartDamageGrace;
+#endif
 
 namespace SuccessChance
 {
@@ -126,100 +135,174 @@ namespace SuccessChance
 
         // Abilities switched on that put their buff on only when an attack starts (ActivateOnUnitAction = Attack, as
         // Power Attack and Deadly Aim): before the attack the buff is not there yet, so its attack bonus is added here
-        // as WeaponParametersAttackBonus would add it. Components of other kinds are named in the notes.
+        // as WeaponParametersAttackBonus would add it. Components of other kinds are named in the notes. In WotR that
+        // buff (and any other buff of the attacker) may in turn put a buff on right before each attack with a weapon
+        // (AddInitiatorAttackWithWeaponTrigger, TriggerBeforeAttack): Power Attack's own bonus comes so.
         static int OnAttackBonus(UnitEntityData attacker, ItemEntityWeapon weapon, RuleAttackWithWeapon attack, AttackPrediction p)
         {
-            int total = 0;
+            var pending = new List<KeyValuePair<BlueprintBuff, string>>();
             foreach (var ability in attacker.Descriptor.ActivatableAbilities.Enumerable)
             {
                 var bp = ability.Blueprint;
-                if (!ability.IsOn || ability.IsRunning || !bp.ActivateOnUnitAction
+                if (!ability.IsOn || GameRules.IsStarted(ability) || !bp.ActivateOnUnitAction
                     || bp.ActivateOnUnitActionType != AbilityActivateOnUnitActionType.Attack || bp.Buff == null)
                     continue;
                 if (attacker.Descriptor.Buffs.HasFact(bp.Buff)) continue;
-                int bonus = 0;
-                MechanicsContext context = null;
-                foreach (var component in bp.Buff.ComponentsArray)
-                {
-                    // A bonus to the attack stat, as Fighting Defensively has: its value comes from the buff's
-                    // context (ranks and properties of the unit), calculated here as the buff would on turning on.
-                    var statBonus = component as AddStatBonus;
-                    if (statBonus != null)
-                    {
-                        if (statBonus.Stat != StatType.AdditionalAttackBonus) continue;
-                        int v = statBonus.Value;
-                        if (statBonus.ScaleByBasicAttackBonus) v *= 1 + attacker.Stats.BaseAttackBonus.ModifiedValue / 4;
-                        bonus += v;
-                        p.PendingParts.Add(new Part(bp.Buff.Name + " [" + statBonus.Descriptor + "]", v));
-                        continue;
-                    }
-                    var contextBonus = component as AddContextStatBonus;
-                    if (contextBonus != null)
-                    {
-                        if (contextBonus.Stat != StatType.AdditionalAttackBonus) continue;
-                        if (context == null)
-                        {
-                            context = new MechanicsContext(attacker, attacker.Descriptor, bp.Buff);
-                            context.RecalculateRanks();
-                        }
-                        int cv = contextBonus.Value.Calculate(context) * contextBonus.Multiplier;
-                        bonus += cv;
-                        p.PendingParts.Add(new Part(bp.Buff.Name + " [" + contextBonus.Descriptor + "]", cv));
-                        continue;
-                    }
-                    var abilityValue = component as AddStatBonusAbilityValue;
-                    if (abilityValue != null)
-                    {
-                        if (abilityValue.Stat != StatType.AdditionalAttackBonus) continue;
-                        if (context == null)
-                        {
-                            context = new MechanicsContext(attacker, attacker.Descriptor, bp.Buff);
-                            context.RecalculateRanks();
-                        }
-                        int av = abilityValue.Value.Calculate(context);
-                        bonus += av;
-                        p.PendingParts.Add(new Part(bp.Buff.Name + " [" + abilityValue.Descriptor + "]", av));
-                        continue;
-                    }
-                    var w = component as WeaponParametersAttackBonus;
-                    if (w == null)
-                    {
-                        // Components that only feed the others (ranks, recalculation) say nothing about the attack.
-                        if (component != null && !(component is ContextRankConfig) && !(component is RecalculateOnFactsChange))
-                        {
-                            string note = bp.Buff.Name + ": " + component.GetType().Name + " not counted";
-                            if (!p.Notes.Contains(note)) p.Notes.Add(note);
-                        }
-                        continue;
-                    }
-                    if (w.OnlyForFullAttack && attack != null && !attack.IsFullAttack) continue;
-                    bool finesse = !w.OnlyFinessable || weapon.Blueprint.Type.Category.HasSubCategory(WeaponSubCategory.Finessable)
-                        || (attacker.Get<DamageGracePart>()?.HasEntry(weapon.Blueprint.Category) ?? false);
-                    bool range = w.Ranged == weapon.Blueprint.IsRanged;
-                    bool hands = !w.OnlyTwoHanded || weapon.Blueprint.IsTwoHanded;
-                    if (!finesse || !range || !hands) continue;
-                    int value = w.AttackBonus;
-                    if (w.ScaleByBasicAttackBonus) value *= 1 + attacker.Stats.BaseAttackBonus.ModifiedValue / 4;
-                    bonus += value;
-                    p.PendingParts.Add(new Part(bp.Buff.Name, value));
-                }
-                if (bonus != 0) p.Notes.Add(string.Format("{0} {1:+0;-0} (turns on at the attack)", bp.Name, bonus));
+                pending.Add(new KeyValuePair<BlueprintBuff, string>(bp.Buff, bp.Name));
+            }
+#if WOTR
+            var sources = new List<KeyValuePair<BlueprintBuff, string>>(pending);
+            foreach (var buff in attacker.Descriptor.Buffs.Enumerable)
+                sources.Add(new KeyValuePair<BlueprintBuff, string>(buff.Blueprint, buff.Name));
+            foreach (var source in sources)
+                foreach (var applied in BeforeAttackBuffs(source.Key, attacker, weapon, attack))
+                    if (!attacker.Descriptor.Buffs.HasFact(applied) && !pending.Any(x => x.Key == applied))
+                        pending.Add(new KeyValuePair<BlueprintBuff, string>(applied, source.Value));
+#endif
+            int total = 0;
+            foreach (var entry in pending)
+            {
+                int bonus = BuffAttackBonus(entry.Key, attacker, weapon, attack, p);
+                if (bonus != 0) p.Notes.Add(string.Format("{0} {1:+0;-0} (turns on at the attack)", entry.Value, bonus));
                 total += bonus;
             }
             return total;
+        }
+
+#if WOTR
+        // The buffs a buff puts on its owner right before an attack with this weapon, as AbstractWeaponTrigger tests
+        // the attack before it (the parts about the roll's result do not apply then).
+        static IEnumerable<BlueprintBuff> BeforeAttackBuffs(BlueprintBuff buff, UnitEntityData attacker, ItemEntityWeapon weapon, RuleAttackWithWeapon attack)
+        {
+            foreach (var component in buff.ComponentsArray)
+            {
+                var trigger = component as AddInitiatorAttackWithWeaponTrigger;
+                if (trigger == null || !trigger.TriggerBeforeAttack || !trigger.ActionsOnInitiator || trigger.Action == null) continue;
+                var bp = weapon.Blueprint;
+                if (trigger.CheckWeaponBlueprint ? bp != trigger.WeaponBlueprint
+                    : (trigger.WeaponType != null && trigger.WeaponType != bp.Type)
+                      || (trigger.CheckWeaponCategory && trigger.Category != bp.Category)
+                      || (trigger.CheckWeaponRangeType && !trigger.RangeType.IsSuitableWeapon(weapon))
+                      || (trigger.CheckWeaponGroup && !bp.FighterGroup.Contains(trigger.Group))
+                      || (trigger.AllNaturalAndUnarmed && !bp.Type.IsNatural && !bp.Type.IsUnarmed))
+                    continue;
+                if (trigger.OnlyOnFullAttack && attack != null && !attack.IsFullAttack) continue;
+                if (trigger.OnlyOnFirstAttack && attack != null && !attack.IsFirstAttack) continue;
+                if (trigger.Action.Actions == null) continue;
+                foreach (var action in trigger.Action.Actions)
+                {
+                    var apply = action as ContextActionApplyBuff;
+                    if (apply?.Buff != null) yield return apply.Buff;
+                }
+            }
+        }
+#endif
+
+        // The attack bonus a buff that is not on yet would give to an attack with this weapon.
+        static int BuffAttackBonus(BlueprintBuff buff, UnitEntityData attacker, ItemEntityWeapon weapon, RuleAttackWithWeapon attack, AttackPrediction p)
+        {
+            int bonus = 0;
+            MechanicsContext context = null;
+            foreach (var component in buff.ComponentsArray)
+            {
+                // A bonus to the attack stat, as Fighting Defensively has: its value comes from the buff's
+                // context (ranks and properties of the unit), calculated here as the buff would on turning on.
+                var statBonus = component as AddStatBonus;
+                if (statBonus != null)
+                {
+                    if (statBonus.Stat != StatType.AdditionalAttackBonus) continue;
+                    int v = statBonus.Value;
+                    if (statBonus.ScaleByBasicAttackBonus) v *= 1 + attacker.Stats.BaseAttackBonus.ModifiedValue / 4;
+                    bonus += v;
+                    p.PendingParts.Add(new Part(buff.Name + " [" + statBonus.Descriptor + "]", v));
+                    continue;
+                }
+                var contextBonus = component as AddContextStatBonus;
+                if (contextBonus != null)
+                {
+                    if (contextBonus.Stat != StatType.AdditionalAttackBonus) continue;
+                    if (context == null)
+                    {
+                        context = new MechanicsContext(attacker, attacker.Descriptor, buff);
+                        context.RecalculateRanks();
+                    }
+                    int cv = contextBonus.Value.Calculate(context) * contextBonus.Multiplier;
+                    bonus += cv;
+                    p.PendingParts.Add(new Part(buff.Name + " [" + contextBonus.Descriptor + "]", cv));
+                    continue;
+                }
+                var abilityValue = component as AddStatBonusAbilityValue;
+                if (abilityValue != null)
+                {
+                    if (abilityValue.Stat != StatType.AdditionalAttackBonus) continue;
+                    if (context == null)
+                    {
+                        context = new MechanicsContext(attacker, attacker.Descriptor, buff);
+                        context.RecalculateRanks();
+                    }
+                    int av = abilityValue.Value.Calculate(context);
+                    bonus += av;
+                    p.PendingParts.Add(new Part(buff.Name + " [" + abilityValue.Descriptor + "]", av));
+                    continue;
+                }
+                var w = component as WeaponParametersAttackBonus;
+                if (w == null)
+                {
+                    // Components that only feed the others (ranks, recalculation, triggers before the attack, counted
+                    // above) say nothing about the attack.
+                    if (component != null && !(component is ContextRankConfig) && !(component is RecalculateOnFactsChange)
+#if WOTR
+                        && !(component is AddInitiatorAttackWithWeaponTrigger)
+#endif
+                        )
+                    {
+                        string note = buff.Name + ": " + component.GetType().Name + " not counted";
+                        if (!p.Notes.Contains(note)) p.Notes.Add(note);
+                    }
+                    continue;
+                }
+                if (w.OnlyForFullAttack && attack != null && !attack.IsFullAttack) continue;
+                bool finesse = !w.OnlyFinessable || weapon.Blueprint.Type.Category.HasSubCategory(WeaponSubCategory.Finessable)
+                    || (attacker.Get<DamageGracePart>()?.HasEntry(weapon.Blueprint.Category) ?? false);
+                bool range = w.Ranged == weapon.Blueprint.IsRanged;
+                bool hands = !w.OnlyTwoHanded || weapon.Blueprint.IsTwoHanded;
+#if WOTR
+                if (w.SpecificWeaponBlueprint ? w.WeaponBlueprint != weapon.Blueprint : !finesse || !range || !hands) continue;
+                int value = w.AttackBonus;
+                if (w.UseContextIstead)
+                {
+                    if (context == null)
+                    {
+                        context = new MechanicsContext(attacker, attacker.Descriptor, buff);
+                        context.RecalculateRanks();
+                    }
+                    value = w.ContextAttackBonus.Calculate(context);
+                }
+                if (w.ScaleByBasicAttackBonus) value *= 1 + attacker.Stats.BaseAttackBonus.ModifiedValue / 4;
+                if (w.MultiplierFact != null && attacker.HasFact(w.MultiplierFact)) value *= w.Multiplier;
+#else
+                if (!finesse || !range || !hands) continue;
+                int value = w.AttackBonus;
+                if (w.ScaleByBasicAttackBonus) value *= 1 + attacker.Stats.BaseAttackBonus.ModifiedValue / 4;
+#endif
+                bonus += value;
+                p.PendingParts.Add(new Part(buff.Name, value));
+            }
+            return bonus;
         }
 
         static void Calculate(RuleAttackRoll roll, AttackPrediction p)
         {
             var attacker = roll.Initiator;
             var target = roll.Target;
-            if (!roll.WeaponStats.IsTriggererd) Rulebook.Trigger(roll.WeaponStats);
+            if (!GameRules.IsTriggered(roll.WeaponStats)) Rulebook.Trigger(roll.WeaponStats);
             p.CriticalEdge = roll.WeaponStats.CriticalEdge;
-            int multiplier = p.CriticalMultiplier = roll.WeaponStats.CriticalMultiplier;
+            int multiplier = p.CriticalMultiplier = GameRules.CriticalMultiplier(roll.WeaponStats);
             for (int i = 0; i < roll.WeaponStats.DamageDescription.Count; i++)
             {
                 var damage = roll.WeaponStats.DamageDescription[i];
-                int min = damage.Dice.Rolls + damage.Bonus, max = damage.Dice.Rolls * damage.Dice.Dice.Sides() + damage.Bonus;
+                var dice = GameRules.Dice(damage);
+                int min = dice.Rolls + damage.Bonus, max = dice.Rolls * dice.Dice.Sides() + damage.Bonus;
                 p.DamageMin += min;
                 p.DamageMax += max;
                 p.CritDamageMin += i == 0 ? min * multiplier : min;
@@ -246,7 +329,7 @@ namespace SuccessChance
 
             // Concealment or a miss chance (d100 over the value), as TryOvercomeTargetConcealmentAndMissChance.
             p.Concealment = roll.IgnoreConcealment ? Concealment.None : UnitPartConcealment.Calculate(attacker, target, true);
-            p.MissChance = roll.MissChance;
+            p.MissChance = GameRules.MissChance(roll);
             if (p.MissChance > 0 && (p.Concealment != Concealment.Total || p.MissChance > 50) && (p.Concealment != Concealment.Partial || p.MissChance > 20))
                 p.PassConcealment = Math.Max(0, 100 - p.MissChance) / 100.0;
             else
@@ -255,43 +338,52 @@ namespace SuccessChance
                 if (!roll.IgnoreConcealment && p.Concealment != Concealment.None)
                 {
                     var check = new RuleConcealmentCheck(attacker, target, true);
-                    DryRun.Run(check, null);
-                    p.ConcealmentReroll = check.RerollIfFailed;
-                    double fail = (p.Concealment == Concealment.Partial ? 20 : 50) / 100.0;
-                    p.PassConcealment = 1 - (p.ConcealmentReroll ? fail * fail : fail);
+                    double fail = 0;
+                    DryRun.Run(check, () => fail = GameRules.ConcealmentFail(check, p.Concealment, out p.ConcealmentReroll));
+                    p.PassConcealment = 1 - fail;
                 }
             }
 
+#if WOTR
+            // As RuleAttackRoll.OnTrigger: flat-footed forced by the roll, the roll's own bonuses copied to the attack
+            // bonus, with the weapon stats of the roll.
+            var ac = Rulebook.Trigger(new RuleCalculateAC(attacker, target, roll.AttackType) { ForceFlatFooted = roll.ForceFlatFooted });
+            var abRule = new RuleCalculateAttackBonus(attacker, target, roll.WeaponStats, roll.AttackBonusPenalty) { TargetIsFlanked = roll.TargetIsFlanked };
+            abRule.CopyModifiersFrom(roll);
+            Rulebook.Trigger(abRule);
+#else
             var ac = Rulebook.Trigger(new RuleCalculateAC(attacker, target, roll.AttackType));
-            p.TargetAC = ac.TargetAC;
+            var abRule = Rulebook.Trigger(new RuleCalculateAttackBonus(attacker, target, roll.Weapon, roll.AttackBonusPenalty));
+#endif
+            p.TargetAC = GameRules.Result(ac);
             p.FlatFooted = ac.IsTargetFlatFooted;
             p.ArmorClassParts = Breakdown.ArmorClass(ac, target);
-            var abRule = Rulebook.Trigger(new RuleCalculateAttackBonus(attacker, target, roll.Weapon, roll.AttackBonusPenalty));
             p.AttackBonus = abRule.Result;
             p.AttackBonusParts = Breakdown.AttackBonus(abRule, attacker);
             p.OnAttackBonus = OnAttackBonus(attacker, roll.Weapon, roll.RuleAttackWithWeapon, p);
             p.AttackBonus += p.OnAttackBonus;
             p.AttackBonusParts.AddRange(p.PendingParts);
             int ab = p.AttackBonus, acValue = p.TargetAC;
-            Func<int, bool> hits = d => d == 20 || (d > 1 && d + ab >= acValue);
+            // WotR: a feature lets a natural 1 hit if the total does (State.Features.AlwaysChance).
+            bool alwaysChance = GameRules.AlwaysChance(attacker);
+            Func<int, bool> hits = d => d == 20 || ((d > 1 || alwaysChance) && d + ab >= acValue);
             // ModifyD20 tests "failed" with RuleAttackRoll.IsSuccessRoll. In the game as shipped it adds the not yet
             // rolled Roll (0) instead of the die: every die but a natural 20 counts as failed unless AB >= AC. Kingmaker
             // Fixes (or any mod that patches the method) makes it test the die.
-            Func<int, bool> failedForReroll = AttackSuccessRollFixed
+            Func<int, bool> failedForReroll = GameRules.SuccessRollTestsDie || AttackSuccessRollFixed
                 ? (Func<int, bool>)(d => !hits(d))
                 : d => !(d > 1 && (d == 20 || ab >= acValue));
             p.Rerolls = DryRun.Rerolls(roll);
             var pmf = D20.Pmf(p.Rerolls, failedForReroll);
             p.RollHits = D20.P(pmf, hits);
 
-            var critsOnParty = Game.Instance.Player.Difficulty.CritsOnParty;
-            p.CanCrit = !roll.ImmuneToCriticalHit && (!target.IsPlayerFaction || critsOnParty == CriticalHitPower.Weak || critsOnParty == CriticalHitPower.Normal);
+            p.CanCrit = GameRules.CanCrit(roll, target);
             int edge = p.CriticalEdge;
             bool autoThreat = roll.AutoCriticalThreat;
             Func<int, bool> threat = d => p.CanCrit && hits(d) && (d >= edge || autoThreat);
             if (p.CanCrit && D20.P(pmf, threat) > 0)
             {
-                p.CriticalAC = Rulebook.Trigger(new RuleCalculateAC(attacker, target, roll.AttackType) { IsCritical = true }).TargetAC;
+                p.CriticalAC = GameRules.Result(Rulebook.Trigger(new RuleCalculateAC(attacker, target, roll.AttackType) { IsCritical = true }));
                 p.ConfirmationBonus = roll.CriticalConfirmationBonus;
                 int need = p.CriticalAC - ab - p.ConfirmationBonus;
                 // The confirmation die goes through the same d20 modifiers, no natural 1 or 20 rule here. By then the

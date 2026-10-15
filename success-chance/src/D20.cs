@@ -33,8 +33,23 @@ namespace SuccessChance
                 for (int f = 1; f <= 20; f++)
                 {
                     // The first die is rolled before the modifiers that apply only if it failed.
-                    D20Modifier reroll = null, replace = null;
+                    D20Modifier replace = null;
                     int bonus = 0;
+#if WOTR
+                    // RuleRollDice: every applying modifier adds its rerolls, positive to keep the best, negative the
+                    // worst, so opposite ones cancel out; a fixed roll overrides the result.
+                    int net = 0;
+                    for (int i = 0; i < n; i++)
+                    {
+                        var m = modifiers[i];
+                        if ((mask & (1 << i)) == 0 || !m.Applies(f, failed)) continue;
+                        bonus += m.SaveBonus;
+                        if (m.Replace) replace = m;
+                        else net += m.TakeBest ? m.Rerolls : -m.Rerolls;
+                    }
+                    var reroll = net == 0 ? null : new D20Modifier { Rerolls = Math.Abs(net), TakeBest = net > 0 };
+#else
+                    D20Modifier reroll = null;
                     for (int i = 0; i < n; i++)
                     {
                         var m = modifiers[i];
@@ -42,6 +57,7 @@ namespace SuccessChance
                         bonus += m.SaveBonus;
                         if (m.Replace) replace = m; else reroll = m;
                     }
+#endif
                     double pf = p * 0.05;
                     if (replace != null && replace.Roll >= 1 && replace.Roll <= 20)
                         Add(result, replace.Roll, bonus, pf);
@@ -111,6 +127,8 @@ namespace SuccessChance
                 string what = m.Replace ? "roll " + m.Roll
                     : (m.TakeBest ? "best of " : "worst of ") + (m.Rerolls + 1);
                 if (m.OnlyIfFailed) what += " if failed";
+                if (m.OnlyIfSuccess) what += " if succeeded";
+                if (m.Compare > 0 && m.Compare <= 5) what += " if die " + new[] { "", ">", "<", "<=", ">=", "=" }[m.Compare] + " " + m.CompareValue;
                 if (m.SaveBonus != 0) what += string.Format(" save {0:+0;-0}", m.SaveBonus);
                 if (m.Chance < 100) what += " " + m.Chance + "%";
                 parts.Add((m.Source ?? "?") + ": " + what);

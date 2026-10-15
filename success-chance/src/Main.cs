@@ -43,6 +43,9 @@ namespace SuccessChance
             new Harmony(modEntry.Info.Id).PatchAll(typeof(Main).Assembly);
             EventBus.Subscribe(new AttackCheck());
             EventBus.Subscribe(new SpellChecks());
+#if WOTR
+            EventBus.Subscribe(new EarlyPredictionsHook());
+#endif
             HoverChance.Create();
             return true;
         }
@@ -154,7 +157,7 @@ namespace SuccessChance
                     ChanceLog.Write(string.Format("{0} -> {1} [{2}]: not predicted ({3}), real: {4}, d20 {5} + {6} vs AC {7}",
                         Name(evt.Initiator), Name(evt.Target), evt.Weapon?.Blueprint.Name,
                         attack == null ? "no attack with a weapon, reason " + (evt.Reason?.Ability?.Name ?? evt.Reason?.Fact?.Name ?? "?") : "no prediction",
-                        evt.Result, evt.Roll.Value, evt.AttackBonus, evt.TargetAC));
+                        evt.Result, GameRules.Die(evt), evt.AttackBonus, evt.TargetAC));
                 return;
             }
             if (attack != null) m_Pending.Remove(attack);
@@ -164,7 +167,7 @@ namespace SuccessChance
                 s_Expected += p.Hit;
                 if (evt.IsHit) s_Hits++;
                 // AB and AC are only rolled against when the attack got past concealment and was not automatic.
-                bool rolled = evt.Roll.Value > 0;
+                bool rolled = GameRules.Die(evt) > 0;
                 bool mismatch = rolled && (evt.AttackBonus != p.AttackBonus || evt.TargetAC != p.TargetAC);
                 if (mismatch) s_Mismatches++;
                 var sb = new System.Text.StringBuilder();
@@ -174,7 +177,7 @@ namespace SuccessChance
                     sb.AppendFormat("\n    AB {0} = {1}\n    AC {2} = {3}", p.AttackBonus, Breakdown.Format(p.AttackBonusParts),
                         p.TargetAC, Breakdown.Format(p.ArmorClassParts));
                 sb.AppendFormat("\n    real: {0}{1}", evt.Result,
-                    rolled ? string.Format(", d20 {0} + {1} vs AC {2}", evt.Roll.Value, evt.AttackBonus, evt.TargetAC) : "");
+                    rolled ? string.Format(", d20 {0} + {1} vs AC {2}", GameRules.Die(evt), evt.AttackBonus, evt.TargetAC) : "");
                 if (mismatch)
                 {
                     // The real terms, taken while the roll's own bonuses are still on, and what differs by name.

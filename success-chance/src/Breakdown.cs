@@ -5,6 +5,9 @@ using Kingmaker.EntitySystem.Entities;
 using Kingmaker.EntitySystem.Stats;
 using Kingmaker.RuleSystem;
 using Kingmaker.RuleSystem.Rules;
+#if WOTR
+using Fact = Kingmaker.EntitySystem.EntityFact;
+#endif
 
 namespace SuccessChance
 {
@@ -54,6 +57,39 @@ namespace SuccessChance
             if (effective != sum) parts.Add(new Part(stat.Type + ": not stacking", effective - sum));
         }
 
+#if WOTR
+        // A bonus of a rule: its fact, else the stat or the kind of bonus it stands for.
+        static string BonusName(Modifier b)
+        {
+            string name = FactName(b.Fact) ?? (b.Stat != StatType.Unknown ? b.Stat.ToString() : b.Type.ToString());
+            return name + " [" + b.Descriptor + "]";
+        }
+
+        // The attack bonus as RuleCalculateAttackBonus adds it up: the bonuses of the rule (base attack bonus, the
+        // ability, the secondary weapon, enhancement, flanking, shooting into melee...) and the modifiers of the
+        // additional attack bonus shown at the moment.
+        internal static List<Part> AttackBonus(RuleCalculateAttackBonus rule, UnitEntityData unit)
+        {
+            var parts = new List<Part>();
+            foreach (var b in rule.AllBonuses) parts.Add(new Part(BonusName(b), b.Value));
+            if (rule.StatModifiersAtTheMoment != null)
+                foreach (var m in rule.StatModifiersAtTheMoment) parts.Add(new Part(ModifierName(m), m.ModValue));
+            AddOther(parts, rule.Result);
+            return parts;
+        }
+
+        // The armor class as RuleCalculateAC shows it: the base and the modifiers that count against this attack (the
+        // rule's own, as prone, among them).
+        internal static List<Part> ArmorClass(RuleCalculateAC rule, UnitEntityData target)
+        {
+            var parts = new List<Part> { new Part("AC base", target.Stats.AC.BaseValue) };
+            if (rule.StatModifiersAtTheMoment != null)
+                foreach (var m in rule.StatModifiersAtTheMoment) parts.Add(new Part(ModifierName(m), m.ModValue));
+            AddOther(parts, rule.Result);
+            return parts;
+        }
+
+#else
         internal static List<Part> AttackBonus(RuleCalculateAttackBonus rule, UnitEntityData unit)
         {
             var parts = new List<Part> { new Part("BAB", unit.Stats.BaseAttackBonus.ModifiedValue) };
@@ -86,6 +122,7 @@ namespace SuccessChance
             return parts;
         }
 
+#endif
         // A saving throw: the class base, the ability bonus, the modifiers, as RuleSavingThrow takes the stat.
         internal static List<Part> Save(ModifiableValue stat, int value)
         {

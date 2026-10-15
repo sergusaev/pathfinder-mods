@@ -18,6 +18,11 @@ using Kingmaker.UnitLogic.Mechanics;
 using Kingmaker.UnitLogic.Mechanics.Actions;
 using Kingmaker.UnitLogic.Parts;
 using Kingmaker.Utility;
+#if WOTR
+using Kingmaker.UnitLogic;
+using Kingmaker.UnitLogic.Class.Kineticist;
+using Kingmaker.Blueprints;
+#endif
 
 namespace SuccessChance
 {
@@ -51,6 +56,8 @@ namespace SuccessChance
         public bool Immune;
         public bool Ignored;
         public bool HasRoll;
+        // WotR: the caster checks a skill instead of the caster level when it is higher (not counted).
+        public bool SkillInstead;
         public List<D20Modifier> Rerolls;
         // The chance the spell gets through.
         public double Pass = 1;
@@ -62,6 +69,7 @@ namespace SuccessChance
             if (!HasRoll) return "no SR roll" + (SpellResistance > 0 ? " (SR " + SpellResistance + ")" : "");
             var s = string.Format("SR {0} vs d20 + {1}: through {2:0.#}%", SpellResistance, Penetration, Pass * 100);
             if (Rerolls != null && Rerolls.Count > 0) s += " | d20: " + D20.Describe(Rerolls);
+            if (SkillInstead) s += " | a skill check may replace the caster level: not counted";
             return s;
         }
     }
@@ -87,20 +95,46 @@ namespace SuccessChance
     {
         internal static SavePrediction Save(UnitEntityData unit, SavingThrowType type, int dc, RuleReason reason)
         {
-            var evt = new RuleSavingThrow(unit, type, dc) { Reason = reason };
-            var p = new SavePrediction { Type = type, DC = dc };
+            return Save(new RuleSavingThrow(unit, type, dc) { Reason = reason });
+        }
+
+        // A saving throw rule made as the game makes it, run dry.
+        internal static SavePrediction Save(RuleSavingThrow evt)
+        {
+            var unit = evt.Initiator;
+            var p = new SavePrediction { Type = evt.Type, DC = evt.DifficultyClass };
             DryRun.Run(evt, () =>
             {
                 // As RuleSavingThrow.OnTrigger takes the stat.
                 var stat = unit.Stats.GetStat(evt.StatType);
+#if WOTR
+                // A better stat may stand in for the save (UnitPartSavingThrowsReplace); the rule's own bonuses are on
+                // the stat while it is read; handlers may raise the DC.
+                var replace = unit.Get<UnitPartSavingThrowsReplace>();
+                if (replace != null && replace.SavingThrowStat == evt.StatType)
+                {
+                    var other = unit.Stats.GetStat(replace.ReplaceToStat);
+                    if (other.ModifiedValue > stat.ModifiedValue) stat = other;
+                }
+                using (stat.GetTemporaryModifiersScope(evt.AllBonuses)) p.Stat = stat.ModifiedValue;
+                p.DC = evt.DifficultyClass;
+#else
                 p.Stat = (stat as ModifiableValueAttributeStat)?.Bonus ?? (stat as ModifiableValueSavingThrow)?.ModifiedValueWithDisabledBonuses() ?? stat.ModifiedValue;
+#endif
                 p.Parts = Breakdown.Save(stat, p.Stat);
                 p.SuccessBonus = evt.SuccessBonus;
                 p.AutoPass = evt.AutoPass;
                 p.Evasion = evt.Evasion;
                 p.ImprovedEvasion = evt.ImprovedEvasion;
                 p.Rerolls = DryRun.Rerolls(evt);
+#if WOTR
+                // Rerolls handlers put on the save's own die (BuffDescriptorImmunity), outside ModifyD20.
+                if (evt.D20?.Rerolls != null)
+                    foreach (var r in evt.D20.Rerolls)
+                        p.Rerolls.Add(new D20Modifier { Source = r.Source?.Name, Rerolls = Math.Abs(r.Amount), TakeBest = r.Amount > 0 });
+#endif
             });
+            int dc = p.DC;
             // "Reroll only if failed" asks RuleSavingThrow.IsSuccessRoll about the first die before OnTrigger has
             // taken the stat (0): every die but 20 below the DC counts as failed.
             Func<int, bool> failed = d => !(d == 20 || (d > 1 && d >= dc));
@@ -116,6 +150,20 @@ namespace SuccessChance
             var p = new SpellResistancePrediction();
             DryRun.Run(evt, () =>
             {
+#if WOTR
+                // As RuleSpellResistanceCheck.OnTrigger and IsSpellResisted.
+                var part = target.Get<UnitPartSpellResistance>();
+                p.Ignored = context.SourceAbilityContext?.ForceIgnoreSpellResist == true || evt.Initiator.Descriptor.State.Features.PrimalMagicEssence
+                    || evt.IgnoreSpellResistance;
+                p.Immune = part?.IsImmune(context) ?? false;
+                p.SpellResistance = part?.GetValue(context) ?? 0;
+                p.Penetration = context.Params.CasterLevel + GameRules.SpellPenetration(evt);
+                // The value is set by OnTrigger; HasResistanceRoll reads it.
+                GameRules.SetSpellResistance(evt, p.SpellResistance);
+                p.HasRoll = evt.HasResistanceRoll;
+                if (context.MaybeCaster?.Get<UnitPartSpellResistanceCheckReplace>() != null) p.SkillInstead = true;
+                if (!p.Ignored && !p.Immune && p.HasRoll) p.Rerolls = DryRun.Rerolls(evt);
+#else
                 // As RuleSpellResistanceCheck.OnTrigger and IsSpellResisted.
                 var part = target.Get<UnitPartSpellResistance>();
                 p.Ignored = evt.IgnoreSpellResistance || (evt.Initiator?.Descriptor.State.Features.PrimalMagicEssence ?? false);
@@ -124,6 +172,7 @@ namespace SuccessChance
                 p.Penetration = context.Params.CasterLevel + evt.AdditionalSpellPenetration;
                 p.HasRoll = p.SpellResistance > 0 && (evt.Ability == null || evt.Ability.SpellResistance);
                 if (!p.Ignored && !p.Immune && p.HasRoll) p.Rerolls = DryRun.Rerolls(evt);
+#endif
             });
             if (p.Ignored) p.Pass = 1;
             else if (p.Immune) p.Pass = 0;
@@ -154,11 +203,29 @@ namespace SuccessChance
             // The parameters rule removes some facts after it (RemoveAfterCast) and before it (metamagic for one
             // spell): it runs dry, its result calculated as its OnTrigger does.
             AbilityParams parameters = null;
+#if WOTR
+            // As AbilityData.CalculateParams: an item's or a fact's own parameters, or a calculator component of the
+            // ability, else the rule with the ability's overrides.
+            if (ability.SourceItemEquipmentBlueprint != null || ability.Fact?.OverrideParams != null
+                || blueprint.GetComponent<Kingmaker.UnitLogic.Mechanics.Components.ContextAbilityParamsCalculator>() != null)
+                parameters = ability.CalculateParams();
+            else
+            {
+                var rule = new RuleCalculateAbilityParams(caster, ability)
+                {
+                    ReplaceDC = ability.OverrideDC,
+                    ReplaceSpellLevel = ability.OverrideSpellLevel,
+                    ReplaceCasterLevel = ability.OverrideCasterLevel,
+                    ReplaceStatBonusModifier = ability.OverrideCasterModifier,
+                    IgnoreDCBonuses = ability.IgnoreDCBonuses,
+                };
+#else
             if (ability.SourceItemEquipmentBlueprint != null || ability.Fact?.OverrideParams != null)
                 parameters = ability.CalculateParams();
             else
             {
                 var rule = new RuleCalculateAbilityParams(caster, ability) { ReplaceDC = ability.OverrideDC, ReplaceSpellLevel = ability.OverrideSpellLevel };
+#endif
                 DryRun.Run(rule, () => rule.OnTrigger(Kingmaker.Game.Instance.Rulebook.Context));
                 parameters = rule.Result;
             }
@@ -172,11 +239,23 @@ namespace SuccessChance
                 var projectile = component as AbilityDeliverProjectile;
                 if (projectile != null && projectile.NeedAttackRoll && projectile.Type != AbilityProjectileType.Line && projectile.Type != AbilityProjectileType.Cone && p.Attack == null)
                 {
+#if WOTR
+                    // As AbilityDeliverProjectile: the melee weapon for Hand of the Apprentice, the main hand for a
+                    // kineticist archer blast, Intelligence for the stat with the domains-by-Intelligence feature.
+                    var weapon = projectile.IsHandOfTheApprentice ? caster.GetThreatHandMelee()?.MaybeWeapon
+                        : AbilityKineticist.IsArcherBlast(ability) && projectile.Type == AbilityProjectileType.Simple ? caster.Body.PrimaryHand.Weapon
+                        : projectile.Weapon != null ? Weapon(projectile.Weapon) : null;
+                    var stat = caster.State.Features.DomainsByIntelligenceFeature ? StatType.Intelligence : projectile.AttackRollBonusStat;
+                    if (weapon != null)
+                        using (projectile.ReplaceAttackRollBonusStat ? ContextData<AttackBonusStatReplacement>.Request().Setup(stat) : null)
+                            p.Attack = AttackChance.Predict(caster, target, weapon, 0, null, context);
+#else
                     var weapon = projectile.IsHandOfTheApprentice ? caster.GetThreatHand()?.MaybeWeapon
                         : projectile.Weapon != null ? Weapon(projectile.Weapon) : null;
                     if (weapon != null)
                         using (projectile.ReplaceAttackRollBonusStat ? new AttackBonusStatReplacement(projectile.AttackRollBonusStat) : null)
                             p.Attack = AttackChance.Predict(caster, target, weapon, 0, null, context);
+#endif
                 }
             }
 
@@ -186,8 +265,18 @@ namespace SuccessChance
             {
                 var run = component as AbilityEffectRunAction;
                 if (run == null) continue;
+#if WOTR
+                // The save as the effect makes it (CreateSavingThrow: DC, persistent spell and the rest); a persistent
+                // spell makes the target save twice.
+                if ((SavingThrowType)SaveTypeInContext.Invoke(run, new object[] { context }) != SavingThrowType.Unknown)
+                {
+                    p.Save = Save((RuleSavingThrow)CreateSave.Invoke(run, new object[] { target, context, false }));
+                    if (context.HasMetamagic(Kingmaker.UnitLogic.Abilities.Metamagic.Persistent)) p.Save.Pass *= p.Save.Pass;
+                }
+#else
                 if (run.HasSavingThrow)
                     p.Save = Save(target, run.SavingThrowType, context.Params.DC, context);
+#endif
                 else
                 {
                     int bonus;
@@ -207,6 +296,11 @@ namespace SuccessChance
             }
             return p;
         }
+
+#if WOTR
+        static readonly MethodInfo SaveTypeInContext = AccessTools.Method(typeof(AbilityEffectRunAction), "GetSavingThrowTypeInContext");
+        static readonly MethodInfo CreateSave = AccessTools.Method(typeof(AbilityEffectRunAction), "CreateSavingThrow");
+#endif
 
         static readonly FieldInfo DamageKind = AccessTools.Field(typeof(ContextActionDealDamage), "m_Type");
 

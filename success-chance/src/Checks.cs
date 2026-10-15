@@ -10,12 +10,20 @@ namespace SuccessChance
     // Rolls predicted at the very start of the rule, before any handler has added its bonuses to it: saving throws,
     // spell resistance and attack rolls not made by an attack with a weapon (touch and ray spells). Checked against the
     // real roll after it.
+#if WOTR
+    // WotR calls hooks before the handlers of every rule (RulebookEventBus.Hooks), subscribed with the event bus.
+    class EarlyPredictionsHook : IRulebookEventAboutToTriggerHook
+    {
+        public void OnBeforeEventAboutToTrigger(RulebookEvent rule) => EarlyPredictions.Prefix(rule);
+    }
+#else
     [HarmonyPatch(typeof(RulebookEventBus), nameof(RulebookEventBus.OnEventAboutToTrigger))]
+#endif
     static class EarlyPredictions
     {
         static readonly Dictionary<RulebookEvent, object> s_Pending = new Dictionary<RulebookEvent, object>();
 
-        static void Prefix(RulebookEvent evt)
+        internal static void Prefix(RulebookEvent evt)
         {
             if (DryRun.Active || !Main.Settings.Logging) return;
             Cost.RuleStart();
@@ -25,7 +33,12 @@ namespace SuccessChance
                 if (save != null)
                 {
                     if (!save.Initiator.Descriptor.State.IsDead)
+#if WOTR
+                        // A copy of the rule as it was made (DC, success bonus, evasion and the rest).
+                        s_Pending[evt] = SpellChance.Save(new RuleSavingThrow(save.Initiator, save) { Reason = save.Reason });
+#else
                         s_Pending[evt] = SpellChance.Save(save.Initiator, save.Type, save.DifficultyClass, save.Reason);
+#endif
                     return;
                 }
                 var sr = evt as RuleSpellResistanceCheck;

@@ -16,6 +16,9 @@ using Kingmaker.UI.CombatText;
 using Kingmaker.UI.Overtip;
 using Kingmaker.UI._ConsoleUI.Overtips;
 using Kingmaker.View;
+#if WOTR
+using Kingmaker.UnitLogic.Commands;
+#endif
 using DG.Tweening;
 using TMPro;
 using TurnBased.Controllers;
@@ -106,10 +109,18 @@ namespace SuccessChance
         {
             if (CombatController.IsInTurnBasedCombat())
             {
+#if WOTR
+                var unit = CombatController.SelectedUnit;
+#else
                 var unit = CombatController.CurrentUnit;
+#endif
                 return unit != null && unit.IsDirectlyControllable ? unit : null;
             }
+#if WOTR
+            return Game.Instance.SelectionCharacter?.FirstSelectedUnit;
+#else
             return Game.Instance.UI.SelectionManager?.FirstSelectUnit;
+#endif
         }
 
         // What is shown now: one entry for an attacker, a target and an ability, its text, where it stands and where on
@@ -140,7 +151,11 @@ namespace SuccessChance
                 UnitEntityData attacker = null, target = m_Hovered;
                 var mode = Game.Instance.CurrentMode;
                 // An ability chosen and waiting for its target: its chance; otherwise the attacks with weapons.
+#if WOTR
+                var ability = Game.Instance.SelectedAbilityHandler?.SelectedAbility;
+#else
                 var ability = Game.Instance.SelectedAbilityHandler?.Ability;
+#endif
                 bool full = true;
                 bool show = Main.Settings.ShowOnHover && (mode == GameModeType.Default || mode == GameModeType.Pause)
                     && target != null && target.View != null && target.IsPlayersEnemy && target.IsVisibleForPlayer
@@ -267,6 +282,19 @@ namespace SuccessChance
         }
 
         // Overtips are pooled and bound to other units.
+#if WOTR
+        // WotR binds through the view base of every view: the overtip's own part of the binding is patched.
+        [HarmonyLib.HarmonyPatch(typeof(UnitOvertipView), "BindViewImplementation")]
+        static class ConsoleBound
+        {
+            static void Postfix(UnitOvertipView __instance)
+            {
+                var viewModel = s_ViewModel?.GetValue(__instance, null) as EntityOvertipVM;
+                if (viewModel?.Unit != null) s_Overtips[viewModel.Unit] = __instance;
+                s_PlaceVersion++;
+            }
+        }
+#else
         [HarmonyLib.HarmonyPatch(typeof(UnitOvertipView), nameof(UnitOvertipView.Bind))]
         static class ConsoleBound
         {
@@ -276,6 +304,7 @@ namespace SuccessChance
                 s_PlaceVersion++;
             }
         }
+#endif
 
         [HarmonyLib.HarmonyPatch(typeof(OvertipController), nameof(OvertipController.Initialize), new[] { typeof(UnitEntityData) })]
         static class PcBound
@@ -318,11 +347,20 @@ namespace SuccessChance
             full = true;
             if (!CombatController.IsInTurnBasedCombat()) return false;
             var turn = Game.Instance.TurnBasedCombatController.CurrentTurn;
+#if WOTR
+            var unit = turn?.SelectedUnit;
+            var states = unit != null ? turn.GetActionsStates(unit) : null;
+#else
             var states = turn?.ActionsStates;
+#endif
             if (states == null) return false;
             if (states.IsOutOfRange) return false;
             if (ability != null) return true;
+#if WOTR
+            full = turn.GetEnabledFullAttack(unit);
+#else
             full = turn.EnabledFullAttack;
+#endif
             return states.IsAttack();
         }
 
@@ -337,6 +375,11 @@ namespace SuccessChance
         internal static List<AttackPrediction> Series(UnitEntityData attacker, UnitEntityData target, bool full)
         {
             var attacks = new List<KeyValuePair<ItemEntityWeapon, int>>();
+#if WOTR
+            // As the game lists a full attack (UnitAttack.EnumerateFullAttack): the hands in turn, then the limbs.
+            foreach (var a in UnitAttack.EnumerateFullAttack(attacker))
+                if (a.Hand?.MaybeWeapon != null) attacks.Add(new KeyValuePair<ItemEntityWeapon, int>(a.Hand.MaybeWeapon, a.AttackBonusPenalty));
+#else
             var body = attacker.Body;
             if (body.HandsAreEnabled)
             {
@@ -353,6 +396,7 @@ namespace SuccessChance
             }
             foreach (var limb in body.AdditionalLimbs)
                 if (limb.HasWeapon && limb.HasItem) attacks.Add(new KeyValuePair<ItemEntityWeapon, int>(limb.MaybeWeapon, 0));
+#endif
             if (attacks.Count == 0)
             {
                 var weapon = attacker.GetFirstWeapon();
@@ -385,6 +429,7 @@ namespace SuccessChance
                 Ordinal(predictions.Count, ru), Colored(last.Hit, last.Hit), ru ? "общий" : "total", Damage(min, max));
         }
 
+#if !WOTR
         static List<int> Penalties(RuleCalculateAttacksCount.AttacksCount count)
         {
             var list = new List<int>();
@@ -392,6 +437,7 @@ namespace SuccessChance
             for (int j = 1; j <= count.PenalizedAttacks; j++) list.Add(5 * j);
             return list;
         }
+#endif
 
         internal static string CritText(AttackPrediction p)
         {
