@@ -1,0 +1,37 @@
+# Success Chance (Pathfinder: Kingmaker)
+
+[Русская версия](README.ru.md)
+
+A Unity Mod Manager mod that shows, in turn-based combat, the chance that an attack or a spell succeeds and the damage it does, over the enemy you point at, before you act. It works with a gamepad as well as with keyboard and mouse.
+
+## What it shows
+
+The text stands over the enemy where the game shows its own floating text (a miss, damage), in the same font; percentages are coloured from red to green, damage is red.
+
+- **Attack:** `95%, 3-10 (crit 5%, 9-30)` — the chance to hit, the damage of a hit, then the chance of a confirmed critical hit and its damage.
+- **Full attack:** the first and the last attack in short, plus the total damage of the series, e.g. `#1 90% (crit 9%, …) / #5 15%, total 45-100`.
+- **Spell:** `Hit 80% Resistance 80% Fails Will 45%, 10-60 / 5-30` — the touch attack, getting through spell resistance, the target failing its save, then the damage when it fails / when it saves. `Immune` when spell resistance cannot be overcome at all; a part that cannot fail (no resistance, no save) is left out.
+
+The text appears only when the action can be done now: on your character's turn, with an attack still available (a pointer that would only move shows nothing) or with a spell chosen and waiting for its target. While the game's own floating text is over the target, the mod's text gives way to it. The mod does nothing in real time: there is no time to read a chance there.
+
+## How it is calculated
+
+The mod does not repeat the game's formulas: it runs the game's own rules "dry" — the attack bonus, armour class, flat-footedness, concealment and miss chances, critical threat and confirmation, the spell's DC and caster level, spell resistance, saving throws — with every handler that only adds bonuses, and without anything that would roll dice, spend resources or write to the combat log. So everything the game counts is counted: buffs and debuffs, conditions, feats, class features, items, difficulty settings and other mods. Rerolls ("roll twice, take the better", "reroll if failed") are counted exactly; a natural 1 and 20 too.
+
+Results are cached and calculated again only when something that can change them happens to the attacker or the target (a buff, equipment, a new round, a turn-based mode change), not every frame.
+
+## Overtips
+
+With both controls the overtip over a unit (name, hit points, action, cooldown) now follows the rules of the keyboard-and-mouse interface and its settings; the gamepad settings' "always show hit points" checkboxes still apply. With keyboard and mouse the floating texts stand a little higher over the overtip, so they do not stick to its edge.
+
+## Log
+
+`Mods/SuccessChance/SuccessChance.log` (the previous session's is kept as `SuccessChance.prev.log`): every attack and every saving throw and spell resistance check in turn-based combat, with the predicted chance, its breakdown by source and the real roll, so the prediction can be checked against the game. Can be turned off in the mod's UMM window, as can the text over enemies.
+
+## Not counted yet
+
+Combat maneuvers and skill checks; spells cast through activatable abilities.
+
+## Building
+
+`./build.sh [--install]`, see [Building](../README.md#building).

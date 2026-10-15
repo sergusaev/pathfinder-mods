@@ -49,8 +49,8 @@ namespace SuccessChance
 
         static void OnGUI(UnityModManager.ModEntry modEntry)
         {
-            Settings.ShowOnHover = GUILayout.Toggle(Settings.ShowOnHover, " Show the hit chance under the enemy the pointer is on");
-            Settings.LogAttacks = GUILayout.Toggle(Settings.LogAttacks, " Log every weapon attack: predicted chance and the real roll (SuccessChance.log)");
+            Settings.ShowOnHover = GUILayout.Toggle(Settings.ShowOnHover, " Show the chance of success over the enemy pointed at (turn-based combat)");
+            Settings.LogAttacks = GUILayout.Toggle(Settings.LogAttacks, " Log every attack, save and spell resistance check in turn-based combat: predicted chance and the real roll (SuccessChance.log)");
             GUILayout.Label(AttackCheck.Summary());
         }
 
