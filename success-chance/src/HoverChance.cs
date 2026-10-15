@@ -150,26 +150,10 @@ namespace SuccessChance
                 if (!show)
                 {
                     LogWhyNot(target, ability, mode, attacker);
-                    // The attack or the spell is under way on the target still pointed at: its result (a miss, damage)
-                    // comes in the chance's place, and the name keeps giving way while the command runs and its result
-                    // is up, so the result stands at the same height as the chance did.
-                    if (s_NameGivenWay != null && m_Place != null && target == m_Target
-                        && (GameTextUp() || m_Attacker != null && m_Attacker.Commands.AnyCommandTargets(m_Target)))
-                    {
-                        if (m_Label != null && m_Label.gameObject.activeSelf) m_Label.gameObject.SetActive(false);
-                        return;
-                    }
-                    if (s_NameGivenWay != null)
-                        s_BackReason = target == null ? "no hover" : !CanActNow(ability, out full) ? "cannot act now" : "not shown";
                     Hide();
                     return;
                 }
                 m_WhyNot = null;
-                if (s_DumpAt > 0 && Time.unscaledTime >= s_DumpAt)
-                {
-                    s_DumpAt = 0;
-                    DumpOvertip(s_NameGivenWay);
-                }
                 if (attacker != m_Attacker || target != m_Target || ability != m_Ability || full != m_Full || s_Version != m_Version)
                     Refresh(attacker, target, ability, full);
                 if (m_PlaceVersion != s_PlaceVersion) Locate();
@@ -178,9 +162,8 @@ namespace SuccessChance
                     Hide();
                     return;
                 }
-                // The name gives way while the chance or the game's own text stands in its place: one text replaces
-                // the other, and the name comes back only when the chance is no longer wanted.
-                HideName();
+                // In the game's combat text block, the overtip lays it out above the name, hit points and action as
+                // it does its own texts; while one of the game's texts is up the chance gives way (one replaces the other).
                 bool up = !GameTextUp();
                 if (m_Label.gameObject.activeSelf != up) m_Label.gameObject.SetActive(up);
             }
@@ -228,7 +211,6 @@ namespace SuccessChance
         {
             m_PlaceVersion = s_PlaceVersion;
             m_Place = CombatTextOf(m_Target);
-            m_NameOvertip = null;
             s_GameTexts.Clear();
             if (m_Place == null)
             {
@@ -253,7 +235,6 @@ namespace SuccessChance
             m_Label.text = m_Text ?? "";
             // Placed as the game's own combat text (a miss, damage): in the block's layout, nothing calculated.
             m_Rect.SetAsLastSibling();
-            m_NameOvertip = OvertipOf(m_Place);
         }
 
         bool GameTextUp()
@@ -474,41 +455,8 @@ namespace SuccessChance
         void Hide()
         {
             if (m_Label != null && m_Label.gameObject.activeSelf) m_Label.gameObject.SetActive(false);
-            RestoreName();
         }
 
-        // While the chance is shown the overtip does not want its name (NeedName answers no, patched below): the game
-        // itself fades the name out and moves its combat text block down into the name's place, by its own layout
-        // (TweenComponentsToPlace); when the chance goes, the overtip is laid out again and the name comes back as the
-        // game's settings say. Nothing is set on the name plate by the mod.
-        Component m_NameOvertip;
-        static Component s_NameGivenWay;
-
-        void HideName()
-        {
-            if (s_NameGivenWay == m_NameOvertip) return;
-            RestoreName();
-            s_NameGivenWay = m_NameOvertip;
-            LayOut(s_NameGivenWay);
-            s_DumpAt = Time.unscaledTime + 0.6f;
-            if (s_NameGivenWay != null && Main.Settings.LogAttacks)
-            {
-                var settings = Kingmaker.UI.SettingsUI.SettingsRoot.Instance;
-                ChanceLog.Write(string.Format("hover: name of {0} gives way ({1}; names of enemies {2}, hit points {3})", AttackCheck.Name(m_Target),
-                    s_NameGivenWay.GetType().Name, settings.ShowNamesForEnemies.CurrentState, settings.ShowEnemyHP.CurrentState));
-            }
-        }
-
-        void RestoreName()
-        {
-            var overtip = s_NameGivenWay;
-            s_NameGivenWay = null;
-            LayOut(overtip);
-            if (overtip != null && Main.Settings.LogAttacks) ChanceLog.Write("hover: name back (" + s_BackReason + ")");
-            s_BackReason = "other";
-        }
-
-        static string s_BackReason = "other";
         string m_WhyNot;
 
         // Why the chance is not shown over a unit pointed at, when the reason changes (for the log).
@@ -532,106 +480,6 @@ namespace SuccessChance
                 ChanceLog.Write(string.Format("hover {0}: not shown, {1} ({2})", AttackCheck.Name(target), why,
                     Game.Instance.IsControllerGamepad ? "gamepad" : "mouse"));
         }
-        static float s_DumpAt;
-
-        // What the overtip shows once its name has given way: whether the game still wants the name, and every part
-        // that can be seen, with its alpha and height on the overtip.
-        static void DumpOvertip(Component overtip)
-        {
-            if (overtip == null || !Main.Settings.LogAttacks) return;
-            var sb = new System.Text.StringBuilder("hover: overtip after giving way:");
-            var pc = overtip as OvertipController;
-            if (pc != null)
-                sb.AppendFormat(" NeedName {0}, NamePanel alpha {1:0.00}, combat panel {2}, name part shown {3}", pc.NeedName(), pc.NamePanel.alpha,
-                    pc.CombatPanelVisible, (s_PcNamePart?.GetValue(pc) as OvertipComponent)?.IsShowed);
-            var console = overtip as UnitOvertipView;
-            if (console != null) sb.AppendFormat(" NeedName {0}", console.NeedName());
-            var root = overtip.transform;
-            foreach (var g in overtip.GetComponentsInChildren<Graphic>())
-            {
-                if (!g.enabled || g.color.a <= 0 || g.canvasRenderer.GetAlpha() <= 0) continue;
-                float alpha = g.color.a;
-                for (var t = g.transform; t != null && t != root.parent; t = t.parent)
-                {
-                    var cg = t.GetComponent<CanvasGroup>();
-                    if (cg != null) alpha *= cg.alpha;
-                }
-                if (alpha < 0.05f) continue;
-                var tmp = g as TMP_Text;
-                var rect = g.rectTransform;
-                var y = root.InverseTransformPoint(rect.TransformPoint(rect.rect.center)).y;
-                sb.AppendFormat("\n    {0} alpha {1:0.00} y {2:0} h {3:0}{4}", Path(g.transform, root), alpha, y, rect.rect.height,
-                    tmp != null ? " \"" + tmp.text.Replace("\n", " ") + "\"" : "");
-            }
-            ChanceLog.Write(sb.ToString());
-        }
-
-        static string Path(Transform t, Transform root)
-        {
-            string path = t.name;
-            for (t = t.parent; t != null && t != root; t = t.parent) path = t.name + "/" + path;
-            return path;
-        }
-
-        static void LayOut(Component overtip)
-        {
-            if (overtip == null) return;
-            var console = overtip as UnitOvertipView;
-            if (console != null) console.TweenComponentsToPlace();
-            else (overtip as OvertipController)?.TweenComponentsToPlace();
-        }
-
-        static Component OvertipOf(Transform place)
-        {
-            return (Component)place.GetComponentInParent<UnitOvertipView>() ?? place.GetComponentInParent<OvertipController>();
-        }
-
-        [HarmonyLib.HarmonyPatch(typeof(UnitOvertipView), nameof(UnitOvertipView.NeedName))]
-        static class ConsoleNeedName
-        {
-            static void Postfix(UnitOvertipView __instance, ref bool __result)
-            {
-                if (__result && s_NameGivenWay != null && ReferenceEquals(__instance, s_NameGivenWay)) __result = false;
-            }
-        }
-
-        // In combat the PC overtip shows the name with its own part (m_OvertipName, by the names setting), which
-        // NeedName asks too: it gives way as well.
-        static readonly System.Reflection.FieldInfo s_PcNamePart = HarmonyLib.AccessTools.Field(typeof(OvertipController), "m_OvertipName");
-
-        // The console overtip asks its name part every frame (UpdatePart): the part of the overtip that gives way says no.
-        static readonly System.Reflection.FieldInfo s_ConsoleNamePart = HarmonyLib.AccessTools.Field(typeof(UnitOvertipView), "m_OvertipViewPartName");
-
-        [HarmonyLib.HarmonyPatch(typeof(OvertipViewPartName), nameof(OvertipViewPartName.NeedShow))]
-        static class ConsoleNamePart
-        {
-            static void Postfix(OvertipViewPartName __instance, ref bool __result)
-            {
-                var console = s_NameGivenWay as UnitOvertipView;
-                if (__result && console != null && ReferenceEquals(s_ConsoleNamePart?.GetValue(console), __instance)) __result = false;
-            }
-        }
-
-        [HarmonyLib.HarmonyPatch(typeof(OvertipComponent), nameof(OvertipComponent.CheckSettings))]
-        static class PcNamePart
-        {
-            static void Postfix(OvertipComponent __instance, ref bool __result)
-            {
-                if (!__result || s_NameGivenWay == null) return;
-                var pc = __instance.OvertipController;
-                if (pc != null && ReferenceEquals(pc, s_NameGivenWay) && ReferenceEquals(s_PcNamePart?.GetValue(pc), __instance)) __result = false;
-            }
-        }
-
-        [HarmonyLib.HarmonyPatch(typeof(OvertipController), nameof(OvertipController.NeedName))]
-        static class PcNeedName
-        {
-            static void Postfix(OvertipController __instance, ref bool __result)
-            {
-                if (__result && s_NameGivenWay != null && ReferenceEquals(__instance, s_NameGivenWay)) __result = false;
-            }
-        }
-
         internal static string Percent(double x)
         {
             return Math.Round(x * 100).ToString("0") + "%";
