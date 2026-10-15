@@ -38,6 +38,14 @@ A Unity Mod Manager mod that collects small fixes of the game's own bugs. Each f
 
 **Fix.** A prefix makes the test use the die it is given. The attack roll itself is not changed: it already asks with its own roll.
 
+### Hit points missing over a unit with the gamepad interface
+
+**Symptom.** With the gamepad interface a unit's hit points (or another part of its overtip) are sometimes not shown, although the settings show them over every other unit; it stays so for that unit. Seen on one of several zombies in turn-based combat.
+
+**Cause.** Each part of an overtip switches itself on and off by the unit's visibility, subscribed to in `OvertipViewPartBase.BindWithSettings`. The subscription is dropped and never disposed. Overtips are reused for other units, and the unit the overtip showed before still switches the part: when it goes out of sight, the part over the new unit is switched off.
+
+**Fix.** A transpiler keeps the subscription with the binding, so it is disposed when the overtip is bound to another unit; a change of a unit the part no longer shows is ignored.
+
 ### Custom portraits in the gamepad character creation
 
 **Symptom.** With the gamepad interface, character creation offers only the built-in portraits: the game does not read the `Portraits` folder there, although the mouse interface does.
