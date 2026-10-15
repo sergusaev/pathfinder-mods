@@ -6,73 +6,85 @@ namespace SuccessChance
     // Distribution of a d20 roll after the d20 modifiers of ModifyD20.
     static class D20
     {
-        // pmf[1..20]. "failed" is the game's own test of a roll for "reroll only if failed".
-        internal static double[] Pmf(List<D20Modifier> modifiers, Func<int, bool> failed)
+        // One outcome: the die kept and the saving throw bonus the applied modifiers gave (AddSavingThrowBonus).
+        internal struct Outcome
         {
-            var pmf = new double[21];
-            if (modifiers == null || modifiers.Count == 0)
-            {
-                for (int d = 1; d <= 20; d++) pmf[d] = 0.05;
-                return pmf;
-            }
-            // Each modifier applies with its chance; enumerate which apply. The game lets each applying modifier set
-            // the roll in turn, so the last one wins; a fixed roll (Replace) wins over any reroll.
-            int n = Math.Min(modifiers.Count, 8);
+            public int Die;
+            public int Bonus;
+            public double P;
+        }
+
+        // Every outcome of the roll. "failed" is the game's own test of the first die for "reroll only if failed".
+        // Each modifier applies with its chance; the game lets each applying modifier set the roll in turn, so the last
+        // one wins and a fixed roll (Replace) wins over any reroll.
+        internal static List<Outcome> Outcomes(List<D20Modifier> modifiers, Func<int, bool> failed)
+        {
+            var result = new Dictionary<long, Outcome>();
+            int n = modifiers == null ? 0 : Math.Min(modifiers.Count, 8);
             for (int mask = 0; mask < (1 << n); mask++)
             {
                 double p = 1;
-                D20Modifier reroll = null, replace = null;
                 for (int i = 0; i < n; i++)
                 {
-                    var m = modifiers[i];
                     bool on = (mask & (1 << i)) != 0;
-                    p *= on ? m.Chance / 100.0 : 1 - m.Chance / 100.0;
-                    if (!on) continue;
-                    if (m.Replace) replace = m; else reroll = m;
+                    p *= on ? modifiers[i].Chance / 100.0 : 1 - modifiers[i].Chance / 100.0;
                 }
                 if (p <= 0) continue;
-                if (replace != null && replace.Roll >= 1 && replace.Roll <= 20)
+                for (int f = 1; f <= 20; f++)
                 {
-                    pmf[replace.Roll] += p;
-                    continue;
-                }
-                var one = reroll == null ? Uniform() : Rerolled(reroll, failed);
-                for (int d = 1; d <= 20; d++) pmf[d] += p * one[d];
-            }
-            return pmf;
-        }
-
-        static double[] Uniform()
-        {
-            var pmf = new double[21];
-            for (int d = 1; d <= 20; d++) pmf[d] = 0.05;
-            return pmf;
-        }
-
-        // The first die f, then (unless "only if failed" and f did not fail) n more dice, the best or the worst kept.
-        static double[] Rerolled(D20Modifier m, Func<int, bool> failed)
-        {
-            var pmf = new double[21];
-            int n = Math.Max(0, m.Rerolls);
-            for (int f = 1; f <= 20; f++)
-            {
-                if (n == 0 || (m.OnlyIfFailed && !failed(f)))
-                {
-                    pmf[f] += 0.05;
-                    continue;
-                }
-                for (int x = 1; x <= 20; x++)
-                {
-                    double px;
-                    if (m.TakeBest)
-                        // P(max = x) = P(max <= x) - P(max <= x-1), max <= x when f <= x and every other die <= x.
-                        px = (f <= x ? Math.Pow(x / 20.0, n) : 0) - (f <= x - 1 ? Math.Pow((x - 1) / 20.0, n) : 0);
+                    // The first die is rolled before the modifiers that apply only if it failed.
+                    D20Modifier reroll = null, replace = null;
+                    int bonus = 0;
+                    for (int i = 0; i < n; i++)
+                    {
+                        var m = modifiers[i];
+                        if ((mask & (1 << i)) == 0 || (m.OnlyIfFailed && !failed(f))) continue;
+                        bonus += m.SaveBonus;
+                        if (m.Replace) replace = m; else reroll = m;
+                    }
+                    double pf = p * 0.05;
+                    if (replace != null && replace.Roll >= 1 && replace.Roll <= 20)
+                        Add(result, replace.Roll, bonus, pf);
+                    else if (reroll != null && reroll.Rerolls > 0)
+                        for (int x = 1; x <= 20; x++)
+                        {
+                            double px = Kept(reroll, f, x);
+                            if (px > 0) Add(result, x, bonus, pf * px);
+                        }
                     else
-                        // P(min = x) = P(min >= x) - P(min >= x+1).
-                        px = (f >= x ? Math.Pow((21 - x) / 20.0, n) : 0) - (f >= x + 1 ? Math.Pow((20 - x) / 20.0, n) : 0);
-                    pmf[x] += 0.05 * px;
+                        Add(result, f, bonus, pf);
                 }
             }
+            return new List<Outcome>(result.Values);
+        }
+
+        static void Add(Dictionary<long, Outcome> result, int die, int bonus, double p)
+        {
+            long key = ((long)bonus << 8) | (uint)die;
+            Outcome o;
+            result.TryGetValue(key, out o);
+            o.Die = die;
+            o.Bonus = bonus;
+            o.P += p;
+            result[key] = o;
+        }
+
+        // The first die f and n more dice, the best or the worst kept: the chance that x is kept.
+        static double Kept(D20Modifier m, int f, int x)
+        {
+            int n = m.Rerolls;
+            if (m.TakeBest)
+                // P(max = x) = P(max <= x) - P(max <= x-1), max <= x when f <= x and every other die <= x.
+                return (f <= x ? Math.Pow(x / 20.0, n) : 0) - (f <= x - 1 ? Math.Pow((x - 1) / 20.0, n) : 0);
+            // P(min = x) = P(min >= x) - P(min >= x+1).
+            return (f >= x ? Math.Pow((21 - x) / 20.0, n) : 0) - (f >= x + 1 ? Math.Pow((20 - x) / 20.0, n) : 0);
+        }
+
+        // pmf[1..20] of the die kept.
+        internal static double[] Pmf(List<D20Modifier> modifiers, Func<int, bool> failed)
+        {
+            var pmf = new double[21];
+            foreach (var o in Outcomes(modifiers, failed)) pmf[o.Die] += o.P;
             return pmf;
         }
 
@@ -83,6 +95,13 @@ namespace SuccessChance
             return s;
         }
 
+        internal static double P(List<Outcome> outcomes, Func<int, int, bool> pred)
+        {
+            double s = 0;
+            foreach (var o in outcomes) if (pred(o.Die, o.Bonus)) s += o.P;
+            return s;
+        }
+
         internal static string Describe(List<D20Modifier> modifiers)
         {
             if (modifiers == null || modifiers.Count == 0) return "";
@@ -90,7 +109,9 @@ namespace SuccessChance
             foreach (var m in modifiers)
             {
                 string what = m.Replace ? "roll " + m.Roll
-                    : (m.TakeBest ? "best of " : "worst of ") + (m.Rerolls + 1) + (m.OnlyIfFailed ? " if failed" : "");
+                    : (m.TakeBest ? "best of " : "worst of ") + (m.Rerolls + 1);
+                if (m.OnlyIfFailed) what += " if failed";
+                if (m.SaveBonus != 0) what += string.Format(" save {0:+0;-0}", m.SaveBonus);
                 if (m.Chance < 100) what += " " + m.Chance + "%";
                 parts.Add((m.Source ?? "?") + ": " + what);
             }

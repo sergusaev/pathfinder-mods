@@ -86,6 +86,22 @@ namespace SuccessChance
             return parts;
         }
 
+        // A saving throw: the class base, the ability bonus, the modifiers, as RuleSavingThrow takes the stat.
+        internal static List<Part> Save(ModifiableValue stat, int value)
+        {
+            var parts = new List<Part>();
+            var save = stat as ModifiableValueSavingThrow;
+            if (save != null)
+            {
+                parts.Add(new Part("base", save.BaseValue - save.BaseStat.Bonus));
+                parts.Add(new Part(save.BaseStat.Type.ToString(), save.BaseStat.Bonus));
+                AddStat(parts, stat, save.ModifiedValueWithDisabledBonuses() - save.BaseValue);
+            }
+            else parts.Add(new Part(stat.Type.ToString(), value));
+            AddOther(parts, value);
+            return parts;
+        }
+
         static void AddOther(List<Part> parts, int total)
         {
             int sum = parts.Sum(x => x.Value);

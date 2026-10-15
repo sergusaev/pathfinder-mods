@@ -15,6 +15,12 @@ namespace SuccessChance
         // SuccessChance.log in the mod folder.
         public bool LogAttacks = true;
 
+        // The hit chance of the selected character under the enemy the pointer is on.
+        public bool ShowOnHover = true;
+
+        // The mod works in turn-based combat only: in real time there is no time to read a chance.
+        internal bool Logging => LogAttacks && TurnBased.Controllers.CombatController.IsInTurnBasedCombat();
+
         public override void Save(UnityModManager.ModEntry modEntry)
         {
             Save(this, modEntry);
@@ -36,11 +42,14 @@ namespace SuccessChance
             ChanceLog.Open(Path.Combine(modEntry.Path, "SuccessChance.log"));
             new Harmony(modEntry.Info.Id).PatchAll(typeof(Main).Assembly);
             EventBus.Subscribe(new AttackCheck());
+            EventBus.Subscribe(new SpellChecks());
+            HoverChance.Create();
             return true;
         }
 
         static void OnGUI(UnityModManager.ModEntry modEntry)
         {
+            Settings.ShowOnHover = GUILayout.Toggle(Settings.ShowOnHover, " Show the hit chance under the enemy the pointer is on");
             Settings.LogAttacks = GUILayout.Toggle(Settings.LogAttacks, " Log every weapon attack: predicted chance and the real roll (SuccessChance.log)");
             GUILayout.Label(AttackCheck.Summary());
         }
@@ -61,6 +70,13 @@ namespace SuccessChance
         {
             try
             {
+                // The log of the session before is kept beside it (the game is often restarted to switch the interface).
+                var previous = Path.ChangeExtension(path, ".prev.log");
+                if (File.Exists(path))
+                {
+                    if (File.Exists(previous)) File.Delete(previous);
+                    File.Move(path, previous);
+                }
                 s_Writer = new StreamWriter(path, false) { AutoFlush = true };
                 s_Writer.WriteLine("Success Chance log, " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
             }
@@ -93,7 +109,7 @@ namespace SuccessChance
 
         public void OnEventAboutToTrigger(RuleAttackWithWeapon evt)
         {
-            if (!Main.Settings.LogAttacks || evt.Weapon == null || evt.Target == null) return;
+            if (!Main.Settings.Logging || evt.Weapon == null || evt.Target == null) return;
             try
             {
                 m_Pending[evt] = AttackChance.Predict(evt.Initiator, evt.Target, evt.Weapon, evt.AttackBonusPenalty, evt);
@@ -104,7 +120,13 @@ namespace SuccessChance
             }
         }
 
-        static string Name(Kingmaker.EntitySystem.Entities.UnitEntityData unit)
+        internal static string ReasonName(Kingmaker.RuleSystem.RulebookEvent evt)
+        {
+            var reason = evt.Reason;
+            return reason?.Ability?.Name ?? reason?.Fact?.Name ?? reason?.Context?.AssociatedBlueprint?.name ?? "?";
+        }
+
+        internal static string Name(Kingmaker.EntitySystem.Entities.UnitEntityData unit)
         {
             string name = unit.CharacterName;
             return string.IsNullOrEmpty(name) ? unit.Blueprint.name : name;
@@ -122,19 +144,20 @@ namespace SuccessChance
         public void OnEventDidTrigger(RuleAttackRoll evt)
         {
             var attack = evt.RuleAttackWithWeapon;
-            AttackPrediction p;
-            if (attack == null || !m_Pending.TryGetValue(attack, out p))
+            AttackPrediction p = null;
+            if (attack == null) p = EarlyPredictions.Take(evt) as AttackPrediction;
+            if (p == null && (attack == null || !m_Pending.TryGetValue(attack, out p)))
             {
                 // An attack roll the prediction did not see (no attack with a weapon around it): written down so
                 // that what is not covered yet shows.
-                if (Main.Settings.LogAttacks)
+                if (Main.Settings.Logging)
                     ChanceLog.Write(string.Format("{0} -> {1} [{2}]: not predicted ({3}), real: {4}, d20 {5} + {6} vs AC {7}",
                         Name(evt.Initiator), Name(evt.Target), evt.Weapon?.Blueprint.Name,
                         attack == null ? "no attack with a weapon, reason " + (evt.Reason?.Ability?.Name ?? evt.Reason?.Fact?.Name ?? "?") : "no prediction",
                         evt.Result, evt.Roll.Value, evt.AttackBonus, evt.TargetAC));
                 return;
             }
-            m_Pending.Remove(attack);
+            if (attack != null) m_Pending.Remove(attack);
             try
             {
                 s_Attacks++;
@@ -145,8 +168,8 @@ namespace SuccessChance
                 bool mismatch = rolled && (evt.AttackBonus != p.AttackBonus || evt.TargetAC != p.TargetAC);
                 if (mismatch) s_Mismatches++;
                 var sb = new System.Text.StringBuilder();
-                sb.AppendFormat("{0} -> {1} [{2}{3}]: {4}", Name(evt.Initiator), Name(evt.Target), p.Weapon,
-                    p.Penalty != 0 ? " -" + p.Penalty : "", p);
+                sb.AppendFormat("{0} -> {1} [{2}{3}]{4}: {5}", Name(evt.Initiator), Name(evt.Target), p.Weapon,
+                    p.Penalty != 0 ? " -" + p.Penalty : "", attack == null ? " " + ReasonName(evt) : "", p);
                 if (p.AttackBonusParts != null)
                     sb.AppendFormat("\n    AB {0} = {1}\n    AC {2} = {3}", p.AttackBonus, Breakdown.Format(p.AttackBonusParts),
                         p.TargetAC, Breakdown.Format(p.ArmorClassParts));

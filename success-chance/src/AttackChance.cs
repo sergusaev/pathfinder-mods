@@ -53,11 +53,22 @@ namespace SuccessChance
         public List<Part> PendingParts = new List<Part>();
         public double Hit;
         public double Crit;
+        // Damage of a hit that is not a critical one: the weapon's dice and bonuses (no sneak attack and other damage
+        // added when the damage is dealt).
+        public int DamageMin;
+        public int DamageMax;
+        // Damage of a confirmed critical hit: as RuleAttackWithWeapon.CreateDamage, the critical multiplier goes on the
+        // weapon's own damage (its dice rolled that many times, its bonus multiplied), the rest (energy dice) once.
+        public int CriticalMultiplier;
+        public int CritDamageMin;
+        public int CritDamageMax;
+        // Time the prediction took.
+        public double Milliseconds;
 
         public override string ToString()
         {
-            var s = string.Format("hit {0:0.#}% crit {1:0.#}% | AB {2} vs AC {3}{4}", Hit * 100, Crit * 100, AttackBonus, TargetAC,
-                FlatFooted ? " (flat-footed)" : "");
+            var s = string.Format("hit {0:0.#}% crit {1:0.#}% | AB {2} vs AC {3}{4} | damage {5}-{6} | {7:0.0} ms", Hit * 100, Crit * 100,
+                AttackBonus, TargetAC, FlatFooted ? " (flat-footed)" : "", DamageMin, DamageMax, Milliseconds);
             if (AutoHit) s += " | auto hit";
             if (AutoMiss) s += " | auto miss";
             if (PassConcealment < 1)
@@ -95,10 +106,10 @@ namespace SuccessChance
         }
 
         internal static AttackPrediction Predict(UnitEntityData attacker, UnitEntityData target, ItemEntityWeapon weapon, int penalty,
-            RuleAttackWithWeapon attack = null)
+            RuleAttackWithWeapon attack = null, RuleReason reason = null)
         {
             var stats = new RuleCalculateWeaponStats(attacker, weapon, attack);
-            var roll = new RuleAttackRoll(attacker, target, stats, penalty) { RuleAttackWithWeapon = attack };
+            var roll = new RuleAttackRoll(attacker, target, stats, penalty) { RuleAttackWithWeapon = attack, Reason = reason };
             if (attack != null)
             {
                 roll.AutoHit = attack.AutoHit;
@@ -107,7 +118,9 @@ namespace SuccessChance
                 roll.Reason = attack;
             }
             var p = new AttackPrediction { Weapon = weapon.Blueprint.Name, Penalty = penalty };
+            var watch = System.Diagnostics.Stopwatch.StartNew();
             DryRun.Run(roll, () => Calculate(roll, p));
+            p.Milliseconds = watch.Elapsed.TotalMilliseconds;
             return p;
         }
 
@@ -202,6 +215,20 @@ namespace SuccessChance
             var target = roll.Target;
             if (!roll.WeaponStats.IsTriggererd) Rulebook.Trigger(roll.WeaponStats);
             p.CriticalEdge = roll.WeaponStats.CriticalEdge;
+            int multiplier = p.CriticalMultiplier = roll.WeaponStats.CriticalMultiplier;
+            for (int i = 0; i < roll.WeaponStats.DamageDescription.Count; i++)
+            {
+                var damage = roll.WeaponStats.DamageDescription[i];
+                int min = damage.Dice.Rolls + damage.Bonus, max = damage.Dice.Rolls * damage.Dice.Dice.Sides() + damage.Bonus;
+                p.DamageMin += min;
+                p.DamageMax += max;
+                p.CritDamageMin += i == 0 ? min * multiplier : min;
+                p.CritDamageMax += i == 0 ? max * multiplier : max;
+            }
+            p.DamageMin = Math.Max(1, p.DamageMin);
+            p.DamageMax = Math.Max(p.DamageMin, p.DamageMax);
+            p.CritDamageMin = Math.Max(1, p.CritDamageMin);
+            p.CritDamageMax = Math.Max(p.CritDamageMin, p.CritDamageMax);
 
             bool confused = target.Descriptor.State.HasCondition(UnitCondition.Confusion);
             bool friend = !target.IsEnemy(attacker) && !target.Faction.Neutral && !confused;
