@@ -1,0 +1,11 @@
+{
+  "Id": "BeltBar",
+  "DisplayName": "Belt Bar",
+  "Author": "sergusaev",
+  "Version": "0.1.0",
+  "HomePage": "https://github.com/sergusaev/pathfinder-mods",
+  "ManagerVersion": "0.22.0",
+  "AssemblyName": "BeltBar.dll",
+  "EntryMethod": "BeltBar.Main.Load",
+  "Requirements": []
+}
