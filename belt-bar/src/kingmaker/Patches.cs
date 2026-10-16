@@ -5,30 +5,6 @@ using UnityModManagerNet;
 
 namespace BeltBar
 {
-    // A belt button on the gamepad action bar, right of the weapon set button: it opens a row with the belt slots.
-    public static class Main
-    {
-        internal static UnityModManager.ModEntry Mod;
-
-        public static bool Load(UnityModManager.ModEntry modEntry)
-        {
-            Mod = modEntry;
-            modEntry.OnUpdate = (e, dt) => BeltButton.Tick();
-            new Harmony(modEntry.Info.Id).PatchAll(typeof(Main).Assembly);
-            return true;
-        }
-
-        internal static void Log(string message)
-        {
-            Mod.Logger.Log(message);
-        }
-
-        internal static void Error(Exception e, string where)
-        {
-            Mod.Logger.Error(where + ": " + e);
-        }
-    }
-
     [HarmonyPatch(typeof(ActionBarView), nameof(ActionBarView.Initialize))]
     static class InitializePatch
     {

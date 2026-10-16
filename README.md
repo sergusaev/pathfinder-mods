@@ -6,6 +6,7 @@ Small [Unity Mod Manager](https://www.nexusmods.com/site/mods/21) mods for **Pat
 
 | Mod | Game | What it does |
 |---|---|---|
+| [Belt Bar](belt-bar) | Kingmaker and Wrath of the Righteous | Gamepad: a belt button on the action bar, right of the weapon set button; it opens a row of the belt slots above the bar, so a potion, a scroll or a wand is used from the bar without the context menu |
 | [Belt Consumables Refill](belt-consumables-refill) | Kingmaker and Wrath of the Righteous | A used-up belt consumable is replaced from the party inventory and the belt slot shows how many are left; removes the "0 charges" item abilities left by the refill of Bag of Tricks / ToyBox |
 | [Camera Rotation and Compass](kingmaker-gamepad-camera-rotation) | Kingmaker | Gamepad: camera rotation and zoom with the right stick, the WotR compass instead of the hourglass, the WotR console layout for camera mode, turn-based mode and inspect. Keyboard and mouse: rotation with the middle mouse button, the compass in the clock |
 | [Kingmaker Fixes](kingmaker-fixes) | Kingmaker | Fixes of the game's own bugs: no false "immune thanks to the difficulty settings" line in the combat log, no burst of errors on entering the global map, characters do not go silent after an area loads, "reroll if failed" on attacks no longer rerolls hits, hit points no longer go missing over a unit with the gamepad interface, custom portraits from the `Portraits` folder in the gamepad character creation. Replaces Custom Portraits Gamepad Selection Fix |
