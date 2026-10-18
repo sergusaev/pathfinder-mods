@@ -201,7 +201,13 @@ namespace BeltBar
                 try { vm.Dispose(); }
                 catch (Exception e) { Main.Error(e, "dispose slot"); }
             }
-            foreach (var slot in m_Slots) UnityEngine.Object.Destroy(slot);
+            // The unfocus fade of a slot runs on the global MainThreadDispatcher, not on the slot, and would touch the
+            // slot's CanvasGroup after it is gone: hide the slot now, destroy it once the fade is over.
+            foreach (var slot in m_Slots)
+            {
+                slot.SetActive(false);
+                UnityEngine.Object.Destroy(slot, 1f);
+            }
             if (m_Sets != null) m_Sets.gameObject.SetActive(false);
         }
     }

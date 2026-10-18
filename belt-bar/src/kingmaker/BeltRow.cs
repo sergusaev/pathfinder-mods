@@ -104,6 +104,7 @@ namespace BeltBar
                 vm.SetMechanicSlot(new IndexedMechanicSlot { Index = -1 - i, Slot = slot });
 
                 var view = cell.GetComponent<ActionBarSlotView>();
+                OwnCount(view, template, cell.transform);
                 view.Initialize();
                 view.Bind(vm);
                 // The frame of the cell is the weapon window's own; items offer no cells of a higher level
@@ -128,6 +129,25 @@ namespace BeltBar
             m_Layer.AddButton(delegate { m_Button.CloseRow(false); }, 7);
             GamePad.Instance.PushLayer(m_Layer);
             Game.Instance.UI.Common.UISound.Play(UISoundType.ActionBarFocusOn);
+        }
+
+        static readonly System.Reflection.FieldInfo s_ResourceCount = HarmonyLib.AccessTools.Field(typeof(ActionBarSlotView), "m_ResourceCount");
+
+        // The count text of a bar cell is not inside the cell but in a shared container (Slots/CountContainer/Count01
+        // for the first cell), so a clone of the cell still writes into the count of the game's first cell. Give the
+        // clone a copy of that text of its own, at the same place relative to the cell.
+        static void OwnCount(ActionBarSlotView view, Transform template, Transform clone)
+        {
+            var count = (Component)s_ResourceCount.GetValue(view);
+            if (count == null || count.transform.IsChildOf(clone)) return;
+            var original = (RectTransform)count.transform;
+            var copy = (RectTransform)UnityEngine.Object.Instantiate(original.gameObject, clone, false).transform;
+            copy.name = "BeltCount";
+            copy.anchorMin = copy.anchorMax = copy.pivot = new Vector2(0.5f, 0.5f);
+            copy.sizeDelta = original.rect.size;
+            copy.localPosition = template.InverseTransformPoint(original.TransformPoint(original.rect.center));
+            copy.SetAsLastSibling();
+            s_ResourceCount.SetValue(view, copy.GetComponent(s_ResourceCount.FieldType));
         }
 
         static void HideChild(Transform parent, string path)
