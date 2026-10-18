@@ -14,12 +14,36 @@
 
 **Исправление.** Префиксы пропускают надпись для касания, которое персонаж держит как заряд того же заклинания. Название самого заклинания показывается как раньше, журнал боя не меняется.
 
+Исправление то же, что в Kingmaker Fixes, где оно проверено в игре; в Wrath of the Righteous сверено только с кодом игры.
+
+### Свои портреты не прокручиваются в режиме геймпада
+
+**Как проявляется.** В режиме геймпада при создании персонажа на вкладке «Пользовательские» (свои портреты) список не идёт за курсором: курсор уходит за край экрана, а правый стик список не листает.
+
+**Причина.**
+
+- Свои портреты в консольном интерфейсе (`CharGenCustomPortraitGroupConsoleView`) лежат в виртуальном списке `VirtualListGridVertical`. В фокусе оказывается `VirtualListElement` — обычный объект, а не `MonoBehaviour`.
+- `CharGenPortraitPhaseDetailedConsoleView.SetSelected` прокручивает только внешний `ScrollRect` и только к `MonoBehaviour`, поэтому для своих портретов ничего не делает.
+- Штатный `ScrollController.ForceScrollToElement` работает только с рядами, которые список уже раскладывал: видимыми плюс одним запасным.
+- Правый стик (`CharGenPortraitPhaseDetailedConsoleView.Scroll`) крутит внешний `ScrollRect`, а виртуального списка в нём нет.
+
+**Исправление.**
+
+- Список идёт за курсором при крестовине, левом стике, одиночных нажатиях и автоповторе, до концов списка. Каждый кадр элемент в фокусе подтягивается в видимую область через `ScrollController.ScrollTowards`, который умеет и дальние, ещё не разложенные ряды.
+- Правый стик на вкладке своих портретов двигает курсор по рядам: порог наклона 0,5, первый шаг сразу, автоповтор через 0,35 с с интервалом 0,09 с. На других вкладках стик работает как раньше.
+- При ошибке слежение за курсором отключается, ошибка пишется в лог UMM.
+
+Свои портреты — подпапки в `Portraits` с `Small.png` (185×242), `Medium.png` (330×432) и `Fulllength.png` (692×1024); вложенные подпапки игра не видит:
+
+- Steam Deck / Proton: `~/.local/share/Steam/steamapps/compatdata/1184370/pfx/drive_c/users/steamuser/AppData/LocalLow/Owlcat Games/Pathfinder Wrath Of The Righteous/Portraits/`
+- Windows: `%USERPROFILE%\AppData\LocalLow\Owlcat Games\Pathfinder Wrath Of The Righteous\Portraits\`
+
+Раньше это был отдельный мод Portrait Scroll Fix (gamepad) (`Mods/PortraitScrollFix`). Его папку нужно удалить: пока старый мод включён, WotR Fixes оставляет прокрутку ему, чтобы список не прокручивался дважды, и пишет об этом в лог. Проверено в игре на Steam Deck в составе старого мода.
+
 ## Установка
 
-Распаковать zip из релиза в папку `Mods` игры, чтобы мод оказался в `Mods/WotrFixes`. Ничего назначать и настраивать не нужно. Установка Unity Mod Manager — [справка по Steam Deck](../docs/steam-deck.ru.md), [Windows](../docs/windows.ru.md).
-
-Исправление то же, что в Kingmaker Fixes, где оно проверено в игре; в Wrath of the Righteous сверено только с кодом игры.
+Распаковать zip из релиза в папку `Mods` игры, чтобы мод оказался в `Mods/WotrFixes`. Ничего назначать и настраивать не нужно. Установка Unity Mod Manager — [Steam Deck](../docs/steam-deck.ru.md), [Windows](../docs/windows.ru.md); установка мода — [вручную](../docs/mods.ru.md).
 
 ## Сборка
 
-См. [README репозитория](../README.ru.md#сборка): `./build.sh`, `./build.sh --install`.
+См. [README репозитория](../README.ru.md#сборка-из-исходников): `./build.sh`, `./build.sh --install`.

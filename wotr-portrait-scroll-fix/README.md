@@ -2,6 +2,8 @@
 
 [Русская версия](README.ru.md)
 
+> **Moved into [WotR Fixes](../wotr-fixes).** This mod is no longer developed: install WotR Fixes and delete `Mods/PortraitScrollFix`. The text below describes the last separate version.
+
 A Unity Mod Manager mod. In the gamepad interface the "Custom" tab of the character creation portraits does not scroll after the cursor: the cursor leaves the screen and the right stick does not move the list. The mod fixes both.
 
 ## What it does
@@ -44,4 +46,4 @@ Notes for building against WotR:
 
 ## Building
 
-See the [repository README](../README.md#building): `./build.sh`, `./build.sh --install`. When updating by hand, delete the old `PortraitScrollFix.dll.*.cache` in the mod folder.
+See the [repository README](../README.md#building-from-source): `./build.sh`, `./build.sh --install`. When updating by hand, delete the old `PortraitScrollFix.dll.*.cache` in the mod folder.
