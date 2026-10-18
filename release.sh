@@ -9,6 +9,7 @@
 # The zip goes to dist/<ModId>-<Version>.zip and holds one folder <ModId>/ with Info.json and the DLL,
 # ready to unpack into the game's mods folder. The tag is the folder name without the game prefix
 # plus the version from Info.json: kingmaker-gamepad-camera-rotation 1.1.0 -> gamepad-camera-rotation-v1.1.0.
+# TAG_NAME= in the mod's build.sh replaces the folder name (wotr-fixes: "fixes" is Kingmaker Fixes' tag).
 # A mod built for both games (GAMES= in its build.sh) gets one zip per game, dist/<ModId>-<Version>-<game>.zip,
 # both attached to the same release.
 set -euo pipefail
@@ -38,7 +39,10 @@ ID="$(info Id)"; VERSION="$(info Version)"; NAME="$(info DisplayName)"; DLL="$(i
 GAMES="$(setting GAMES)"
 MULTI=1
 [ -n "$GAMES" ] || { GAMES="$(setting GAME)"; MULTI=0; }
-TAG="${MOD#kingmaker-}"; TAG="${TAG#wotr-}-v$VERSION"
+TAG="${MOD#kingmaker-}"; TAG="${TAG#wotr-}"
+# A mod whose short name is taken by another one sets its own (TAG_NAME= in its build.sh).
+[ -z "$(setting TAG_NAME)" ] || TAG="$(setting TAG_NAME)"
+TAG="$TAG-v$VERSION"
 game_name() {
   case "$1" in
     kingmaker) echo "Pathfinder: Kingmaker" ;;

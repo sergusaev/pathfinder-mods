@@ -46,6 +46,14 @@ A Unity Mod Manager mod that collects small fixes of the game's own bugs. Each f
 
 **Fix.** A transpiler keeps the subscription with the binding, so it is disposed when the overtip is bound to another unit; a change of a unit the part no longer shows is ignored.
 
+### A touch spell's name twice over the head
+
+**Symptom.** One Cure Light Wounds (or another touch spell), or one potion of such a spell, shows the spell's name over the character's head twice in a row. It happens with the gamepad and with keyboard and mouse alike.
+
+**Cause.** A touch spell is cast twice. First the spell itself is cast: it charges the character's hand with a separate touch ability of the same name (`AbilityEffectStickyTouch`, `UnitPartTouch`). Then that touch is cast. The text over the head is written for each cast (`RuleCastSpell`), by `OvertipsVM` in the gamepad interface and by `CombatTextManager` in the mouse interface, so the same name shows twice.
+
+**Fix.** Prefixes skip the text for the touch that the character holds as the charge of the same spell. The spell's own name shows as before, and the combat log is not changed.
+
 ### Custom portraits in the gamepad character creation
 
 **Symptom.** With the gamepad interface, character creation offers only the built-in portraits: the game does not read the `Portraits` folder there, although the mouse interface does.
@@ -54,8 +62,11 @@ A Unity Mod Manager mod that collects small fixes of the game's own bugs. Each f
 
 Each portrait is a subfolder of `Portraits` with `Small.png` (185×242), `Medium.png` (330×432) and `Fulllength.png` (692×1024):
 
-- Linux (native build, Steam Deck): `~/.config/unity3d/Owlcat Games/Pathfinder Kingmaker/Portraits/`
+- Steam Deck, Windows build under Proton: `~/.local/share/Steam/steamapps/compatdata/640820/pfx/drive_c/users/steamuser/AppData/LocalLow/Owlcat Games/Pathfinder Kingmaker/Portraits/`
+- Linux, native build: `~/.config/unity3d/Owlcat Games/Pathfinder Kingmaker/Portraits/`
 - Windows: `%USERPROFILE%\AppData\LocalLow\Owlcat Games\Pathfinder Kingmaker\Portraits\`
+
+If a save uses a portrait whose folder has no pictures, the game puts its default placeholder pictures there by itself. If the main character still has the placeholder after you moved your saves, replace the three PNG files in that portrait's folder with the real ones.
 
 This fix used to be a separate mod, Custom Portraits Gamepad Selection Fix (`Mods/ConsoleCustomPortraits`). Remove that folder: while the old mod is on, Kingmaker Fixes leaves the portraits to it so that they are not listed twice, and says so in the log.
 

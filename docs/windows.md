@@ -125,6 +125,7 @@ When a mod is updated, delete the `*.cache` files in its folder before starting 
 | [Camera Rotation and Compass](../kingmaker-gamepad-camera-rotation) | Kingmaker | `Mods\GamepadCameraRotation` | the compass needs WotR installed (found automatically in the Steam libraries) |
 | [Level 1 Companions & Free Respec](../level1-companions) | Kingmaker, WotR | `Mods\Level1Companions` | a separate zip per game (`-kingmaker`, `-wotr`). In WotR move `lvl1companions` out of `Mods` first |
 | [Portrait Scroll Fix (gamepad)](../wotr-portrait-scroll-fix) | WotR | `Mods\PortraitScrollFix` | only matters with a gamepad |
+| [WotR Fixes](../wotr-fixes) | WotR | `Mods\WotrFixes` | |
 | [Buff It 2 The Limit (Groups)](https://github.com/sergusaev/wrath-epic-buffing) | WotR | `Mods\BuffIt2TheLimit` | replaces the original Buff It 2 The Limit and BubbleBuffs: move those out of `Mods` first. The settings of Buff It 2 The Limit stay (same id and files); the settings of BubbleBuffs (`bubblebuff-*.json`) are not read |
 | [Buff It 2 The Limit (Groups) for Kingmaker](https://github.com/sergusaev/wrath-epic-buffing) | Kingmaker | `Mods\PadBuffsKingmaker` | |
 

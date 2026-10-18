@@ -143,12 +143,13 @@ python3 -m zipfile -e PortraitScrollFix-1.1.0.zip "$WOTR/mods/"              # e
 | Мод | Игра | Папка | Примечания |
 |---|---|---|---|
 | [Unity Mod Manager in Game Menus](../umm-menu-button/README.ru.md) | Kingmaker, WotR | `Mods/UmmMenuButton`, `mods/UmmMenuButton` | отдельный zip для каждой игры |
-| [Kingmaker Fixes](../kingmaker-fixes/README.ru.md) | Kingmaker | `Mods/KingmakerFixes` | заменяет `Mods/ConsoleCustomPortraits`, ту папку удалить; портреты кладутся в `~/.config/unity3d/Owlcat Games/Pathfinder Kingmaker/Portraits/` |
+| [Kingmaker Fixes](../kingmaker-fixes/README.ru.md) | Kingmaker | `Mods/KingmakerFixes` | заменяет `Mods/ConsoleCustomPortraits`, ту папку удалить; портреты кладутся в `~/.local/share/Steam/steamapps/compatdata/640820/pfx/drive_c/users/steamuser/AppData/LocalLow/Owlcat Games/Pathfinder Kingmaker/Portraits/` |
 | [Time Control and Deadlines](../kingmaker-time-control/README.ru.md) | Kingmaker | `Mods/TimeControl` | |
 | [Belt Consumables Refill](../belt-consumables-refill/README.ru.md) | Kingmaker, WotR | `Mods/BeltConsumablesRefill`, `mods/BeltConsumablesRefill` | отдельный zip для каждой игры |
 | [Camera Rotation and Compass](../kingmaker-gamepad-camera-rotation/README.ru.md) | Kingmaker | `Mods/GamepadCameraRotation` | компасу нужна установленная WotR (находится сама). В Bag of Tricks выключить поворот камеры |
 | [Level 1 Companions & Free Respec](../level1-companions/README.ru.md) | Kingmaker, WotR | `Mods/Level1Companions`, `mods/Level1Companions` | отдельный zip для каждой игры (`-kingmaker`, `-wotr`). В WotR сначала удалить `mods/lvl1companions` |
 | [Portrait Scroll Fix (gamepad)](../wotr-portrait-scroll-fix/README.ru.md) | WotR | `mods/PortraitScrollFix` | портреты — в папку `Portraits` внутри префикса Proton, см. README мода |
+| [WotR Fixes](../wotr-fixes/README.ru.md) | WotR | `mods/WotrFixes` | |
 | [Buff It 2 The Limit (Groups)](https://github.com/sergusaev/wrath-epic-buffing/blob/gamepad/pad-docs/README.ru.md) | WotR | `mods/BuffIt2TheLimit` | заменяет оригинальные Buff It 2 The Limit и BubbleBuffs — их сначала удалить |
 | [Buff It 2 The Limit (Groups) для Kingmaker](https://github.com/sergusaev/wrath-epic-buffing/blob/gamepad/pad-docs/README.ru.md#kingmaker) | Kingmaker | `Mods/PadBuffsKingmaker` | |
 
