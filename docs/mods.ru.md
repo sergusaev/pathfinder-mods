@@ -124,5 +124,6 @@ Remove-Item "$KM\Mods\BeltBar\*.cache"
 | Мода нет в списке UMM | папка не на своём месте: нужно `Mods/<Мод>/Info.json`. Лишний уровень папок (`Mods/<Мод>/<Мод>/Info.json`) или папка рядом с `Mods`, а не внутри, — UMM мод не увидит |
 | Мода нет в списке, на Steam Deck | в папке игры две папки модов, `Mods` и `mods`: Proton видит только одну. Перенесите всё в `Mods`, вторую удалите |
 | Красный статус | zip не для этой игры (`-kingmaker` / `-wotr`) или UMM слишком старый. Причина — в логе игры ([пути](steam-deck.ru.md#9-где-что-лежит), [Windows](windows.ru.md#6-где-что-лежит)), строки с id мода |
+| WotR: красные все моды этой коллекции сразу, в логе игры `Patching exception` и `__args` | старые версии модов с загрузчиком из UMM 0.33.2 (Doorstop 4): с ним WotR берёт свой Harmony 2.0.4, а его старые версии модов не понимают. Обновить все моды до текущих релизов (Belt Bar 1.0.2, Belt Consumables Refill 1.0.2, Level 1 Companions 1.0.4, Success Chance 1.1.1, UMM in Game Menus 1.0.3, WotR Fixes 1.1.1, меню баффов `v1.21.2-pad.9` и новее) |
 | После обновления ведёт себя как старая версия | не удалён `*.cache` — см. «Обновление» |
 | Мод в списке, но ничего не делает в Kingmaker с геймпадом | в `Config.xml` UMM есть `UIStartingPoint` ([Steam Deck](steam-deck.ru.md#4-unity-mod-manager-для-kingmaker), [Windows](windows.ru.md#3-убрать-uistartingpoint-у-kingmaker)) |

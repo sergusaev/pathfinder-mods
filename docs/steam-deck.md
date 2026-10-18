@@ -223,6 +223,7 @@ Mod lines in the game log start with the mod id in brackets, e.g. `[BeltBar]`; t
 | WotR asks "Switch to keyboard and mouse?" | no `startup.json`, or file verification restored the original — end of section 5 |
 | The mod is not in the UMM list | the mod folder is in the wrong place: it must be `Mods/<mod folder>/Info.json`, without an extra nested folder. Another cause: the game folder has two mods folders, `Mods` and `mods`, and Proton sees only one. Move everything into `Mods` and delete the other |
 | The mod is listed with a red status | the zip is not for this game (mods for both games have `-kingmaker` and `-wotr` zips) or UMM is too old. The cause is in the game log (section 9) |
+| WotR: all mods of this collection are red at once, the game log has `Patching exception` and `__args` | older mod versions with the loader from UMM 0.33.2 (Doorstop 4): with it WotR uses its own Harmony 2.0.4, which the older versions cannot work with. Update all the mods to the current releases (Belt Bar 1.0.2, Belt Consumables Refill 1.0.2, Level 1 Companions 1.0.4, Success Chance 1.1.1, UMM in Game Menus 1.0.3, WotR Fixes 1.1.1, buff menu `v1.21.2-pad.9` or later) |
 | After an update the old version works | delete `*.cache` in the mod folder ([details](mods.md#updating)) |
 | No "Unity Mod Manager" item in the game's menu | [Unity Mod Manager in Game Menus](../umm-menu-button) is not installed, or UMM did not start (first row) |
 
