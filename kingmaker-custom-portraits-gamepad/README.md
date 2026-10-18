@@ -34,4 +34,4 @@ Tested on Kingmaker 2.1.7b (native Linux build, Steam Deck), UMM 0.32.4, Harmony
 
 ## Building
 
-See the [repository README](../README.md#building): `./build.sh`, `./build.sh --install`.
+See the [repository README](../README.md#building-from-source): `./build.sh`, `./build.sh --install`.

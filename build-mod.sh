@@ -19,7 +19,8 @@
 #   KINGMAKER_DIR      game folder of Pathfinder: Kingmaker (on DECK if set, else on this machine)
 #   WOTR_DIR           game folder of Pathfinder: Wrath of the Righteous
 # Defaults are the Steam library under the home folder of the game machine (SteamOS / Linux layout).
-# Personal values can be kept in local.env next to this script; it is not tracked by git.
+# Personal values can be kept in local.env next to this script; it is not tracked by git. The same variables given
+# on the command line win over it: DECK=deck@steamdeck.local ./build.sh --install goes to the deck's default folders.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -28,7 +29,17 @@ command -v mcs >/dev/null || [ ! -d "/c/Program Files/Mono/bin" ] || PATH="/c/Pr
 # mcs.exe on Windows needs Windows paths, also inside the response file.
 winpath() { if command -v cygpath >/dev/null; then cygpath -m "$1"; else printf '%s\n' "$1"; fi; }
 HERE="$(cd "$(dirname "$0")" && pwd)"
-[ -f "$ROOT/local.env" ] && . "$ROOT/local.env"
+# Values given on the command line win over local.env. DECK given there points the build at the deck, so game
+# folders from local.env (they describe the usual target) are dropped unless also given on the command line.
+CMD_DECK="${DECK+set}"; CMD_DECK_VALUE="${DECK-}"
+CMD_KM="${KINGMAKER_DIR+set}"; CMD_KM_VALUE="${KINGMAKER_DIR-}"
+CMD_WOTR="${WOTR_DIR+set}"; CMD_WOTR_VALUE="${WOTR_DIR-}"
+if [ -f "$ROOT/local.env" ]; then
+  . "$ROOT/local.env"
+  [ -z "$CMD_DECK" ] || DECK="$CMD_DECK_VALUE"
+  if [ -n "$CMD_KM" ]; then KINGMAKER_DIR="$CMD_KM_VALUE"; elif [ -n "$CMD_DECK_VALUE" ]; then KINGMAKER_DIR=""; fi
+  if [ -n "$CMD_WOTR" ]; then WOTR_DIR="$CMD_WOTR_VALUE"; elif [ -n "$CMD_DECK_VALUE" ]; then WOTR_DIR=""; fi
+fi
 
 FETCH=0; INSTALL=0; ONLY=""
 ARGS=("$@")
@@ -69,7 +80,7 @@ case "$GAME" in
     HARMONY_FROM_UMM=1; DEFINE=KINGMAKER ;;
   wotr)
     GAME_DIR="${WOTR_DIR:-$STEAM_COMMON/Pathfinder Second Adventure}"
-    DATA="Wrath_Data"; MODS="mods"; PROCESS="Wrath.exe"
+    DATA="Wrath_Data"; MODS="Mods"; PROCESS="Wrath.exe"
     # WotR ships Harmony in Managed; reference it so the mod never requires a newer one than is loaded.
     HARMONY_FROM_UMM=0; DEFINE=WOTR ;;
   *) echo "GAME must be kingmaker or wotr"; exit 1 ;;

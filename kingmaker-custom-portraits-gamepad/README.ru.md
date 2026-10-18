@@ -34,4 +34,4 @@
 
 ## Сборка
 
-См. [README репозитория](../README.ru.md#сборка): `./build.sh`, `./build.sh --install`.
+См. [README репозитория](../README.ru.md#сборка-из-исходников): `./build.sh`, `./build.sh --install`.

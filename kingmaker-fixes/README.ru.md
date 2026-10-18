@@ -63,7 +63,6 @@
 Каждый портрет — подпапка в `Portraits` с файлами `Small.png` (185×242), `Medium.png` (330×432) и `Fulllength.png` (692×1024):
 
 - Steam Deck, Windows-сборка под Proton: `~/.local/share/Steam/steamapps/compatdata/640820/pfx/drive_c/users/steamuser/AppData/LocalLow/Owlcat Games/Pathfinder Kingmaker/Portraits/`
-- Linux, нативная сборка: `~/.config/unity3d/Owlcat Games/Pathfinder Kingmaker/Portraits/`
 - Windows: `%USERPROFILE%\AppData\LocalLow\Owlcat Games\Pathfinder Kingmaker\Portraits\`
 
 Если сохранение ссылается на портрет, а в его папке нет картинок, игра сама кладёт туда стандартную заглушку. Если ГГ после переноса сохранений остался с заглушкой, замени три PNG в папке его портрета настоящими.
@@ -78,4 +77,4 @@
 
 ## Сборка
 
-См. [README репозитория](../README.ru.md#сборка): `./build.sh`, `./build.sh --install`.
+См. [README репозитория](../README.ru.md#сборка-из-исходников): `./build.sh`, `./build.sh --install`.

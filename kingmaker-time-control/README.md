@@ -65,7 +65,7 @@ What has happened does not come back, by the way the game's code works: finished
 
 ## Installation
 
-1. Unity Mod Manager must be installed in the game: [Steam Deck guide](../docs/steam-deck.md), [Windows guide](../docs/windows.md).
+1. Unity Mod Manager must be installed in the game: [Steam Deck](../docs/steam-deck.md), [Windows](../docs/windows.md). How to unpack, update and remove a mod, with commands: [installing mods by hand](../docs/mods.md).
 2. Unpack the zip from [Releases](https://github.com/sergusaev/pathfinder-mods/releases) into the game's `Mods` folder, so that you get `Mods/TimeControl/Info.json`.
 3. Start the game; "Time Control and Deadlines" appears in the UMM window.
 

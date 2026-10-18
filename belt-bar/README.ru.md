@@ -13,13 +13,13 @@
 
 ## Установка
 
-1. В игре должен стоять Unity Mod Manager: [руководство для Steam Deck](../docs/steam-deck.md), [руководство для Windows](../docs/windows.md).
+1. В игре должен стоять Unity Mod Manager: [Steam Deck](../docs/steam-deck.ru.md), [Windows](../docs/windows.ru.md). Как распаковать, обновить и удалить мод, с командами — [установка модов вручную](../docs/mods.ru.md).
 2. Скачайте zip для своей игры из [Releases](https://github.com/sergusaev/pathfinder-mods/releases): `BeltBar-<версия>-kingmaker.zip` или `BeltBar-<версия>-wotr.zip`. Две DLL не взаимозаменяемы.
-3. Распакуйте в папку модов, чтобы получилось `Mods/BeltBar/Info.json` (`mods/BeltBar/Info.json` в Wrath of the Righteous).
+3. Распакуйте в папку модов, чтобы получилось `Mods/BeltBar/Info.json`.
 4. Запустите игру: в окне UMM «Belt Bar» с зелёным статусом.
 
 Мод работает только в геймпадном интерфейсе (Steam Deck, геймпад в консольном режиме игры); в интерфейсе клавиатуры и мыши такой панели нет.
 
 ## Сборка
 
-`./build.sh` собирает обе игры, `./build.sh --game kingmaker --install` собирает и ставит одну; см. [README репозитория](../README.md#building). Код каждой игры — в `src/kingmaker` и `src/wotr`: интерфейсы разные.
+`./build.sh` собирает обе игры, `./build.sh --game kingmaker --install` собирает и ставит одну; см. [README репозитория](../README.ru.md#сборка-из-исходников). Код каждой игры — в `src/kingmaker` и `src/wotr`: интерфейсы разные.

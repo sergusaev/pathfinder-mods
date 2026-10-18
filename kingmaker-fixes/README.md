@@ -63,7 +63,6 @@ A Unity Mod Manager mod that collects small fixes of the game's own bugs. Each f
 Each portrait is a subfolder of `Portraits` with `Small.png` (185×242), `Medium.png` (330×432) and `Fulllength.png` (692×1024):
 
 - Steam Deck, Windows build under Proton: `~/.local/share/Steam/steamapps/compatdata/640820/pfx/drive_c/users/steamuser/AppData/LocalLow/Owlcat Games/Pathfinder Kingmaker/Portraits/`
-- Linux, native build: `~/.config/unity3d/Owlcat Games/Pathfinder Kingmaker/Portraits/`
 - Windows: `%USERPROFILE%\AppData\LocalLow\Owlcat Games\Pathfinder Kingmaker\Portraits\`
 
 If a save uses a portrait whose folder has no pictures, the game puts its default placeholder pictures there by itself. If the main character still has the placeholder after you moved your saves, replace the three PNG files in that portrait's folder with the real ones.
@@ -78,4 +77,4 @@ Written for Kingmaker 2.1.7b, UMM 0.32.4, Harmony 2.3.6.
 
 ## Building
 
-See the [repository README](../README.md#building): `./build.sh`, `./build.sh --install`.
+See the [repository README](../README.md#building-from-source): `./build.sh`, `./build.sh --install`.

@@ -36,4 +36,4 @@
 
 ## Сборка
 
-`./build.sh [--game kingmaker|wotr] [--install]` собирает под обе игры (или одну), см. [Сборка](../README.ru.md#сборка).
+`./build.sh [--game kingmaker|wotr] [--install]` собирает под обе игры (или одну), см. [Сборка](../README.ru.md#сборка-из-исходников).

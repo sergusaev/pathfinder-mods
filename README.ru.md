@@ -14,91 +14,165 @@
 | [Success Chance](success-chance/README.ru.md) | Kingmaker и Wrath of the Righteous | В пошаговом бою над врагом под курсором: шанс попасть, крита, преодолеть сопротивление магии и провала спасброска цели, с уроном — по собственным правилам игры, до того как вы действуете |
 | [Time Control and Deadlines](kingmaker-time-control/README.ru.md) | Kingmaker | Дробные коэффициенты длительности дел королевства, времени в пути и на привале; список всех таймеров, в том числе скрытых («До события X осталось D дней H часов»); отслеживание со своим сроком и оповещениями в стиле игры; перемотка времени, которая не перескакивает срок провала |
 | [Unity Mod Manager in Game Menus](umm-menu-button/README.ru.md) | Kingmaker и Wrath of the Righteous | Пункт «Unity Mod Manager» в главном меню и Esc-меню, в стиле игры: менеджер модов открывается из меню игры на любой платформе |
-| [Portrait Scroll Fix (gamepad)](wotr-portrait-scroll-fix/README.ru.md) | Wrath of the Righteous | Список своих портретов прокручивается за курсором геймпада и правым стиком |
-| [WotR Fixes](wotr-fixes/README.ru.md) | Wrath of the Righteous | Исправления ошибок самой игры: заклинание касанием или его зелье больше не показывает название над головой дважды |
+| [WotR Fixes](wotr-fixes/README.ru.md) | Wrath of the Righteous | Исправления ошибок самой игры: заклинание касанием или его зелье больше не показывает название над головой дважды, список своих портретов прокручивается за курсором геймпада и правым стиком. Заменяет Portrait Scroll Fix (gamepad) |
 
 Buff It 2 The Limit (Groups) — меню групп баффов для мода автобаффов Buff It 2 The Limit, для WotR и Kingmaker. Живёт в отдельном форке: [sergusaev/wrath-epic-buffing](https://github.com/sergusaev/wrath-epic-buffing).
 
 ## Установка
 
-**Steam Deck:** по шагам в [docs/steam-deck.ru.md](docs/steam-deck.ru.md) — Unity Mod Manager для обеих игр и моды.
+Для установки ничего собирать не нужно: готовые моды лежат на странице [Releases](https://github.com/sergusaev/pathfinder-mods/releases). Порядок такой:
 
-**Windows без установщика UMM** (например, по SSH): [docs/windows.ru.md](docs/windows.ru.md) — UMM для обеих игр командами PowerShell и моды.
+1. Поставить Unity Mod Manager в игру по справке для своей платформы:
+   - [Steam Deck](docs/steam-deck.ru.md) — обе игры под Proton;
+   - [Windows](docs/windows.ru.md).
+2. Поставить моды: [установка модов вручную](docs/mods.ru.md) — какой zip скачать, куда распаковать, как обновить и удалить, что заменяет что.
 
-На других системах:
+Моды ставятся в любом порядке и в любом наборе, ни одному не нужен другой. Как UMM попадает в игру, что значат параметры запуска и что ломало UMM на Steam Deck — в [отдельной справке](docs/umm.ru.md).
 
-1. Установить [Unity Mod Manager](https://www.nexusmods.com/site/mods/21) для игры.
-2. Скачать zip мода со страницы [Releases](https://github.com/sergusaev/pathfinder-mods/releases).
-3. Распаковать в `<игра>/Mods/`, чтобы получилось `Mods/<ModId>/Info.json`. Именно `Mods` указан в `Config.xml` UMM для обеих игр. На Linux регистр важен для нативного Kingmaker; WotR идёт через Proton, где регистр не важен, поэтому папка `mods` из справки для Steam Deck тоже работает.
-4. Запустить игру: мод появится в окне UMM с зелёным статусом.
+## Для продвинутых
 
-## Сборка
+Дальше — сборка из исходников и установка модов скриптами. Для обычной установки это не нужно.
 
-### Сторонние программы
+### Сборка из исходников
 
-| Программа | Зачем | macOS | Linux | Windows |
-|---|---|---|---|---|
-| Mono с `mcs` (компилятор C#, 6.12) | компиляция | `brew install mono` | `sudo apt install mono-devel` (Debian/Ubuntu; в других дистрибутивах `mono-complete`) | `winget install Mono.Mono` |
-| Bash | `build.sh`, `release.sh` | встроен | встроен | Git for Windows: `winget install Git.Git`, скрипты запускать из **Git Bash** |
-| `ssh` | копирование сборок игры с другой машины и установка на неё (`DECK`) | встроен | `openssh-client` | входит в Git for Windows |
-| `zip` или bsdtar | упаковка zip для релиза | встроен (`tar`) | `sudo apt install zip` | `C:\Windows\System32\tar.exe`, используется сам |
-| GitHub CLI `gh` | только `release.sh --publish` | `brew install gh` | [cli.github.com](https://cli.github.com/) | `winget install GitHub.cli` |
+#### 1. Программы
 
-После установки `gh` один раз войти: `gh auth login`. Mono для Windows не добавляет себя в `PATH`; `build-mod.sh` сам находит его в `C:\Program Files\Mono\bin` и переводит пути для `mcs.exe`. Сборки на macOS и Windows совпадают байт в байт.
+| Программа | Зачем |
+|---|---|
+| Mono с `mcs` (компилятор C#, 6.12) | компиляция |
+| Bash | скрипт `build.sh` |
+| Git | скачать репозиторий |
+| `ssh` | копирование файлов игры с другой машины и установка на неё (Steam Deck) |
 
-**Игра.** Моды компилируются против сборок самой игры: `build.sh` при первом запуске (или с `--fetch`) копирует `<Игра>_Data/Managed/*.dll`, а из UMM — `UnityModManager.dll` и `0Harmony.dll` в `<мод>/refs`, с этой машины или по SSH. Unity Mod Manager в игре должен быть уже установлен. В `refs/` лежат файлы игры, поэтому папка исключена из git, публиковать её нельзя.
+Установка одним блоком:
 
-**Steam Deck как машина с игрой.** Один раз включить SSH в режиме рабочего стола (Konsole): `passwd` — задать пароль пользователю `deck`, затем `sudo systemctl enable --now sshd`; с машины сборки — `ssh-copy-id deck@steamdeck.local`, после этого `DECK=deck@steamdeck.local` в `local.env`.
+**Windows** — в PowerShell:
 
-### Команды
-
-```bash
-./kingmaker-gamepad-camera-rotation/build.sh            # скопировать refs, если их нет, и собрать в build/
-./kingmaker-gamepad-camera-rotation/build.sh --fetch    # заново скопировать сборки игры (после обновления игры)
-./kingmaker-gamepad-camera-rotation/build.sh --install  # собрать и установить в папку модов игры; игра должна быть закрыта
+```powershell
+winget install -e --id Git.Git
+winget install -e --id Mono.Mono
 ```
 
-**Моды для обеих игр.** Мод, у которого в `build.sh` вместо `GAME=` задано `GAMES="kingmaker wotr"` ([Level 1 Companions & Free Respec](level1-companions/README.ru.md)), собирается из одних исходников под каждую игру:
+Все дальнейшие команды на Windows выполняются в **Git Bash** (Пуск → Git Bash), не в PowerShell. Mono не добавляет себя в `PATH` — `build-mod.sh` находит его в `C:\Program Files\Mono\bin` сам; `ssh` входит в Git for Windows.
+
+**Linux (Debian, Ubuntu)**:
 
 ```bash
-./level1-companions/build.sh                              # все игры по очереди: build/kingmaker/, build/wotr/
-./level1-companions/build.sh --game wotr                  # только одна игра
-./level1-companions/build.sh --game kingmaker --install   # собрать и установить в одну игру
+sudo apt install mono-devel git openssh-client
 ```
 
-Компилятор получает `-define:KINGMAKER` или `-define:WOTR`; `src/*.cs` общие, `src/kingmaker/` и `src/wotr/` компилируются только для своей игры. Сборки игры копируются в `refs/<игра>/`, поэтому для полной сборки на машине с игрой должны быть установлены обе игры с UMM. Без `--game` ключи `--fetch` и `--install` действуют на все игры.
+В других дистрибутивах пакет Mono называется `mono-complete` или `mono`.
 
-Общая логика всех модов — в [`build-mod.sh`](build-mod.sh). Игру он находит по переменным:
+**macOS** (с [Homebrew](https://brew.sh)):
+
+```bash
+brew install mono
+```
+
+**Steam Deck** для сборки не подходит: системный раздел SteamOS только для чтения, Mono на него не ставится. Собирайте на другом компьютере и ставьте на деку по SSH ([ниже](#автоматическая-установка)).
+
+#### 2. Репозиторий
+
+```bash
+git clone https://github.com/sergusaev/pathfinder-mods.git
+cd pathfinder-mods
+git config core.filemode false
+```
+
+`core.filemode false` нужен на Windows: там нет признака исполняемого файла, и без этой настройки git показывает все `.sh` изменёнными. На Linux и macOS она не мешает.
+
+#### 3. Где сборка берёт файлы игры
+
+Моды компилируются против сборок самой игры. При первой сборке мода `build.sh` копирует из игры `<Игра>_Data/Managed/*.dll`, а из UMM — `UnityModManager.dll` и `0Harmony.dll` в папку `refs/` мода. Отсюда два условия:
+
+- игра с установленным UMM должна быть на этой машине или на машине, доступной по SSH;
+- для мода двух игр нужны обе игры (или ключ `--game`, см. ниже).
+
+Скрипт находит игру по переменным:
 
 | Переменная | Смысл | По умолчанию |
 |---|---|---|
-| `DECK` | адрес SSH, если игра на другой машине, например `deck@steamdeck.local` | пусто: игра на этой машине |
+| `DECK` | адрес SSH машины с игрой, например `deck@steamdeck.local` | пусто: игра на этой машине |
 | `KINGMAKER_DIR` | папка Kingmaker на машине с игрой | `~/.local/share/Steam/steamapps/common/Pathfinder Kingmaker` |
-| `WOTR_DIR` | папка Wrath of the Righteous на машине с игрой | `~/.local/share/Steam/steamapps/common/Pathfinder Second Adventure` |
+| `WOTR_DIR` | папка WotR на машине с игрой | `~/.local/share/Steam/steamapps/common/Pathfinder Second Adventure` |
 
-Личные значения кладутся в `local.env` рядом с `build-mod.sh` (git его не отслеживает), например:
-
-```bash
-DECK=deck@steamdeck.local
-```
-
-На Windows игра обычно лежит в `C:/Program Files (x86)/Steam/steamapps/common/`: задать `KINGMAKER_DIR` / `WOTR_DIR` и запускать скрипты из Git Bash. Два шага один раз после клонирования на Windows или после копирования рабочей копии с macOS или Linux:
-
-- `git config core.filemode false` в каждом клоне. В Windows нет признака исполняемого файла, и без этой настройки git показывает все `.sh` изменёнными. Настройка хранится в `.git/config`: при копировании `.git` с другой машины возвращается старое значение, её надо выставить снова.
-- `local.env`, скопированный с другой машины, хранит её `DECK` и пути к играм; проверьте его.
-- Концы строк. Git for Windows выписывает текстовые файлы с CRLF (по умолчанию `core.autocrlf=true`), а Bash на скрипте с CRLF падает (`$'\r': command not found`). `.gitattributes` держит `*.sh` в LF на любой машине; клону, сделанному до его появления, нужно один раз обновить скрипты в Git Bash: `git ls-files -z '*.sh' | xargs -0 rm && git checkout -- '*.sh'`. `release.sh` отрезает `\r`, когда читает `Info.json` и `build.sh`, так что CRLF в них не мешает.
-
-## Выпуск релиза
+Значения по умолчанию — раскладка Steam на Linux и Steam Deck. На Windows задайте свои пути в файле `local.env` рядом с `build-mod.sh` (git его не отслеживает). Пример для игр в `F:\SteamLibrary`, в Git Bash:
 
 ```bash
-./release.sh kingmaker-gamepad-camera-rotation              # собрать и упаковать в dist/GamepadCameraRotation-<версия>.zip
-./release.sh kingmaker-gamepad-camera-rotation --publish    # то же, затем тег и релиз на GitHub
-./release.sh wotr-portrait-scroll-fix --publish --notes notes.md
+cat > local.env <<'EOF'
+KINGMAKER_DIR="/f/SteamLibrary/steamapps/common/Pathfinder Kingmaker"
+WOTR_DIR="/f/SteamLibrary/steamapps/common/Pathfinder Second Adventure"
+EOF
 ```
 
-Мод для обеих игр упаковывается в отдельный zip для каждой игры, `dist/<ModId>-<версия>-kingmaker.zip` и `dist/<ModId>-<версия>-wotr.zip`, оба прикладываются к одному релизу (тег `level1-companions-v1.0.0`).
+В Git Bash диск `F:` пишется как `/f`, а обратная косая черта — прямой. Кавычки обязательны: в путях пробелы.
 
-Версия берётся из `Info.json` мода; перед публикацией её нужно поднять — скрипт откажется публиковать уже выпущенную версию, незакоммиченные изменения или невыложенный `main`. Тег — имя папки без префикса игры, например `gamepad-camera-rotation-v1.1.0`. Для публикации нужен [GitHub CLI](https://cli.github.com/) (`gh auth login`). Папка `dist/` в git не попадает.
+Если файлы игры в `refs/` устарели (игра обновилась), скопируйте их заново ключом `--fetch`. `refs/` содержит файлы игры, поэтому исключена из git; публиковать её нельзя.
+
+#### 4. Команды
+
+```bash
+./kingmaker-fixes/build.sh             # собрать в kingmaker-fixes/build/
+./kingmaker-fixes/build.sh --fetch     # сначала заново скопировать файлы игры, потом собрать
+```
+
+Мод двух игр (в его `build.sh` задано `GAMES="kingmaker wotr"`) собирается из одних исходников под каждую игру:
+
+```bash
+./belt-bar/build.sh                    # обе игры по очереди: build/kingmaker/, build/wotr/
+./belt-bar/build.sh --game wotr        # только одна игра
+```
+
+Без `--game` ключи `--fetch` и `--install` действуют на все игры мода. Компилятор получает `-define:KINGMAKER` или `-define:WOTR`; `src/*.cs` общие, `src/kingmaker/` и `src/wotr/` компилируются только для своей игры, `shared/*.cs` входят в каждый мод. Сборки на macOS и Windows совпадают байт в байт.
+
+### Автоматическая установка
+
+`--install` собирает мод и сразу кладёт `Info.json` и DLL в папку `Mods` игры, заодно удаляя кэш UMM (`*.cache`). Игра должна быть закрыта: если она запущена, скрипт откажется ставить. UMM в игре уже должен стоять ([Steam Deck](docs/steam-deck.ru.md), [Windows](docs/windows.ru.md)).
+
+**На этот же компьютер** (пути — из `local.env` или по умолчанию):
+
+```bash
+./belt-bar/build.sh --install
+./kingmaker-fixes/build.sh --install
+```
+
+**На Steam Deck по SSH.** Один раз включить SSH на деке. В режиме рабочего стола в Konsole:
+
+```bash
+passwd                              # задать пароль пользователю deck (если ещё не задан)
+sudo systemctl enable --now sshd    # включить SSH-сервер, в том числе после перезагрузки
+```
+
+Затем один раз на машине сборки (на Windows — в Git Bash) создать ключ и передать его деке, чтобы не вводить пароль каждый раз:
+
+```bash
+[ -f ~/.ssh/id_ed25519 ] || ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519
+ssh-copy-id deck@steamdeck.local     # спросит пароль деки один раз
+ssh deck@steamdeck.local true && echo OK
+```
+
+Если имя `steamdeck.local` не находится, используйте IP-адрес деки (Настройки → Интернет → ваша сеть) — например, `deck@192.168.1.72`.
+
+После этого установка на деку:
+
+```bash
+DECK=deck@steamdeck.local ./belt-bar/build.sh --install
+```
+
+`DECK=` в начале команды действует только на эту команду и важнее `local.env`: пути игр из `local.env` (они для этого компьютера) при этом не используются, берутся папки деки по умолчанию. Если игры на деке на карте microSD, добавьте их пути в ту же команду: `DECK=deck@steamdeck.local KINGMAKER_DIR="/run/media/deck/<карта>/steamapps/common/Pathfinder Kingmaker" ./kingmaker-fixes/build.sh --install`. Если ставите только на деку, можно записать `DECK=deck@steamdeck.local` в `local.env` и не повторять.
+
+### Грабли
+
+| Признак | Причина и решение |
+|---|---|
+| `$'\r': command not found` при запуске `.sh` | скрипт с концами строк Windows (CRLF). `.gitattributes` держит `*.sh` в LF; клону, сделанному до его появления, нужно один раз обновить скрипты в Git Bash: `git ls-files -z '*.sh' \| xargs -0 rm && git checkout -- '*.sh'` |
+| git показывает все `.sh` изменёнными | не выполнен `git config core.filemode false` (раздел 2). Настройка хранится в `.git/config`: при копировании `.git` с другой машины она возвращается к старой |
+| `mcs: command not found` | Mono не установлен, или установлен не в `C:\Program Files\Mono` |
+| сборка ищет игру в `~/.local/share/Steam/…` на Windows | нет `local.env` с путями (раздел 3); на Windows умолчания не подходят |
+| `Kingmaker.exe is running, close the game before installing` | игра запущена — закрыть и повторить |
+| `local.env` скопирован с другой машины | в нём её `DECK` и пути — проверьте его |
+| мод поставился, а в игре старая версия | установка без скрипта: удалить `*.cache` ([подробнее](docs/mods.ru.md#обновление)) |
+
 
 ## Лицензия
 

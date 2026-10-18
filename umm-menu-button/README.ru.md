@@ -15,7 +15,7 @@
 
 ## Установка
 
-1. В игре должен стоять Unity Mod Manager: [справка для Steam Deck](../docs/steam-deck.ru.md), [справка для Windows](../docs/windows.ru.md).
+1. В игре должен стоять Unity Mod Manager: [Steam Deck](../docs/steam-deck.ru.md), [Windows](../docs/windows.ru.md). Как распаковать, обновить и удалить мод, с командами — [установка модов вручную](../docs/mods.ru.md).
 2. Скачайте zip для своей игры из [Releases](https://github.com/sergusaev/pathfinder-mods/releases): `UmmMenuButton-<версия>-kingmaker.zip` или `UmmMenuButton-<версия>-wotr.zip`. Библиотеки двух игр не взаимозаменяемы.
 3. Распакуйте в папку модов так, чтобы получилось `Mods/UmmMenuButton/Info.json`.
 4. Запустите игру; в главном меню появится пункт «Unity Mod Manager».

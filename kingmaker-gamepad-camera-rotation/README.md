@@ -66,7 +66,7 @@ The mod uses the standard gamepad buttons, so it needs no Steam Input changes. I
 - Works in both interfaces of the game: gamepad (console) and keyboard and mouse.
 - Until 1.2.0 the mod was called Gamepad Camera Rotation; its Id and folder `GamepadCameraRotation` stay, so updates go over the old installation.
 - Turn off camera rotation in Bag of Tricks, otherwise both mods rotate the camera.
-- Tested on Kingmaker 2.1.7b (native Linux build on the Steam Deck; Windows), UMM 0.32.4, Harmony 2.3.6.
+- Tested on Kingmaker 2.1.7b (the Windows build under Proton on the Steam Deck; Windows), UMM 0.32.4 and 0.33.2, Harmony 2.3.6.
 
 ## How it works
 
@@ -82,4 +82,4 @@ Errors are written to the UMM log and never break the game.
 
 ## Building
 
-See the [repository README](../README.md#building): `./build.sh`, `./build.sh --install`.
+See the [repository README](../README.md#building-from-source): `./build.sh`, `./build.sh --install`.

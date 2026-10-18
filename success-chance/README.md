@@ -36,4 +36,4 @@ Combat maneuvers and skill checks; spells cast through activatable abilities. In
 
 ## Building
 
-`./build.sh [--game kingmaker|wotr] [--install]` builds for both games (or one), see [Building](../README.md#building).
+`./build.sh [--game kingmaker|wotr] [--install]` builds for both games (or one), see [Building](../README.md#building-from-source).

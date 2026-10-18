@@ -8,13 +8,13 @@ The idea comes from [Level 1 Companions](https://www.nexusmods.com/pathfinderwra
 
 ## Installing
 
-1. Unity Mod Manager must be installed in the game: [Steam Deck guide](../docs/steam-deck.md), [Windows guide](../docs/windows.md).
+1. Unity Mod Manager must be installed in the game: [Steam Deck](../docs/steam-deck.md), [Windows](../docs/windows.md). How to unpack, update and remove a mod, with commands: [installing mods by hand](../docs/mods.md).
 2. Download the zip for your game from [Releases](https://github.com/sergusaev/pathfinder-mods/releases):
    - `Level1Companions-<version>-kingmaker.zip` for Kingmaker;
    - `Level1Companions-<version>-wotr.zip` for Wrath of the Righteous.
 
    The two DLLs are not interchangeable: each is compiled against its own game.
-3. Unpack it into the mods folder, so the result is `Mods/Level1Companions/Info.json` (`mods/` in the Steam Deck guide for WotR, which runs through Proton and ignores case).
+3. Unpack it into the mods folder, so the result is `Mods/Level1Companions/Info.json`.
 4. Start the game. The UMM window (the "Unity Mod Manager" item of the game's menus) lists "Level 1 Companions & Free Respec" with a green status; its settings show the respec button and the list of patched companion blueprints.
 
 When updating, delete `*.cache` in the mod folder before starting the game.
@@ -55,7 +55,7 @@ The button is unavailable in combat, in dialogs and with game windows open; the 
 
 ## Replacing lvl1companions in WotR
 
-lvl1companions (CascadingDragon) and this mod change the same level limit of the same blueprints, so only one of them is needed. With the game closed, delete `mods/lvl1companions` (or move it out of the mods folder) and install this mod. Saves are not affected: neither mod stores anything in them. ToyBox stays: its respec works as before.
+lvl1companions (CascadingDragon) and this mod change the same level limit of the same blueprints, so only one of them is needed. With the game closed, delete `Mods/lvl1companions` (or move it out of the mods folder) and install this mod. Saves are not affected: neither mod stores anything in them. ToyBox stays: its respec works as before.
 
 ## Troubleshooting
 
@@ -86,7 +86,7 @@ The mod is built from the same sources for both games: `src/*.cs` are shared, `s
 
 ## Building
 
-The [repository README](../README.md#building) has the tools and settings. This mod is built for both games:
+The [repository README](../README.md#building-from-source) has the tools and settings. This mod is built for both games:
 
 ```bash
 ./level1-companions/build.sh                          # both games: build/kingmaker/ and build/wotr/

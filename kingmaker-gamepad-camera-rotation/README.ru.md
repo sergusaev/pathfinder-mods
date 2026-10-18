@@ -66,7 +66,7 @@
 - Работает в обоих интерфейсах игры: геймпад (консольный) и клавиатура с мышью.
 - До 1.2.0 мод назывался Gamepad Camera Rotation; Id и папка `GamepadCameraRotation` прежние, обновление ставится поверх.
 - В Bag of Tricks поворот камеры нужно выключить, иначе камеру будут вращать оба мода.
-- Проверено на Kingmaker 2.1.7b (нативная Linux-сборка на Steam Deck; Windows), UMM 0.32.4, Harmony 2.3.6.
+- Проверено на Kingmaker 2.1.7b (Windows-сборка под Proton на Steam Deck; Windows), UMM 0.32.4 и 0.33.2, Harmony 2.3.6.
 
 ## Как устроено
 
@@ -82,4 +82,4 @@
 
 ## Сборка
 
-См. [README репозитория](../README.ru.md#сборка): `./build.sh`, `./build.sh --install`.
+См. [README репозитория](../README.ru.md#сборка-из-исходников): `./build.sh`, `./build.sh --install`.

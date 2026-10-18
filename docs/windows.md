@@ -1,50 +1,60 @@
-# Windows: Unity Mod Manager and the mods without the installer
+# Windows: Unity Mod Manager and the mods
 
 [Русская версия](windows.ru.md)
 
-The usual way to get Unity Mod Manager (UMM) on Windows is its installer from [Nexus Mods](https://www.nexusmods.com/site/mods/21). This guide does the same with a few PowerShell commands: useful when the installer is not wanted, or the PC is set up remotely over SSH, where a program with windows cannot be used. Checked on Windows 10 with Kingmaker 2.1.7b and UMM 0.32.4: Kingmaker was set up this way and runs the mods; the commands of section 1 were run as written. WotR on that PC got UMM from the installer, so its block below repeats the Doorstop setup that works for WotR on the Steam Deck.
+This guide installs Unity Mod Manager (UMM) into **Pathfinder: Kingmaker** and **Pathfinder: Wrath of the Righteous** (WotR) on a Windows 10 or 11 PC. UMM loads through Doorstop; Windows needs no launch options in Steam. Checked on Windows 10: Kingmaker 2.1.7b, WotR 2.7, UMM 0.32.4.
 
-No launch options are needed on Windows: both games load UMM through Doorstop for Windows (`winhttp.dll` and `doorstop_config.ini` in the game folder).
+How Doorstop works, why it beats the Assembly method and what broke UMM is in [a separate page](umm.md).
 
-## 0. Before you start
+## 1. Before you start
 
-- Install the games and start each one once.
-- Close the games while you change their files.
-- Open **PowerShell**. Windows 10 and 11 ship `curl.exe` and `tar.exe`, which is all the commands below need; Python is not required.
-- Set the game folders once per PowerShell window. The default Steam library is shown; with another library use its path, e.g. `F:\SteamLibrary\steamapps\common\...`:
+1. Install the games and start each once up to the main menu.
+2. Close the games: they must be closed while their files change.
+3. Find each game's folder: Steam → right-click the game → **Manage** → **Browse local files**. File Explorer opens; click the address bar and copy the path. It is usually `C:\Program Files (x86)\Steam\steamapps\common\Pathfinder Kingmaker`, or on another drive, e.g. `F:\SteamLibrary\steamapps\common\Pathfinder Kingmaker`. The WotR folder is called `Pathfinder Second Adventure`.
+4. Open **PowerShell**: Start → type `PowerShell` → Windows PowerShell. Paste with a right-click or Ctrl+V. No administrator rights are needed unless the games are under `Program Files`; if they are, run PowerShell as administrator.
+
+There are two ways to install UMM. **Way A** (PowerShell commands) repeats what is tested on our PC and gives the right settings at once. **Way B** (the UMM installer with windows) is more familiar, but section 3 is a must after it.
+
+## 2A. UMM with PowerShell commands
+
+### Game folders
+
+Paste into PowerShell with your paths from item 1.3. The variables live in this PowerShell window only: if you closed it, set them again.
 
 ```powershell
 $KM   = "C:\Program Files (x86)\Steam\steamapps\common\Pathfinder Kingmaker"
 $WOTR = "C:\Program Files (x86)\Steam\steamapps\common\Pathfinder Second Adventure"
+Test-Path "$KM\Kingmaker.exe", "$WOTR\Wrath.exe"
 ```
 
-## 1. Unity Mod Manager
+Both output lines must be `True`. `False` means the path is wrong.
 
-### 1.1 Download UMM
+### Download UMM
 
-The same files as in the installer, from the update package UMM downloads itself (the link is in [Repository_beta_13.json](https://github.com/newman55/unity-mod-manager/blob/master/Repository_beta_13.json) of the UMM repository):
+The same files as in the installer, from the update package that UMM downloads by itself (its link is in [Repository_beta_13.json](https://github.com/newman55/unity-mod-manager/blob/master/Repository_beta_13.json) of the UMM repository). Windows 10 and 11 have `curl.exe` and `tar.exe`; nothing else is needed.
 
 ```powershell
 $P = "$env:USERPROFILE\umm"
 New-Item -ItemType Directory -Force "$P\package" | Out-Null
 curl.exe -L -o "$P\umm_update.zip" "https://www.dropbox.com/s/wt18wcq5six02ku/umm_update.zip?dl=1"
 tar -xf "$P\umm_update.zip" -C "$P\package"
-Get-ChildItem "$P\package"
+Get-ChildItem "$P\package" -Name
 ```
 
-`package` must contain `UnityModManager.dll`, `0Harmony.dll`, `dnlib.dll` and `winhttp_x64.dll`.
+The list must have `UnityModManager.dll`, `0Harmony.dll`, `dnlib.dll`, `winhttp_x64.dll` and `Harmony`.
 
-### 1.2 Kingmaker
+### Kingmaker
 
 ```powershell
 $UMM = "$KM\Kingmaker_Data\Managed\UnityModManager"
 New-Item -ItemType Directory -Force $UMM, "$KM\Mods" | Out-Null
 Copy-Item "$P\package\UnityModManager.dll", "$P\package\UnityModManager.xml", "$P\package\0Harmony.dll", "$P\package\dnlib.dll", "$P\package\Harmony\1.2\*.dll" $UMM
 
-# Doorstop for Windows: the game loads winhttp.dll from its folder, which loads UMM.
+# Doorstop: the loader and its settings.
 Copy-Item "$P\package\winhttp_x64.dll" "$KM\winhttp.dll"
 "[General]`r`nenabled = true`r`ntarget_assembly = Kingmaker_Data\Managed\UnityModManager\UnityModManager.dll" | Set-Content "$KM\doorstop_config.ini" -Encoding ASCII
 
+# The game description for UMM. There is NO UIStartingPoint line here, on purpose.
 @'
 <?xml version="1.0" encoding="utf-8"?>
 <Config xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Name="Pathfinder: Kingmaker">
@@ -60,7 +70,8 @@ Copy-Item "$P\package\winhttp_x64.dll" "$KM\winhttp.dll"
 </Config>
 '@ | Set-Content "$UMM\Config.xml" -Encoding UTF8
 
-# The UMM window shows on start.
+# UMM settings: the window on start. An existing file is left alone: it holds which mods are on.
+if (-not (Test-Path "$UMM\Params.xml")) {
 @'
 <?xml version="1.0" encoding="utf-8"?>
 <Param xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -68,19 +79,24 @@ Copy-Item "$P\package\winhttp_x64.dll" "$KM\winhttp.dll"
   <ShowOnStart>1</ShowOnStart>
 </Param>
 '@ | Set-Content "$UMM\Params.xml" -Encoding UTF8
+}
+
+Test-Path "$KM\winhttp.dll", "$KM\doorstop_config.ini", "$UMM\UnityModManager.dll"
 ```
 
-### 1.3 Wrath of the Righteous
+All three output lines are `True`.
 
-Skip this if UMM is already installed for WotR with the installer.
+### Wrath of the Righteous
 
 ```powershell
 $UMM = "$WOTR\Wrath_Data\Managed\UnityModManager"
 New-Item -ItemType Directory -Force $UMM, "$WOTR\Mods" | Out-Null
 Copy-Item "$P\package\UnityModManager.dll", "$P\package\UnityModManager.xml", "$P\package\0Harmony.dll", "$P\package\dnlib.dll" $UMM
+
 Copy-Item "$P\package\winhttp_x64.dll" "$WOTR\winhttp.dll"
 "[General]`r`nenabled = true`r`ntarget_assembly = Wrath_Data\Managed\UnityModManager\UnityModManager.dll" | Set-Content "$WOTR\doorstop_config.ini" -Encoding ASCII
 
+# WotR keeps the UIStartingPoint line: one main menu for both modes.
 @'
 <?xml version="1.0" encoding="utf-8"?>
 <Config xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Name="Pathfinder: Wrath of the Righteous">
@@ -95,38 +111,83 @@ Copy-Item "$P\package\winhttp_x64.dll" "$WOTR\winhttp.dll"
   <MinimalManagerVersion>0.22.15</MinimalManagerVersion>
 </Config>
 '@ | Set-Content "$UMM\Config.xml" -Encoding UTF8
-Copy-Item "$KM\Kingmaker_Data\Managed\UnityModManager\Params.xml" $UMM
+
+if (-not (Test-Path "$UMM\Params.xml")) {
+@'
+<?xml version="1.0" encoding="utf-8"?>
+<Param xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <CheckUpdates>0</CheckUpdates>
+  <ShowOnStart>1</ShowOnStart>
+</Param>
+'@ | Set-Content "$UMM\Params.xml" -Encoding UTF8
+}
+
+Test-Path "$WOTR\winhttp.dll", "$WOTR\doorstop_config.ini", "$UMM\UnityModManager.dll"
 ```
 
-The WotR step of the Steam Deck guide that writes `startup.json` is for the Steam Deck only; do not do it on a PC, it locks WotR into the gamepad interface.
+The `startup.json` file of the Steam Deck guide is **not** for the PC: it pins WotR to gamepad mode and turns the mouse off.
 
-### 1.4 Check
+After way A go to section 4: the commands above already did section 3.
 
-Start the game. The UMM window shows on start with an empty Mods tab. If it does not appear, see `<game>\<Game>_Data\Managed\UnityModManager\Log.txt` and the game log (`%USERPROFILE%\AppData\LocalLow\Owlcat Games\<game>\output_log.txt` for Kingmaker, `Player.log` for WotR).
+## 2B. UMM with the installer
 
-## 2. Installing the mods
+1. Download Unity Mod Manager from [Nexus Mods](https://www.nexusmods.com/site/mods/21) (a free account is needed) and unpack the archive into any folder, e.g. `Downloads\UnityModManager`.
+2. Run `UnityModManager.exe`.
+3. Pick the game in the list and check the path to the game folder.
+4. Among the installation methods pick **DoorstopProxy**, not **Assembly** ([why](umm.md#assembly-and-why-we-do-not-use-it)).
+5. Click **Install**. Repeat for the other game.
+6. Do section 3 for Kingmaker — **required**.
 
-Download the zip files from [pathfinder-mods releases](https://github.com/sergusaev/pathfinder-mods/releases) and [Buff It 2 The Limit (Groups) releases](https://github.com/sergusaev/wrath-epic-buffing/releases). Every zip holds one folder with `Info.json` and the DLL; unpack it into the game's `Mods` folder:
+## 3. Remove UIStartingPoint for Kingmaker
+
+The UMM installer writes the `UIStartingPoint` line into Kingmaker's `Config.xml`. Because of it the UMM window is never created in gamepad mode: the UMM menu item does not open the window, and the mods are visible but do nothing ([details](umm.md#configxml-and-the-uistartingpoint-line)). Delete the line (`$KM` is from section 2A):
 
 ```powershell
-cd "$env:USERPROFILE\Downloads"
-tar -xf GamepadCameraRotation-1.1.0.zip -C "$KM\Mods"       # example for Kingmaker
-tar -xf PortraitScrollFix-1.1.0.zip -C "$WOTR\Mods"         # example for WotR
+$C = "$KM\Kingmaker_Data\Managed\UnityModManager\Config.xml"
+(Get-Content $C) | Where-Object { $_ -notmatch 'UIStartingPoint' } | Set-Content $C -Encoding UTF8
+Select-String -Path $C -Pattern 'UIStartingPoint'
 ```
 
-When a mod is updated, delete the `*.cache` files in its folder before starting the game: UMM loads its cached copy of the DLL.
+The last command must print nothing. Repeat this section after **every** reinstall or update of UMM with the installer. Leave WotR's line alone.
 
-| Mod | Game | Folder | Notes |
-|---|---|---|---|
-| [Unity Mod Manager in Game Menus](../umm-menu-button) | Kingmaker, WotR | `Mods\UmmMenuButton` | a separate zip per game |
-| [Kingmaker Fixes](../kingmaker-fixes) | Kingmaker | `Mods\KingmakerFixes` | replaces `Mods\ConsoleCustomPortraits`, delete that folder; portraits go to `%USERPROFILE%\AppData\LocalLow\Owlcat Games\Pathfinder Kingmaker\Portraits\` |
-| [Time Control and Deadlines](../kingmaker-time-control) | Kingmaker | `Mods\TimeControl` | |
-| [Belt Consumables Refill](../belt-consumables-refill) | Kingmaker, WotR | `Mods\BeltConsumablesRefill` | a separate zip per game |
-| [Camera Rotation and Compass](../kingmaker-gamepad-camera-rotation) | Kingmaker | `Mods\GamepadCameraRotation` | the compass needs WotR installed (found automatically in the Steam libraries) |
-| [Level 1 Companions & Free Respec](../level1-companions) | Kingmaker, WotR | `Mods\Level1Companions` | a separate zip per game (`-kingmaker`, `-wotr`). In WotR move `lvl1companions` out of `Mods` first |
-| [Portrait Scroll Fix (gamepad)](../wotr-portrait-scroll-fix) | WotR | `Mods\PortraitScrollFix` | only matters with a gamepad |
-| [WotR Fixes](../wotr-fixes) | WotR | `Mods\WotrFixes` | |
-| [Buff It 2 The Limit (Groups)](https://github.com/sergusaev/wrath-epic-buffing) | WotR | `Mods\BuffIt2TheLimit` | replaces the original Buff It 2 The Limit and BubbleBuffs: move those out of `Mods` first. The settings of Buff It 2 The Limit stay (same id and files); the settings of BubbleBuffs (`bubblebuff-*.json`) are not read |
-| [Buff It 2 The Limit (Groups) for Kingmaker](https://github.com/sergusaev/wrath-epic-buffing) | Kingmaker | `Mods\PadBuffsKingmaker` | |
+## 4. Check
 
-**Kingmaker and a connected gamepad.** With a controller connected, Kingmaker may start in the gamepad (console) interface. For the keyboard and mouse interface turn the controller off before starting the game.
+Start the game. The UMM window appears at start; its **Mods** tab is empty for now. If there is no window, open `Log.txt` in `<Game>_Data\Managed\UnityModManager`:
+
+- no file, or no fresh `[Manager]` lines — UMM does not start: check that `winhttp.dll` and `doorstop_config.ini` are in the game folder;
+- there are lines — UMM works; look for the cause under [troubleshooting](#7-troubleshooting).
+
+**Kingmaker and a gamepad.** If a gamepad is connected at launch, Kingmaker starts in the gamepad (console) interface. For the mouse and keyboard interface, disconnect the gamepad before starting the game.
+
+## 5. Installing the mods
+
+How to download, install, update and remove the mods is in the [mod installation guide](mods.md). The first one to install is [Unity Mod Manager in Game Menus](../umm-menu-button): with it the UMM window opens from the game's menus.
+
+## 6. Where things are
+
+| | Kingmaker | WotR |
+|---|---|---|
+| Game folder | from item 1.3 | from item 1.3 |
+| UMM | `<game folder>\Kingmaker_Data\Managed\UnityModManager\` | `<game folder>\Wrath_Data\Managed\UnityModManager\` |
+| Mods | `<game folder>\Mods\` | `<game folder>\Mods\` |
+| UMM log | `…\UnityModManager\Log.txt` | `…\UnityModManager\Log.txt` |
+| Game data | `%USERPROFILE%\AppData\LocalLow\Owlcat Games\Pathfinder Kingmaker\` | `%USERPROFILE%\AppData\LocalLow\Owlcat Games\Pathfinder Wrath Of The Righteous\` |
+| Game and mod log | `output_log.txt` in the game data | `Player.log` and `GameLogFull.txt` in the game data |
+| Saves | `Saved Games\` in the game data | `Saved Games\` in the game data |
+| Custom portraits | `Portraits\` in the game data | `Portraits\` in the game data |
+
+A path with `%USERPROFILE%` can be pasted right into File Explorer's address bar. `AppData` is hidden but opens by the pasted path.
+
+## 7. Troubleshooting
+
+| Symptom | Cause and fix |
+|---|---|
+| No UMM window, no fresh lines in `Log.txt` | no `winhttp.dll` or `doorstop_config.ini` in the game folder, or a wrong path in `target_assembly` of `doorstop_config.ini` — repeat section 2A for this game |
+| Kingmaker, gamepad mode: the UMM menu item opens nothing, the mods do nothing | `Config.xml` has `UIStartingPoint` — section 3 |
+| UMM vanished after a game update | UMM was installed with Assembly — reinstall with way A, or way B with DoorstopProxy |
+| The antivirus deletes `winhttp.dll` | add the game folder to the antivirus exclusions and copy `winhttp.dll` again |
+| A mod is not listed, has a red status, or is the old version after an update | see the [mod installation guide](mods.md#if-a-mod-does-not-work) |
+
+## 8. Uninstalling
+
+Delete `winhttp.dll`, `doorstop_config.ini`, the `<Game>_Data\Managed\UnityModManager` and `Mods` folders from the game folder. With the installer you can also click **Uninstall** in it. The saves are not touched.

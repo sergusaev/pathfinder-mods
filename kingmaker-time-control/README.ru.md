@@ -65,7 +65,7 @@
 
 ## Установка
 
-1. В игре должен стоять Unity Mod Manager: [справка для Steam Deck](../docs/steam-deck.ru.md), [справка для Windows](../docs/windows.ru.md).
+1. В игре должен стоять Unity Mod Manager: [Steam Deck](../docs/steam-deck.ru.md), [Windows](../docs/windows.ru.md). Как распаковать, обновить и удалить мод, с командами — [установка модов вручную](../docs/mods.ru.md).
 2. Распакуйте zip из [Releases](https://github.com/sergusaev/pathfinder-mods/releases) в папку `Mods` игры так, чтобы получилось `Mods/TimeControl/Info.json`.
 3. Запустите игру; в окне UMM появится «Time Control and Deadlines».
 

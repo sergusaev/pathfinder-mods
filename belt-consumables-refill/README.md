@@ -22,11 +22,11 @@ Bag of Tricks ("Auto Equip Consumables") and ToyBox ("Refill consumables in belt
 
 ## Installing
 
-1. Unity Mod Manager must be installed in the game: [Steam Deck guide](../docs/steam-deck.md), [Windows guide](../docs/windows.md).
+1. Unity Mod Manager must be installed in the game: [Steam Deck](../docs/steam-deck.md), [Windows](../docs/windows.md). How to unpack, update and remove a mod, with commands: [installing mods by hand](../docs/mods.md).
 2. Download the zip for your game from [Releases](https://github.com/sergusaev/pathfinder-mods/releases): `BeltConsumablesRefill-<version>-kingmaker.zip` or `BeltConsumablesRefill-<version>-wotr.zip`. The two DLLs are not interchangeable.
 3. Unpack it into the mods folder, so the result is `Mods/BeltConsumablesRefill/Info.json`.
 4. Start the game; the UMM window lists "Belt Consumables Refill" with a green status.
 
 ## Building
 
-`./build.sh` builds both games, `./build.sh --game kingmaker --install` builds and installs one; see the [repository README](../README.md#building).
+`./build.sh` builds both games, `./build.sh --game kingmaker --install` builds and installs one; see the [repository README](../README.md#building-from-source).
