@@ -13,7 +13,6 @@ A Unity Mod Manager mod that lets you rotate the camera in Pathfinder: Kingmaker
 | Right stick, rotate mode | — | left/right rotates the camera, up/down zooms |
 | D-pad Up | zoom in (repeats while held) | toggle turn-based mode |
 | D-pad Down | inspect (repeats while held) | inspect (once per press) |
-| L3 (click the left stick) | highlight objects | highlight objects on holding: the press is left free, so [Action Bar Rows](../action-bar-rows) can switch its rows with it. The Highlight hint at the compass shows the hold ring |
 
 - The camera mode hint sits above the compass and names the mode the button switches to: "Rotate Camera" while moving, "Move Camera" while rotating. The texts are WotR's own (English, Russian, German, French, Chinese; other languages use English).
 - The turn-based mode hint stays where it was and now shows the D-pad Up icon.
@@ -38,7 +37,7 @@ A Unity Mod Manager mod that lets you rotate the camera in Pathfinder: Kingmaker
 
 ## Compass
 
-The hourglass in the lower left corner is replaced by the WotR console compass. It is built with WotR's layout: the same position, size, layers and hints around it (Pause, Cursor, Menu, Highlight and the camera mode). The arrow and the rings turn with the camera; north is the default camera direction of the current area.
+The hourglass in the lower left corner is replaced by the WotR console compass. It is built with WotR's layout: the same position, size and layers. The hints around it (Pause, Cursor, Menu, Highlight) stand on one arc: their icons at one distance from the compass, clear of the arrow; the camera mode hint stands on the same arc above it. The arrow and the rings turn with the camera; north is the default camera direction of the current area.
 
 The compass graphics belong to Wrath of the Righteous and are not shipped with the mod. On the first start the mod finds the installed WotR, reads the sprites from its `Bundles/ui` bundle and saves them as PNG files into `Compass/` inside the mod folder. Later starts use those files.
 
@@ -55,7 +54,7 @@ In Kingmaker the local map follows the camera direction but only re-renders when
 
 - Rotation speed (degrees per second) and zoom speed; inverting either axis.
 - Keyboard and mouse: mouse rotation speed, the rotate and north keys, the compass in the clock (on/off, scale, offset).
-- Offsets of the hints around the compass and of the camera mode hint, in case they overlap at your resolution.
+- The gap between the compass and the hints around it, and their vertical offset.
 - The Wrath of the Righteous folder, if it is not found automatically.
 
 ## On the Steam Deck
@@ -74,6 +73,7 @@ The mod uses the standard gamepad buttons, so it needs no Steam Input changes. I
 - `InputRemap.cs` — a postfix on `InGameInputLayerView.Bind` edits the bindings of the in-game input layer: turn-based moves from R3 to D-pad Up, zoom is removed from D-pad Up, inspect fires once per press, R3 release toggles the camera mode. The hint views are registered again so their icons follow the new buttons; the camera mode hint is a copy of the menu hint.
 - `Main.cs` — rotate mode handling: the right stick turns `CameraRig` and changes the zoom of `CameraZoom`, while the original pan handlers are blocked by prefixes. The area's default yaw is taken from `CameraRig.SetRotation`.
 - `Compass.cs` — a postfix on `InGameClockView.Bind` rebuilds the clock block with the WotR geometry and turns the compass every frame.
+- `CompassArc.cs` — puts the hints around the console compass on one arc, measured on screen every frame after the game's layout.
 - `UnityBundle.cs`, `WotrSprites.cs` — a minimal reader of UnityFS bundles (LZ4 blocks, serialized files with type trees) that finds the sprites, their atlas rectangles and the atlas texture data.
 - `PcMode.cs` — keyboard and mouse: middle-button drag after the game's own scroll tick, Alt+A / Alt+D and the north key, the compass in the clock, its tooltip, key conflicts with the game's bindings.
 - `LocalMapFix.cs` — fixed map orientation, re-render on yaw change, the camera footprint outline.

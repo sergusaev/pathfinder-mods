@@ -20,9 +20,9 @@ namespace GamepadCameraRotation
         public float ZoomSpeed = 0.8f;
         public bool InvertRotation;
         public bool InvertZoom;
-        public float HintsOffsetX = 40f;
+        // Distance from the compass (the reach of its arrow) to the icons of the hints around it.
+        public float HintsGap = 4f;
         public float HintsOffsetY;
-        public float CameraHintOffsetY = 8f;
         public string WotrPath = "";
         // Keyboard and mouse mode.
         public float MouseRotationSpeed = 0.3f;
@@ -47,7 +47,6 @@ namespace GamepadCameraRotation
         internal const int DPadUp = 6;
         internal const int DPadDown = 7;
         internal const int RightStickButton = 19;
-        internal const int LeftStickButton = 18;
         const float DeadZone = 0.2f;
         const string LocalMapContext = "LocalMapInputContext";
 
@@ -83,19 +82,16 @@ namespace GamepadCameraRotation
             Settings.ZoomSpeed = GUILayout.HorizontalSlider(Settings.ZoomSpeed, 0.2f, 3f, GUILayout.Width(300));
             Settings.InvertRotation = GUILayout.Toggle(Settings.InvertRotation, "Invert rotation");
             Settings.InvertZoom = GUILayout.Toggle(Settings.InvertZoom, "Invert zoom");
-            GUILayout.Label("Compass hints offset X: " + Settings.HintsOffsetX.ToString("0"));
-            float x = GUILayout.HorizontalSlider(Settings.HintsOffsetX, -40f, 120f, GUILayout.Width(300));
+            GUILayout.Label("Compass hints gap from the compass: " + Settings.HintsGap.ToString("0"));
+            float x = GUILayout.HorizontalSlider(Settings.HintsGap, 0f, 60f, GUILayout.Width(300));
             GUILayout.Label("Compass hints offset Y: " + Settings.HintsOffsetY.ToString("0"));
             float y = GUILayout.HorizontalSlider(Settings.HintsOffsetY, -60f, 60f, GUILayout.Width(300));
-            GUILayout.Label("Camera mode hint offset Y: " + Settings.CameraHintOffsetY.ToString("0"));
-            float c = GUILayout.HorizontalSlider(Settings.CameraHintOffsetY, -40f, 80f, GUILayout.Width(300));
             GUILayout.Label("Wrath of the Righteous folder (empty = search Steam libraries), used to extract the compass sprites; a change applies on the next area load:");
             Settings.WotrPath = GUILayout.TextField(Settings.WotrPath ?? "", GUILayout.Width(500));
-            if (x != Settings.HintsOffsetX || y != Settings.HintsOffsetY || c != Settings.CameraHintOffsetY)
+            if (x != Settings.HintsGap || y != Settings.HintsOffsetY)
             {
-                Settings.HintsOffsetX = Mathf.Round(x);
+                Settings.HintsGap = Mathf.Round(x);
                 Settings.HintsOffsetY = Mathf.Round(y);
-                Settings.CameraHintOffsetY = Mathf.Round(c);
                 Compass.PlaceHints();
             }
 

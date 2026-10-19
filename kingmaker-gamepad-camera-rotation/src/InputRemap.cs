@@ -14,7 +14,8 @@ using UnityEngine;
 namespace GamepadCameraRotation
 {
     // WotR console layout: R3 release toggles camera rotate mode, D-pad up toggles turn-based mode, D-pad down only inspects.
-    // L3 switches the highlighting of objects on a long press.
+    // L3 keeps the game's highlighting of objects: the open action bar pushes its own input layer, which unbinds this one,
+    // so Action Bar Rows takes L3 there.
     [HarmonyPatch(typeof(InGameInputLayerView), "Bind")]
     static class InputRemap
     {
@@ -24,7 +25,6 @@ namespace GamepadCameraRotation
         static readonly FieldInfo BehaviorField = AccessTools.Field(typeof(InGameInputLayerView), "m_InputBehavior");
         static readonly FieldInfo ToggleModeHintField = AccessTools.Field(typeof(InGameInputLayerView), "m_ToggleModeHint");
         static readonly FieldInfo MenuHintField = AccessTools.Field(typeof(InGameInputLayerView), "m_MenuHint");
-        static readonly FieldInfo HighlightHintField = AccessTools.Field(typeof(InGameInputLayerView), "m_ChangeHighlightHint");
         static readonly FieldInfo BindsField = AccessTools.Field(typeof(InputLayer), "m_Binds");
         static readonly MethodInfo ActivateInspect = AccessTools.Method(typeof(InGameInputLayerView), "OnActivateInspect");
 
@@ -60,25 +60,7 @@ namespace GamepadCameraRotation
                 InputBindStruct cameraBind = layer.AddButton(e => Main.ToggleRotateMode(), Main.RightStickButton,
                     InputActionEventType.ButtonJustReleased, enableDefaultSound: false);
 
-                // Highlighting of objects on a long press of L3, not a short one: a stray press while moving no longer
-                // switches it, and the hint shows the hold ring the game draws for long presses.
-                BindDescription highlight = binds.Find(b => b.ActionId == Main.LeftStickButton && b.EventType == InputActionEventType.ButtonJustPressed);
-                InputBindStruct highlightBind = null;
-                if (highlight != null)
-                {
-                    binds.Remove(highlight);
-                    highlightBind = layer.AddButton(e =>
-                    {
-                        Game.Instance.InteractionHighlightController.SwitchHighlightManually();
-                        Game.Instance.UI.Common.UISound.Play(UISoundType.ButtonClick);
-                    }, Main.LeftStickButton, InputActionEventType.ButtonJustLongPressed);
-                }
-
                 if (bound) layer.Bind();
-
-                var highlightHint = HighlightHintField.GetValue(__instance) as GenericHintView;
-                if (highlightBind != null && highlightHint != null)
-                    behavior.RegisteredHint(highlightHint, highlightBind);
 
                 var toggleHint = ToggleModeHintField.GetValue(__instance) as GenericHintView;
                 if (turnBased != null && toggleHint != null)

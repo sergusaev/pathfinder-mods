@@ -16,7 +16,7 @@ A Unity Mod Manager mod for the gamepad interface of both games. The action bar 
 - **The look.** The bar becomes two blocks, each in its own frame: the slots with the rows, and right of them the weapon set button with the belt button of [Belt Bar](../belt-bar). The frame of the slots grows with the rows; its corners and ornaments keep their size. The bar moves a little to the left to make room for the second frame. The name of the slot under the cursor, its hints and the windows of the weapon sets and the belt open above the top row. In turn-based combat the action strip (five-foot step, standard, move and so on) stands above the top row in a block of its own, with paper and a frame as wide as the slots block; its hints stand at the edges of the block, and the "Context menu" and "Inspect" hints in the middle under the paper. The name of the slot or the enemy under the cursor stands in the middle over this block, and the windows of the weapon sets and the belt open over it.
 - **Weapon sets and the belt.** Up on the weapon set button or the belt button opens its window with the stick as with the D-pad; down closes it, with the stick too.
 
-In Kingmaker L3 also switches the highlighting of objects. [Camera Rotation and Compass](../kingmaker-gamepad-camera-rotation) 1.2.5 or later moves the highlighting to holding L3, so a press switches the rows only.
+In Kingmaker L3 switches the highlighting of objects outside the bar; while the bar is open, L3 switches the rows only.
 
 ## Installing
 

@@ -24,6 +24,14 @@ The fix is the same as in Kingmaker Fixes, where it is tested in the game; in Wr
 
 **Fix.** The visible text with its icon is centred over the overtip's anchor, the point over the head. The height above the name, the HP bar and a bark stays the game's own (`UnitOvertipView.TweenComponentsToPlace`), as in Kingmaker. Stacked texts are 25 interface units apart. Once per session the mod writes the layout it works with to the UMM log (`combat text layout`). On an error the fix switches itself off and logs the error.
 
+### Hints around the compass lie on its ring and on each other
+
+**How it shows.** In the gamepad interface the hints around the compass in the lower left corner cover it: the Cursor and Highlight icons lie on the ring, the camera mode hint covers the tip of the arrow, and Skip Time sits on the Highlight hint.
+
+**Cause.** The game places the hints at fixed points that do not allow for the arrow, which turns with the camera and reaches past the ring.
+
+**Fix.** The hints on the right stand on one arc around the compass, as in Kingmaker with [Camera Rotation and Compass](../kingmaker-gamepad-camera-rotation). The icons of Pause, Cursor, Menu and Highlight keep their heights and stand at one distance from the compass centre, 4 interface units clear of the arrow's reach. The camera mode hint stands above the compass, clear of the hints next to it. Skip Time, which the game puts below the compass almost at the screen's edge, moves right above the camera mode hint, icon over icon. The places are measured on screen every frame, after the game's layout. The layout is written to the UMM log 2, 10 and 30 seconds after the hints appear (`compass hints after`). On an error the fix turns itself off and writes it to the log.
+
 ### Custom portraits do not scroll with the gamepad
 
 **Symptom.** In the gamepad interface the "Custom" tab of the character creation portraits does not follow the cursor: the cursor leaves the screen, and the right stick does not move the list.

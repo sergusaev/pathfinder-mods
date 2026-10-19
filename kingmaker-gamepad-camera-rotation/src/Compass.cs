@@ -24,11 +24,12 @@ namespace GamepadCameraRotation
         // Without the compass the Kingmaker hints keep their arc (positions from the clock prefab), moved right so the icons
         // clear the hourglass; the camera hint continues the arc above the clock.
         static readonly Vector2 ClockHintShift = new Vector2(24f, 0f);
-        static readonly Vector2 ClockCameraHintBase = new Vector2(102f, 133f);
+        static readonly Vector2 ClockCameraHintBase = new Vector2(102f, 141f);
 
+        // With the compass these are only starting places: CompassArc puts the icons on an arc around the ring.
         internal static Vector2 MoveCameraHintPos
         {
-            get { return (s_Sprites != null ? MoveCameraHintBase : ClockCameraHintBase) + new Vector2(0f, Main.Settings.CameraHintOffsetY); }
+            get { return s_Sprites != null ? MoveCameraHintBase : ClockCameraHintBase; }
         }
 
         static readonly string[] SpriteNames =
@@ -45,10 +46,22 @@ namespace GamepadCameraRotation
         // Every built compass: the console one on the clock and the PC one next to the menu buttons.
         sealed class Dial
         {
-            public RectTransform Arrow, Astro01, Astro02;
+            public RectTransform Arrow, Astro01, Astro02, Ring;
         }
 
         static readonly List<Dial> s_Dials = new List<Dial>();
+        // The console compass the hints go around.
+        static Dial s_Console;
+
+        internal static RectTransform Ring
+        {
+            get { return s_Console != null ? s_Console.Ring : null; }
+        }
+
+        internal static RectTransform Arrow
+        {
+            get { return s_Console != null ? s_Console.Arrow : null; }
+        }
 
         static void Postfix(InGameClockView __instance)
         {
@@ -85,6 +98,8 @@ namespace GamepadCameraRotation
             part.SetAsFirstSibling();
             Set(part, Vector2.zero, Vector2.zero, BlockSize, Vector2.zero, 1f);
             BuildDial(part);
+            s_Console = s_Dials[s_Dials.Count - 1];
+            if (root.GetComponent<CompassArc>() == null) root.gameObject.AddComponent<CompassArc>();
             Main.Log?.Log("Compass built");
         }
 
@@ -100,7 +115,7 @@ namespace GamepadCameraRotation
             var dial = new Dial();
             dial.Astro02 = Layer(part, "UI_HudAstrolabe02", Vector2.zero, new Vector2(75.756f, 67.84f), new Vector2(78.5f, 81.5f), new Vector2(0.526f, 0.507f), 1.15f);
             var border = Layer(part, "UI_HudAstrolabeBorder_Console", Vector2.zero, new Vector2(75.51f, 71.24f), new Vector2(130f, 138f), new Vector2(0.5f, 0.5f), 1f);
-            var button = Layer(border, "UI_CircleHighliht", Vector2.zero, new Vector2(0.456f, -2.068f), new Vector2(-6.389f, -15.088f), new Vector2(0.5f, 0.5f), 1f);
+            var button = dial.Ring = Layer(border, "UI_CircleHighliht", Vector2.zero, new Vector2(0.456f, -2.068f), new Vector2(-6.389f, -15.088f), new Vector2(0.5f, 0.5f), 1f);
             button.anchorMax = Vector2.one;
             button.GetComponent<Image>().color = new Color(0.55f, 0.38f, 0.29f, 0.2f);
             dial.Astro01 = Layer(part, "UI_HudAstrolabe01", Vector2.zero, new Vector2(75.338f, 68.326f), new Vector2(63f, 63f), new Vector2(0.373f, 0.451f), 1.15f);
@@ -111,7 +126,7 @@ namespace GamepadCameraRotation
             return true;
         }
 
-        // Hints keep the WotR layout, pushed outward by the configurable offset so their icons clear the compass ring.
+        // Hints keep the heights of the WotR layout, moved by the configurable offset; CompassArc sets the rest.
         internal static void PlaceHints()
         {
             if (s_Root == null) return;
@@ -124,7 +139,7 @@ namespace GamepadCameraRotation
                 PlaceHint("HintHighlight", new Vector2(108f, -7f) + ClockHintShift);
                 return;
             }
-            var side = new Vector2(Main.Settings.HintsOffsetX, Main.Settings.HintsOffsetY);
+            var side = new Vector2(0f, Main.Settings.HintsOffsetY);
             PlaceHint("HintPause", new Vector2(103.3f, 105.6f) + HintShift + side);
             PlaceHint("HintCursor", new Vector2(127f, 69f) + HintShift + side);
             PlaceHint("HintMenu", new Vector2(127f, 50.6f - 12.5f) + new Vector2(HintShift.x, 0f) + side);
@@ -133,8 +148,13 @@ namespace GamepadCameraRotation
 
         static void PlaceHint(string name, Vector2 pos)
         {
-            var hint = s_Root.Find(name) as RectTransform;
+            var hint = Hint(name);
             if (hint != null) hint.anchoredPosition = pos;
+        }
+
+        internal static RectTransform Hint(string name)
+        {
+            return s_Root != null ? s_Root.Find(name) as RectTransform : null;
         }
 
         static void Set(RectTransform rt, Vector2 anchor, Vector2 pos, Vector2 size, Vector2 pivot, float scale)
