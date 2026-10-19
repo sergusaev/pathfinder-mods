@@ -10,26 +10,32 @@ The mods are installed **in any order and any combination**; none needs another 
 
 ## Which file to download
 
-All mods are on the release pages: [pathfinder-mods](https://github.com/sergusaev/pathfinder-mods/releases) and [the buff menu](https://github.com/sergusaev/wrath-epic-buffing/releases). Open the release you need and download the zip from its **Assets** block (not "Source code").
+All mods are on the release pages: [pathfinder-mods](https://github.com/sergusaev/pathfinder-mods/releases) and [the buff menu](https://github.com/sergusaev/wrath-epic-buffing/releases). The newest releases are at the top of the page and each mod has its own: the first release from the top with the mod's name is its latest version. Download the zip from the **Assets** block (not "Source code"). The commands below find and download the latest version by themselves.
 
-- A mod for one game has one zip: `<Mod>-<version>.zip`.
-- A mod for both games has two zips: `<Mod>-<version>-kingmaker.zip` and `<Mod>-<version>-wotr.zip`. They are not interchangeable: each DLL is built for its own game.
-- Each zip holds one folder named after the mod, with `Info.json` and the DLL inside (the WotR buff menu also has pictures and resources). This folder goes into the game's `Mods` folder as a whole.
+- A mod for one game has one zip: `<Name>-<version>.zip`.
+- A mod for both games has two zips: `<Name>-<version>-kingmaker.zip` and `<Name>-<version>-wotr.zip`. They are not interchangeable: each DLL is built for its own game.
+- Each zip holds one mod folder, with `Info.json` and the DLL inside (the WotR buff menu also has pictures and resources). This folder goes into the game's `Mods` folder as a whole.
 
-| Mod | Game | File in the release | Folder in `Mods` |
+| Mod | Game | File name (`MOD`) | Folder in `Mods` |
 |---|---|---|---|
-| [Unity Mod Manager in Game Menus](../umm-menu-button) | both | `UmmMenuButton-…-kingmaker.zip` / `…-wotr.zip` | `UmmMenuButton` |
-| [Action Bar Rows](../action-bar-rows) | both | `ActionBarRows-…-kingmaker.zip` / `…-wotr.zip` | `ActionBarRows` |
-| [Belt Bar](../belt-bar) | both | `BeltBar-…-kingmaker.zip` / `…-wotr.zip` | `BeltBar` |
-| [Belt Consumables Refill](../belt-consumables-refill) | both | `BeltConsumablesRefill-…-kingmaker.zip` / `…-wotr.zip` | `BeltConsumablesRefill` |
-| [Level 1 Companions & Free Respec](../level1-companions) | both | `Level1Companions-…-kingmaker.zip` / `…-wotr.zip` | `Level1Companions` |
-| [Success Chance](../success-chance) | both | `SuccessChance-…-kingmaker.zip` / `…-wotr.zip` | `SuccessChance` |
-| [Kingmaker Fixes](../kingmaker-fixes) | Kingmaker | `KingmakerFixes-….zip` | `KingmakerFixes` |
-| [Camera Rotation and Compass](../kingmaker-gamepad-camera-rotation) | Kingmaker | `GamepadCameraRotation-….zip` | `GamepadCameraRotation` |
-| [Time Control and Deadlines](../kingmaker-time-control) | Kingmaker | `TimeControl-….zip` | `TimeControl` |
-| [Buff It 2 The Limit (Groups) for Kingmaker](https://github.com/sergusaev/wrath-epic-buffing/blob/gamepad/pad-docs/README.md#kingmaker) | Kingmaker | `PadBuffsKingmaker-….zip` (tag `kingmaker-v…`) | `PadBuffsKingmaker` |
-| [WotR Fixes](../wotr-fixes) | WotR | `WotrFixes-….zip` | `WotrFixes` |
-| [Buff It 2 The Limit (Groups)](https://github.com/sergusaev/wrath-epic-buffing/blob/gamepad/pad-docs/README.md) | WotR | `BuffIt2TheLimit-Pad-….zip` (tag `v…-pad.N`) | `BuffIt2TheLimit` |
+| [Unity Mod Manager in Game Menus](../umm-menu-button) | both | `UmmMenuButton` | `UmmMenuButton` |
+| [Action Bar Rows](../action-bar-rows) | both | `ActionBarRows` | `ActionBarRows` |
+| [Belt Bar](../belt-bar) | both | `BeltBar` | `BeltBar` |
+| [Belt Consumables Refill](../belt-consumables-refill) | both | `BeltConsumablesRefill` | `BeltConsumablesRefill` |
+| [Level 1 Companions & Free Respec](../level1-companions) | both | `Level1Companions` | `Level1Companions` |
+| [Success Chance](../success-chance) | both | `SuccessChance` | `SuccessChance` |
+| [Kingmaker Fixes](../kingmaker-fixes) | Kingmaker | `KingmakerFixes` | `KingmakerFixes` |
+| [Camera Rotation and Compass](../kingmaker-gamepad-camera-rotation) | Kingmaker | `GamepadCameraRotation` | `GamepadCameraRotation` |
+| [Time Control and Deadlines](../kingmaker-time-control) | Kingmaker | `TimeControl` | `TimeControl` |
+| [Buff It 2 The Limit (Groups) for Kingmaker](https://github.com/sergusaev/wrath-epic-buffing/blob/gamepad/pad-docs/README.md#kingmaker) | Kingmaker | `PadBuffsKingmaker` (buff menu releases) | `PadBuffsKingmaker` |
+| [WotR Fixes](../wotr-fixes) | WotR | `WotrFixes` | `WotrFixes` |
+| [Buff It 2 The Limit (Groups)](https://github.com/sergusaev/wrath-epic-buffing/blob/gamepad/pad-docs/README.md) | WotR | `BuffIt2TheLimit-Pad` (buff menu releases) | `BuffIt2TheLimit` |
+
+In the commands below three lines pick the mod:
+
+- `MOD` — the file name from the table;
+- `GAME` — `-kingmaker` or `-wotr` for a mod for both games; empty for a mod for one game (`GAME=` / `$GAME = ""`);
+- `REPO` — `sergusaev/pathfinder-mods`, and `sergusaev/wrath-epic-buffing` for both buff menus.
 
 ## What replaces what
 
@@ -49,42 +55,73 @@ Working together with third-party mods:
 
 ## Installing on the Steam Deck
 
-1. Switch to Desktop Mode and download the zip with the browser; by default it goes to `~/Downloads`.
-2. Open Konsole and paste the commands with your file name. The game folders are as in the [Steam Deck guide](steam-deck.md#2-find-the-game-folders); if the game is on a microSD card, change the first line.
+The game is closed. Desktop Mode → Konsole (paste — Ctrl+Shift+V). Paste each block as a whole; change the first lines for your mod.
 
-For Kingmaker:
-
-```bash
-KM="$HOME/.local/share/Steam/steamapps/common/Pathfinder Kingmaker"
-cd ~/Downloads
-unzip -o BeltBar-1.0.1-kingmaker.zip -d "$KM/Mods/"
-ls "$KM/Mods/BeltBar"
-```
-
-For WotR:
+**1. Download.** With a command — it finds the latest version by itself:
 
 ```bash
-WOTR="$HOME/.local/share/Steam/steamapps/common/Pathfinder Second Adventure"
+MOD=BeltBar                       # file name from the table
+GAME=-kingmaker                   # -kingmaker / -wotr; empty for a mod for one game: GAME=
+REPO=sergusaev/pathfinder-mods    # buff menu: sergusaev/wrath-epic-buffing
 cd ~/Downloads
-unzip -o BeltBar-1.0.1-wotr.zip -d "$WOTR/Mods/"
-ls "$WOTR/Mods/BeltBar"
+URL=$(curl -s "https://api.github.com/repos/$REPO/releases?per_page=100" | grep -o "https://[^\"]*/$MOD-[0-9][^/\"]*$GAME\.zip" | head -1)
+echo "$URL"
+curl -L -O "$URL"
+F=$(basename "$URL")
 ```
 
-`ls` must show `Info.json` and the mod's DLL. `-o` lets `unzip` overwrite old files without asking.
+`echo` must show a link to a zip. An empty line means a typo in `MOD`/`GAME`/`REPO` or no internet.
 
-**Without Konsole, with the mouse in Dolphin:** right-click the zip → **Extract** → **Extract archive to…** → pick the game's `Mods` folder (the path is in the [table of paths](steam-deck.md#9-where-things-are); hidden folders — Ctrl+H).
+Or with the browser: the zip goes to `~/Downloads`. Then instead of the block above:
+
+```bash
+MOD=BeltBar; GAME=-kingmaker      # as in the block above
+F=$(ls -t ~/Downloads/$MOD-*$GAME*.zip | head -1)
+echo "$F"
+```
+
+**2. Extract into `Mods`.** In the same Konsole, right after step 1. The game folders are as in the [Steam Deck guide](steam-deck.md#2-find-the-game-folders); if the game is on a microSD card, change the first line.
+
+```bash
+G="$HOME/.local/share/Steam/steamapps/common/Pathfinder Kingmaker"   # WotR: …/common/Pathfinder Second Adventure
+D=$(unzip -Z1 "$F" | head -1 | cut -d/ -f1)
+unzip -o "$F" -d "$G/Mods/"
+rm -f "$G/Mods/$D/"*.cache
+ls -l "$G/Mods/$D"
+```
+
+`ls` must show `Info.json` and the mod's DLL (the file dates come from the zip, i.e. the release build date, not today). `D` is the mod folder inside the zip, `-o` overwrites old files without asking, `rm` deletes UMM's cache (see "Updating").
+
+**Without Konsole, with the mouse in Dolphin:** right-click the zip → **Extract** → **Extract archive to…** → pick the game's `Mods` folder (the path is in the [table of paths](steam-deck.md#9-where-things-are); hidden folders — Ctrl+H). When updating, then delete the cache (see "Updating").
 
 ## Installing on Windows
 
-**With the mouse:** right-click the zip → **Extract All…** → enter the game's `Mods` folder as the path, e.g. `F:\SteamLibrary\steamapps\common\Pathfinder Kingmaker\Mods` → **Extract**. The result must be `Mods\BeltBar\` with `Info.json` inside, without an extra level like `Mods\BeltBar-1.0.1-kingmaker\BeltBar\`. If there is an extra level, move the inner folder one level up.
+The game is closed.
 
-**PowerShell** (`$KM` and `$WOTR` are from the [Windows guide](windows.md#game-folders)):
+**With the mouse:** right-click the zip → **Extract All…** → enter the game's `Mods` folder as the path, e.g. `F:\SteamLibrary\steamapps\common\Pathfinder Kingmaker\Mods` → **Extract**. The result must be `Mods\<Mod>\` with `Info.json` inside, without an extra level like `Mods\<Mod>-<version>-kingmaker\<Mod>\`. If there is an extra level, move the inner folder one level up.
+
+**PowerShell**, the same two steps as on the Deck. `$KM` and `$WOTR` are from the [Windows guide](windows.md#game-folders).
+
+1. Download the latest version:
 
 ```powershell
-cd "$env:USERPROFILE\Downloads"
-tar -xf BeltBar-1.0.1-kingmaker.zip -C "$KM\Mods"
-tar -xf BeltBar-1.0.1-wotr.zip -C "$WOTR\Mods"
-Get-ChildItem "$KM\Mods\BeltBar" -Name
+$MOD = "BeltBar"; $GAME = "-kingmaker"; $REPO = "sergusaev/pathfinder-mods"
+$A = (Invoke-RestMethod "https://api.github.com/repos/$REPO/releases?per_page=100").assets | Where-Object name -Match "^$MOD-\d.*$GAME\.zip$" | Select-Object -First 1
+$A.name
+$F = "$env:USERPROFILE\Downloads\$($A.name)"
+curl.exe -L -o $F $A.browser_download_url
+```
+
+Or, if the zip is already downloaded with the browser: `$MOD = "BeltBar"; $GAME = "-kingmaker"` and then `$F = (Get-ChildItem "$env:USERPROFILE\Downloads\$MOD-*$GAME*.zip" | Sort-Object LastWriteTime | Select-Object -Last 1).FullName`.
+
+2. Extract into `Mods`:
+
+```powershell
+$G = $KM     # WotR: $G = $WOTR
+$D = (tar -tf $F | Select-Object -First 1).Split('/')[0]
+tar -xf $F -C "$G\Mods"
+Remove-Item "$G\Mods\$D\*.cache" -ErrorAction SilentlyContinue
+Get-ChildItem "$G\Mods\$D"
 ```
 
 ## Check
@@ -93,24 +130,7 @@ Start the game and open the UMM window (the menu item or the window on start), t
 
 ## Updating
 
-An update goes in the same way, over the old one, with the game closed. Then delete UMM's cache in the mod folder, or the old DLL may load.
-
-Steam Deck:
-
-```bash
-KM="$HOME/.local/share/Steam/steamapps/common/Pathfinder Kingmaker"
-unzip -o ~/Downloads/BeltBar-1.0.1-kingmaker.zip -d "$KM/Mods/"
-rm -f "$KM/Mods/BeltBar/"*.cache
-```
-
-Windows (PowerShell):
-
-```powershell
-tar -xf "$env:USERPROFILE\Downloads\BeltBar-1.0.1-kingmaker.zip" -C "$KM\Mods"
-Remove-Item "$KM\Mods\BeltBar\*.cache"
-```
-
-The cache files look like `BeltBar.dll.2354.cache`. With the mouse, just delete them in the file manager.
+An update goes in the same way as an install, over the old one, with the game closed: the commands above download the latest version and delete UMM's cache. The cache files look like `BeltBar.dll.2354.cache`: UMM may load them instead of the new DLL. If you installed with the mouse, delete them in the file manager.
 
 A mod's settings and data in its folder (`Settings.xml`, and for Time Control the `Tracking` folder with the tracked countdowns) survive an update: they are not in the zip. So do not delete the whole mod folder when updating.
 
@@ -125,6 +145,6 @@ With the game closed, delete the mod's folder from `Mods`; its settings go with 
 | The mod is not in the UMM list | the folder is in the wrong place: it must be `Mods/<Mod>/Info.json`. An extra level (`Mods/<Mod>/<Mod>/Info.json`), or the folder next to `Mods` instead of inside it, and UMM does not see the mod |
 | The mod is not listed, on the Steam Deck | the game folder has two mods folders, `Mods` and `mods`, and Proton sees only one. Move everything into `Mods` and delete the other |
 | Red status | the zip is not for this game (`-kingmaker` / `-wotr`) or UMM is too old. The cause is in the game log ([Steam Deck paths](steam-deck.md#9-where-things-are), [Windows](windows.md#6-where-things-are)), lines with the mod id |
-| WotR: all mods of this collection are red at once, the game log has `Patching exception` and `__args` | older mod versions with the loader from UMM 0.33.2 (Doorstop 4): with it WotR uses its own Harmony 2.0.4, which the older versions cannot work with. Update all the mods to the current releases (Belt Bar 1.0.2, Belt Consumables Refill 1.0.2, Level 1 Companions 1.0.4, Success Chance 1.1.1, UMM in Game Menus 1.0.3, WotR Fixes 1.1.1, buff menu `v1.21.2-pad.9` or later) |
+| WotR: all mods of this collection are red at once, the game log has `Patching exception` and `__args` | older mod versions with the loader from UMM 0.33.2 (Doorstop 4): with it WotR uses its own Harmony 2.0.4, which the older versions cannot work with. Update all the mods to the latest releases (at least: Belt Bar 1.0.2, Belt Consumables Refill 1.0.2, Level 1 Companions 1.0.4, Success Chance 1.1.1, UMM in Game Menus 1.0.3, WotR Fixes 1.1.1, buff menu `v1.21.2-pad.9` or later) |
 | After an update it behaves like the old version | `*.cache` was not deleted — see "Updating" |
 | The mod is listed but does nothing in Kingmaker with the gamepad | UMM's `Config.xml` has `UIStartingPoint` ([Steam Deck](steam-deck.md#4-unity-mod-manager-for-kingmaker), [Windows](windows.md#3-remove-uistartingpoint-for-kingmaker)) |
