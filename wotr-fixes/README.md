@@ -16,6 +16,14 @@ A Unity Mod Manager mod that collects small fixes of the game's own bugs. Each f
 
 The fix is the same as in Kingmaker Fixes, where it is tested in the game; in Wrath of the Righteous it is checked against the game code only.
 
+### Combat text to the right of the head instead of over it
+
+**Symptom.** Damage, misses, saving throws and spell names pop up to the right of the unit's head instead of over its middle. In Kingmaker the same text stands right over the head. With the gamepad and with keyboard and mouse alike.
+
+**Cause.** In Kingmaker the text lives inside the unit's overtip. Wrath of the Righteous moves it to a shared container (`OvertipsView.CombatTextContainer`) and every frame puts the text's pivot on the overtip part (`OvertipViewPartCombatText.GetCombatTextPosition`). An absent spell icon is hidden by alpha only, so its place stays. The text thus starts at the head and runs to the right. Stacked texts are 25 screen pixels apart rather than 25 interface units, so at an interface scale other than 1:1 they close up or drift apart.
+
+**Fix.** The visible text with its icon is centred over the overtip's anchor, the point over the head. The height above the name, the HP bar and a bark stays the game's own (`UnitOvertipView.TweenComponentsToPlace`), as in Kingmaker. Stacked texts are 25 interface units apart. Once per session the mod writes the layout it works with to the UMM log (`combat text layout`). On an error the fix switches itself off and logs the error.
+
 ### Custom portraits do not scroll with the gamepad
 
 **Symptom.** In the gamepad interface the "Custom" tab of the character creation portraits does not follow the cursor: the cursor leaves the screen, and the right stick does not move the list.

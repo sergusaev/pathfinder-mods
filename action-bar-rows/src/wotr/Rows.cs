@@ -8,6 +8,7 @@ using Kingmaker.EntitySystem.Entities;
 using Kingmaker.UI.MVVM._ConsoleView.ActionBar;
 using Kingmaker.UI.MVVM._PCView.ActionBar;
 using Kingmaker.UI.MVVM._VM.ActionBar;
+using Kingmaker.UI.TurnBasedMode;
 using Owlcat.Runtime.UI.ConsoleTools;
 using Owlcat.Runtime.UI.ConsoleTools.GamepadInput;
 using Owlcat.Runtime.UI.ConsoleTools.HintTool;
@@ -25,7 +26,8 @@ namespace ActionBarRows
     //
     // As in Kingmaker, the bar becomes two blocks, each on its own paper in its own frame: the slots with the rows
     // (the frame grows with them) and, a small gap to the right, the weapon set button with whatever other mods put
-    // next to it. The whole bar moves left by what the gap and the second frame take.
+    // next to it. The whole bar moves left by what the gap and the second frame take. In turn-based combat the
+    // prediction panel gets a third block of its own, a small gap above the slots, in the middle over them.
     sealed class Rows : MonoBehaviour
     {
         internal const int MaxRows = 3;
@@ -36,6 +38,7 @@ namespace ActionBarRows
         static readonly FieldInfo NavField = AccessTools.Field(typeof(ActionBarConsoleView), "m_NavigationBehaviour");
         static readonly FieldInfo IsConvertField = AccessTools.Field(typeof(ActionBarConsoleView), "m_IsConvert");
         static readonly FieldInfo StickHintField = AccessTools.Field(typeof(ActionBarConsoleView), "m_RightStickButtonHint");
+        static readonly string[] NameHintFields = { "m_ContextMenuHint", "m_InspectHint" };
         static readonly FieldInfo SlotsContainerField = AccessTools.Field(typeof(ActionBarBaseView), "m_MainSlotsContainer");
         static readonly FieldInfo SlotsField = AccessTools.Field(typeof(ActionBarBaseView), "m_Slots");
         static readonly FieldInfo PageLabelField = AccessTools.Field(typeof(ActionBarBaseView), "m_PageLabel");
@@ -72,8 +75,20 @@ namespace ActionBarRows
         bool m_Built, m_Failed;
         int m_Count = 1;
 
-        // The two blocks: papers and frames. The slots' paper and frames are the game's own, the rest are copies.
-        RectTransform m_SlotsPaper, m_RowsPaper, m_ButtonsPaper, m_SlotsFrame, m_SlotsFrameTbm, m_ButtonsFrame;
+        // The blocks: papers and frames. The slots' paper and frame are the game's own, the rest are copies. The
+        // game's turn-based frame (the slots frame grown around the prediction panel) is not shown.
+        RectTransform m_SlotsPaper, m_ButtonsPaper, m_SlotsFrame, m_SlotsFrameTbm, m_ButtonsFrame;
+        RectTransform m_Prediction, m_PredictionHints, m_PredictionPaper, m_PredictionFrame;
+        bool m_PredictionCut;
+        float m_FrameWidth0;
+        // The panel's actions laid out by the rows, side by side over the whole width of the slots block: five-foot
+        // step, move, standard, swift, free; the full round one over move and standard. The move and the standard
+        // share what the others leave.
+        static readonly string[] ActionFields =
+            { "m_FiveFootAction", "m_MoveAction", "m_StandardAction", "m_SwiftAction", "m_FreeAction", "m_FullRoundActionView" };
+        RectTransform[] m_Actions;
+        float[] m_ActionWidths, m_ActionHeights;
+        float m_ActionGap;
         readonly List<RectTransform> m_Buttons = new List<RectTransform>();
         readonly List<Patch> m_Patches = new List<Patch>();
         // The game's layout, measured once: the space between slots (kept around them on every side and between the
@@ -81,14 +96,16 @@ namespace ActionBarRows
         float m_Margin, m_Pitch, m_EdgeX, m_EdgeBottom, m_EdgeTop, m_TbmShift;
 
         // Above the rows stands what stands above the bar alone; the variants window of each slot opens above the
-        // top row.
-        readonly Dictionary<RectTransform, float> m_TopItems = new Dictionary<RectTransform, float>();
+        // top row. The game moves them itself (with tweens): the rows lift them from wherever the game put them last.
+        sealed class Lifted { internal float Base, Written; }
+        readonly Dictionary<RectTransform, Lifted> m_TopItems = new Dictionary<RectTransform, Lifted>();
         // The name of the slot under the cursor with the hints above it, and the windows of the buttons: each a small
         // gap above the frame.
         RectTransform m_SpellPanel, m_SpellName;
+        float m_SpellPanelX;
         readonly List<RectTransform> m_Windows = new List<RectTransform>();
         const string ButtonPath = "ActionBarWeaponConsoleView";
-        readonly Dictionary<RectTransform, float> m_Variants = new Dictionary<RectTransform, float>();
+        readonly Dictionary<RectTransform, Lifted> m_Variants = new Dictionary<RectTransform, Lifted>();
         readonly Dictionary<RectTransform, int> m_VariantsRow = new Dictionary<RectTransform, int>();
         // The hints under the bar: the rows' one after the stick's, those of opening and closing the bar at the right
         // edge of the buttons block.
@@ -146,6 +163,7 @@ namespace ActionBarRows
             m_EdgeBottom = paper0.yMin - frame0.yMin;
             m_EdgeTop = frame0.yMax - paper0.yMax;
             m_TbmShift = m_SlotsFrameTbm != null ? Box(m_SlotsFrameTbm).yMax - frame0.yMax : 0f;
+            m_FrameWidth0 = frame0.width;
 
             // The buttons right of the slots: the weapon set button and Belt Bar's copy of it (whose view is not the
             // game's any more, only its name is). Whatever else stands right of the slots moves with them.
@@ -173,7 +191,6 @@ namespace ActionBarRows
             // the paper, under the bar's slots, the top row first (what opens from a lower row is drawn over it).
             int index = paper.GetSiblingIndex() + 1;
             m_SlotsPaper = paper;
-            m_RowsPaper = Copy(paper, m_Bar, "ActionBarRowsPaper", index++);
             m_ButtonsPaper = Copy(paper, m_Bar, "ActionBarButtonsPaper", index++);
             m_ButtonsFrame = Copy(m_SlotsFrame, m_SlotsFrame.parent, "ActionBarButtonsFrame", m_SlotsFrame.GetSiblingIndex() + 1);
 
@@ -193,10 +210,8 @@ namespace ActionBarRows
             foreach (var patch in new[]
             {
                 Patch.Make(m_SlotsFrame, Sides(slotsWidth, frame0.width), slotsFrameY, plainSide),
-                Patch.Make(m_SlotsFrameTbm, Sides(slotsWidth, frame0.width), new[] { 0f, 0.8f, 0.85f, 1f }),
                 Patch.Make(m_ButtonsFrame, Sides(buttonsWidth, frame0.width), frameY),
                 Patch.Make(m_SlotsPaper, paperX, paperY),
-                Patch.Make(m_RowsPaper, paperX, paperY),
                 Patch.Make(m_ButtonsPaper, paperX, paperY),
             })
                 if (patch != null) m_Patches.Add(patch);
@@ -228,10 +243,60 @@ namespace ActionBarRows
             m_Hint = MakeHint();
             BindHint();
 
-            foreach (string path in new[] { "AbilitiesGroupsContainer", "PredictionPanelConsoleView/PredictionHints" })
-                AddTop(m_Main.Find(path) as RectTransform);
+            // The prediction panel of turn-based combat: its own paper and frame, drawn right under it. Its frame is
+            // cut when the panel first shows, to the panel's width.
+            if (m_SlotsFrameTbm != null)
+                foreach (var graphic in m_SlotsFrameTbm.GetComponentsInChildren<Graphic>(true)) graphic.enabled = false;
+            m_Prediction = m_Main.Find("PredictionPanelConsoleView") as RectTransform;
+            if (m_Prediction != null)
+            {
+                m_PredictionHints = m_Prediction.Find("PredictionHints") as RectTransform;
+                Transform under = m_Prediction;
+                while (under.parent != m_Main) under = under.parent;
+                int at = under.GetSiblingIndex();
+                m_PredictionPaper = Copy(paper, m_Main, "ActionBarPredictionPaper", at);
+                m_PredictionFrame = Copy(m_SlotsFrame, m_Main, "ActionBarPredictionFrame", at + 1);
+                var cut = Patch.Make(m_PredictionPaper, paperX, paperY);
+                if (cut != null) m_Patches.Add(cut);
+                m_PredictionPaper.gameObject.SetActive(false);
+                m_PredictionFrame.gameObject.SetActive(false);
+
+                var view = m_Prediction.GetComponent<PredictionPanelBaseView>();
+                var actions = view == null ? null : ActionFields
+                    .Select(name => AccessTools.Field(typeof(PredictionPanelBaseView), name).GetValue(view) as Component)
+                    .Select(action => action != null ? action.transform as RectTransform : null).ToArray();
+                if (actions != null && actions.All(action => action != null))
+                {
+                    m_Actions = actions;
+                    m_ActionWidths = actions.Select(action => Box(action).width).ToArray();
+                    m_ActionHeights = actions.Select(action => Box(action).height).ToArray();
+                    m_ActionGap = Mathf.Clamp(Box(actions[1]).xMin - Box(actions[0]).xMax, 0f, m_Margin);
+                    foreach (var action in actions)
+                    {
+                        for (var parent = action.parent; parent != null && parent != m_Main; parent = parent.parent)
+                        {
+                            foreach (var group in parent.GetComponents<LayoutGroup>()) group.enabled = false;
+                            foreach (var fitter in parent.GetComponents<ContentSizeFitter>()) fitter.enabled = false;
+                        }
+                        Stretch(action);
+                    }
+                }
+                else Main.Log("prediction panel actions not as expected, the panel is moved whole");
+            }
+            else Main.Log("no prediction panel over the bar, it stays where it is");
+            var groups = m_Main.Find("AbilitiesGroupsContainer") as RectTransform;
+            if (groups == null) Main.Log("no AbilitiesGroupsContainer over the bar, it stays where it is");
+            AddTop(groups);
             m_SpellPanel = m_Main.Find("SpellPanelContainer") as RectTransform;
             m_SpellName = m_Main.Find("SpellPanelContainer/SpellNamePanel") as RectTransform;
+            if (m_SpellPanel != null) m_SpellPanelX = m_SpellPanel.anchoredPosition.x;
+            foreach (string name in NameHintFields)
+            {
+                var hint = AccessTools.Field(typeof(ActionBarConsoleView), name).GetValue(View) as Component;
+                var rect = hint != null ? hint.transform as RectTransform : null;
+                if (rect != null) m_NameHints.Add(rect);
+                else Main.Log(name + " not found, it stays where it is");
+            }
             foreach (var button in m_Buttons)
             {
                 var window = button.Find(ButtonPath + "/WeaponSets") as RectTransform;
@@ -272,14 +337,14 @@ namespace ActionBarRows
 
         void AddTop(RectTransform rect)
         {
-            if (rect != null) m_TopItems[rect] = rect.anchoredPosition.y;
+            if (rect != null) m_TopItems[rect] = new Lifted { Base = rect.anchoredPosition.y, Written = rect.anchoredPosition.y };
         }
 
         void AddVariants(ActionBarBaseSlotView slot, int row)
         {
             var variants = slot != null ? slot.transform.Find("SubGroup") as RectTransform : null;
             if (variants == null) return;
-            m_Variants[variants] = variants.anchoredPosition.y;
+            m_Variants[variants] = new Lifted { Base = variants.anchoredPosition.y, Written = variants.anchoredPosition.y };
             m_VariantsRow[variants] = row;
         }
 
@@ -311,6 +376,153 @@ namespace ActionBarRows
             return Rect.MinMaxRect(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y), Mathf.Max(a.x, b.x), Mathf.Max(a.y, b.y));
         }
 
+        // What the prediction panel shows, its hints left out: they move with it.
+        Rect PredictionBox()
+        {
+            var boxes = m_Prediction.GetComponentsInChildren<Graphic>()
+                .Where(g => g.enabled && g.color.a > 0.01f && !(g is TMP_Text && string.IsNullOrEmpty(((TMP_Text)g).text))
+                    && (m_PredictionHints == null || !g.transform.IsChildOf(m_PredictionHints)))
+                .Select(g => Box(g.rectTransform)).ToList();
+            return boxes.Count == 0 ? Box(m_Prediction) : Union(boxes);
+        }
+
+        // An action made wider: what spans it (its back, its name) spans it at any width, the rest stays in the middle.
+        static void Stretch(RectTransform action)
+        {
+            var stretched = new HashSet<Transform> { action };
+            foreach (var rect in action.GetComponentsInChildren<RectTransform>(true))
+            {
+                if (rect == action || !stretched.Contains(rect.parent) || Mathf.Abs(rect.localScale.x - 1f) > 0.01f) continue;
+                var parent = (RectTransform)rect.parent;
+                if (rect.rect.width < 0.9f * parent.rect.width) continue;
+                float left = rect.localPosition.x + rect.rect.xMin - parent.rect.xMin;
+                float right = parent.rect.xMax - rect.localPosition.x - rect.rect.xMax;
+                rect.anchorMin = new Vector2(0f, rect.anchorMin.y);
+                rect.anchorMax = new Vector2(1f, rect.anchorMax.y);
+                rect.offsetMin = new Vector2(left, rect.offsetMin.y);
+                rect.offsetMax = new Vector2(-right, rect.offsetMax.y);
+                stretched.Add(rect);
+            }
+        }
+
+        // The actions side by side between two edges, each at the height the game gives it.
+        void PlaceActions(float left, float right)
+        {
+            float wide = Mathf.Max(0f, (right - left - m_ActionWidths[0] - m_ActionWidths[3] - m_ActionWidths[4] - 4f * m_ActionGap) / 2f);
+            var widths = new[] { m_ActionWidths[0], wide, wide, m_ActionWidths[3], m_ActionWidths[4] };
+            var places = new Rect[widths.Length];
+            float x = left;
+            // The heights are the game's own, measured once: what is placed is never measured back (an action caught
+            // at no size would keep it).
+            for (int i = 0; i < widths.Length; i++)
+            {
+                float y = Box(m_Actions[i]).center.y;
+                places[i] = new Rect(x, y - m_ActionHeights[i] / 2f, widths[i], m_ActionHeights[i]);
+                x += widths[i] + m_ActionGap;
+            }
+            for (int i = 0; i < widths.Length; i++) Place(m_Actions[i], places[i]);
+            float fullY = Box(m_Actions[5]).center.y;
+            Place(m_Actions[5], Rect.MinMaxRect(places[1].xMin, fullY - m_ActionHeights[5] / 2f, places[2].xMax, fullY + m_ActionHeights[5] / 2f));
+        }
+
+        // The prediction panel's hints, as the game makes them: the first at the left edge of the prediction block,
+        // the others at its right edge, a small gap above it. Done again after the game's layout, which stacks them
+        // in its column whenever they change (m_HintsLeft > m_HintsRight: no block, nothing to do). Returns the top
+        // of what shows, or the bottom when nothing does. The hints of the name above (the slot's context menu, the
+        // enemy's inspection) join them in the middle, under the name; out of combat they are back where the game
+        // put them.
+        float m_HintsLeft = 1f, m_HintsRight, m_HintsBottom;
+        readonly List<RectTransform> m_NameHints = new List<RectTransform>();
+        readonly Dictionary<RectTransform, Vector2> m_NameHintsAt = new Dictionary<RectTransform, Vector2>();
+
+        float PlaceHints()
+        {
+            float top = m_HintsBottom - BlockGap;
+            if (m_HintsLeft > m_HintsRight)
+            {
+                foreach (var hint in m_NameHintsAt) hint.Key.anchoredPosition = hint.Value;
+                m_NameHintsAt.Clear();
+                return top;
+            }
+            if (m_PredictionHints != null && m_PredictionHints.gameObject.activeInHierarchy)
+            {
+                float right = m_HintsRight;
+                for (int i = m_PredictionHints.childCount - 1; i >= 0; i--)
+                {
+                    var hint = m_PredictionHints.GetChild(i);
+                    if (!hint.gameObject.activeInHierarchy) continue;
+                    var shown = Visible(hint);
+                    float x = i == 0 ? m_HintsLeft : right - shown.width;
+                    if (i > 0) right = x - 2f * m_Margin;
+                    var moved = new Vector2(x - shown.xMin, m_HintsBottom - shown.yMin);
+                    if (moved.sqrMagnitude > 0.0001f) hint.position += m_Main.TransformVector(moved);
+                    top = Mathf.Max(top, shown.yMax + moved.y);
+                }
+            }
+            // Side by side, together in the middle.
+            var shownHints = m_NameHints.Where(hint => hint.gameObject.activeInHierarchy).ToList();
+            var boxes = shownHints.Select(hint => Visible(hint)).ToList();
+            float at = (m_HintsLeft + m_HintsRight - boxes.Sum(box => box.width) - 2f * m_Margin * Mathf.Max(0, boxes.Count - 1)) / 2f;
+            for (int i = 0; i < shownHints.Count; i++)
+            {
+                var hint = shownHints[i];
+                if (!m_NameHintsAt.ContainsKey(hint)) m_NameHintsAt[hint] = hint.anchoredPosition;
+                var moved = new Vector2(at - boxes[i].xMin, m_HintsBottom - boxes[i].yMin);
+                if (moved.sqrMagnitude > 0.0001f) hint.position += m_Main.TransformVector(moved);
+                top = Mathf.Max(top, boxes[i].yMax + moved.y);
+                at += boxes[i].width + 2f * m_Margin;
+            }
+            return top;
+        }
+
+        void AfterLayout()
+        {
+            try
+            {
+                if (m_Built && !m_Failed) PlaceHints();
+            }
+            catch (Exception e)
+            {
+                Main.Error(e, "prediction hints");
+                Canvas.willRenderCanvases -= AfterLayout;
+            }
+        }
+
+        void OnEnable() { Canvas.willRenderCanvases += AfterLayout; }
+
+        void OnDisable() { Canvas.willRenderCanvases -= AfterLayout; }
+
+        // What a transform shows, its texts by their letters, not their rectangles.
+        Rect Shown(Transform root)
+        {
+            var boxes = new List<Rect>();
+            foreach (var graphic in root.GetComponentsInChildren<Graphic>())
+            {
+                if (!graphic.enabled) continue;
+                var text = graphic as TMP_Text;
+                if (text == null)
+                {
+                    boxes.Add(Box(graphic.rectTransform));
+                    continue;
+                }
+                var bounds = text.textBounds;
+                if (string.IsNullOrEmpty(text.text) || bounds.size.x <= 0f || bounds.size.x > 10000f) continue;
+                Vector2 a = m_Main.InverseTransformPoint(text.transform.TransformPoint(bounds.min));
+                Vector2 b = m_Main.InverseTransformPoint(text.transform.TransformPoint(bounds.max));
+                boxes.Add(Rect.MinMaxRect(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y), Mathf.Max(a.x, b.x), Mathf.Max(a.y, b.y)));
+            }
+            return boxes.Count == 0 ? Box((RectTransform)root) : Union(boxes);
+        }
+
+        // Moves what the game placed by the rows' lift from where the game put it last.
+        static void Lift(RectTransform rect, Lifted lifted, float lift)
+        {
+            var position = rect.anchoredPosition;
+            if (Mathf.Abs(position.y - lifted.Written) > 0.01f) lifted.Base = position.y;
+            lifted.Written = lifted.Base + lift;
+            rect.anchoredPosition = new Vector2(position.x, lifted.Written);
+        }
+
         // What a transform shows: its pictures and texts, which may reach out of its own rectangle.
         Rect Visible(Transform root)
         {
@@ -324,8 +536,10 @@ namespace ActionBarRows
             var parent = (RectTransform)rect.parent;
             Vector2 a = parent.InverseTransformPoint(m_Main.TransformPoint(new Vector3(box.xMin, box.yMin, 0f)));
             Vector2 b = parent.InverseTransformPoint(m_Main.TransformPoint(new Vector3(box.xMax, box.yMax, 0f)));
-            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
             var scale = rect.localScale;
+            // Shrunk to nothing (an animation): no size to give it.
+            if (Mathf.Abs(scale.x) < 0.001f || Mathf.Abs(scale.y) < 0.001f) return;
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
             rect.sizeDelta = new Vector2(Mathf.Abs(b.x - a.x) / scale.x, Mathf.Abs(b.y - a.y) / scale.y);
             rect.anchoredPosition = (a + b) / 2f - parent.rect.center;
         }
@@ -505,30 +719,63 @@ namespace ActionBarRows
         // comes and goes.
         void Layout()
         {
-            bool tbm = Vm != null && Vm.PredictionPanelVm.Value != null;
-            // In turn-based combat the prediction panel stands above the bar: the rows go above it.
-            float shift = tbm ? m_TbmShift : 0f;
+            bool tbm = Vm != null && Vm.PredictionPanelVm.Value != null && m_Prediction != null && m_Prediction.gameObject.activeInHierarchy;
             float extra = (m_Count - 1) * m_Pitch;
             float M = m_Margin;
             var content = SlotsBox();
             var container = Box(m_Slots).center;
             for (int k = 0; k < m_Rows.Count; k++)
             {
-                Place(m_Rows[k].Rect, new Rect(content.x, content.y + shift + (k + 1) * m_Pitch, content.width, content.height));
+                Place(m_Rows[k].Rect, new Rect(content.x, content.y + (k + 1) * m_Pitch, content.width, content.height));
                 m_Rows[k].Copy.anchoredPosition = container - content.center;
             }
 
-            // The slots block: one paper under all rows, the frame around it; in turn-based combat the paper of the
-            // rows is apart from the bar's, above the prediction panel.
-            float rowsTop = content.yMax + (m_Count > 1 ? shift + extra : 0f);
-            bool apart = tbm && m_Count > 1;
-            var paper = Rect.MinMaxRect(content.xMin - M, content.yMin - M, content.xMax + M, (apart ? content.yMax : rowsTop) + M);
+            // The slots block: one paper under all rows, the frame around it.
+            var paper = Rect.MinMaxRect(content.xMin - M, content.yMin - M, content.xMax + M, content.yMax + extra + M);
             Place(m_SlotsPaper, paper);
-            m_RowsPaper.gameObject.SetActive(apart);
-            if (apart) Place(m_RowsPaper, Rect.MinMaxRect(paper.xMin, content.yMin + shift + m_Pitch - M, paper.xMax, rowsTop + M));
             var frame = Rect.MinMaxRect(paper.xMin - m_EdgeX, content.yMin - M - m_EdgeBottom, paper.xMax + m_EdgeX, content.yMax + M + m_EdgeTop + extra);
             Place(m_SlotsFrame, frame);
-            if (m_SlotsFrameTbm != null) Place(m_SlotsFrameTbm, Rect.MinMaxRect(frame.xMin, frame.yMin, frame.xMax, frame.yMax + m_TbmShift));
+            if (m_SlotsFrameTbm != null) Place(m_SlotsFrameTbm, frame);
+
+            // The prediction block: as wide as the slots block, the gap between them the one between the slots and the
+            // buttons blocks.
+            float top = frame.yMax, above = top;
+            if (m_PredictionPaper != null)
+            {
+                m_PredictionPaper.gameObject.SetActive(tbm);
+                m_PredictionFrame.gameObject.SetActive(tbm);
+            }
+            if (tbm)
+            {
+                var shown = PredictionBox();
+                var moved = new Vector2(m_Actions != null ? 0f : frame.center.x - shown.center.x, frame.yMax + BlockGap + m_EdgeBottom + M - shown.yMin);
+                if (moved.sqrMagnitude > 0.0001f) m_Prediction.position += m_Main.TransformVector(moved);
+                shown.position += moved;
+                var predictionPaper = m_Actions != null
+                    ? Rect.MinMaxRect(paper.xMin, shown.yMin - M, paper.xMax, shown.yMax + M)
+                    : Rect.MinMaxRect(shown.xMin - M, shown.yMin - M, shown.xMax + M, shown.yMax + M);
+                if (m_Actions != null) PlaceActions(predictionPaper.xMin + M, predictionPaper.xMax - M);
+                var predictionFrame = Rect.MinMaxRect(predictionPaper.xMin - m_EdgeX, predictionPaper.yMin - m_EdgeBottom,
+                    predictionPaper.xMax + m_EdgeX, predictionPaper.yMax + m_EdgeTop);
+                if (!m_PredictionCut)
+                {
+                    m_PredictionCut = true;
+                    var cut = Patch.Make(m_PredictionFrame, Sides(predictionFrame.width, m_FrameWidth0), new[] { 0f, 0.4f, 0.6f, 1f });
+                    if (cut != null) m_Patches.Add(cut);
+                }
+                Place(m_PredictionPaper, predictionPaper);
+                Place(m_PredictionFrame, predictionFrame);
+                top = predictionFrame.yMax;
+                m_HintsLeft = predictionPaper.xMin;
+                m_HintsRight = predictionPaper.xMax;
+                m_HintsBottom = top + BlockGap;
+                above = Mathf.Max(top, PlaceHints());
+            }
+            else
+            {
+                m_HintsLeft = 1f;
+                m_HintsRight = 0f;
+            }
 
             // The buttons block: the bar's height.
             var buttons = ButtonsBox();
@@ -547,22 +794,27 @@ namespace ActionBarRows
             foreach (var hint in m_RightHints)
                 if (hint.gameObject.activeInHierarchy) MoveX(hint, buttonsFrame.xMax - Visible(hint).xMax);
 
-            // Above the top row stands what stands above the bar alone.
-            foreach (var item in m_TopItems)
-                item.Key.anchoredPosition = new Vector2(item.Key.anchoredPosition.x, item.Value + extra);
+            // Above the top row stands what stands above the bar alone; in turn-based combat, above the prediction
+            // block, where the game's own frame with the panel ended.
+            float over = top - frame.yMax;
+            foreach (var item in m_TopItems) Lift(item.Key, item.Value, extra + (tbm ? over - m_TbmShift : 0f));
             foreach (var item in m_Variants)
             {
                 int row = m_VariantsRow[item.Key];
                 // A window of a row opens above the top row: the rows above that row are lifted over.
-                float lift = row == 0 ? (m_Count > 1 ? shift + extra : 0f) : (m_Count - 1 - row) * m_Pitch;
-                item.Key.anchoredPosition = new Vector2(item.Key.anchoredPosition.x, item.Value + Mathf.Max(0f, lift));
+                Lift(item.Key, item.Value, (m_Count - 1 - row) * m_Pitch + over);
             }
             // The name of the slot and the windows of the buttons stand a small gap above the slots frame (in
-            // turn-based combat, above its frame with the prediction panel).
-            float top = tbm && m_SlotsFrameTbm != null ? frame.yMax + m_TbmShift : frame.yMax;
-            if (m_SpellPanel != null && m_SpellName != null) MoveY(m_SpellPanel, top + BlockGap - Box(m_SpellName).yMin);
+            // turn-based combat, above the prediction block and its hints).
+            if (m_SpellPanel != null && m_SpellName != null)
+            {
+                // In turn-based combat, in the middle over the slots block too.
+                if (tbm) MoveX(m_SpellPanel, frame.center.x - Box(m_SpellName).center.x);
+                else m_SpellPanel.anchoredPosition = new Vector2(m_SpellPanelX, m_SpellPanel.anchoredPosition.y);
+                MoveY(m_SpellPanel, above + BlockGap - Box(m_SpellName).yMin);
+            }
             foreach (var window in m_Windows)
-                if (window.gameObject.activeInHierarchy) MoveY(window, top + BlockGap - Visible(window).yMin);
+                if (window.gameObject.activeInHierarchy) MoveY(window, above + BlockGap - Visible(window).yMin);
         }
 
         void MoveY(RectTransform rect, float dy)
@@ -573,7 +825,9 @@ namespace ActionBarRows
 
         void OnDestroy()
         {
-            m_HintBind?.Dispose();
+            // On quitting the game the input layer of the hint may be gone before it.
+            try { m_HintBind?.Dispose(); }
+            catch (NullReferenceException) { }
             if (Instance == this) Instance = null;
         }
     }

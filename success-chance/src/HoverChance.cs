@@ -578,6 +578,16 @@ namespace SuccessChance
             m_Label.color = Color.white;
             m_Rect = (RectTransform)go.transform;
             m_Rect.sizeDelta = new Vector2(Mathf.Max(m_Rect.sizeDelta.x, 1000), m_Rect.sizeDelta.y);
+#if WOTR
+            // WotR has no layout in the block: the widget stands by its pivot, which is on its left edge, and its text
+            // is aligned left, so the line would start over the head and run to the right: centred over the head.
+            if (place.GetComponent<LayoutGroup>() == null)
+            {
+                m_Rect.anchorMin = m_Rect.anchorMax = m_Rect.pivot = new Vector2(0.5f, 0.5f);
+                m_Rect.anchoredPosition = Vector2.zero;
+                m_Label.alignment = TextAlignmentOptions.Center;
+            }
+#endif
             ChanceLog.Write(string.Format("hover label made in {0} ({1}), font {2} (template {3}, auto {4}..{5}), layout {6}", place.name,
                 place.root.name, m_Label.fontSize, fontSize, m_Label.fontSizeMin, m_Label.fontSizeMax,
                 place.GetComponent<LayoutGroup>()?.GetType().Name ?? "none"));
