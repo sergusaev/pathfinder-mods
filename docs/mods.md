@@ -19,6 +19,7 @@ All mods are on the release pages: [pathfinder-mods](https://github.com/sergusae
 | Mod | Game | File in the release | Folder in `Mods` |
 |---|---|---|---|
 | [Unity Mod Manager in Game Menus](../umm-menu-button) | both | `UmmMenuButton-…-kingmaker.zip` / `…-wotr.zip` | `UmmMenuButton` |
+| [Action Bar Rows](../action-bar-rows) | both | `ActionBarRows-…-kingmaker.zip` / `…-wotr.zip` | `ActionBarRows` |
 | [Belt Bar](../belt-bar) | both | `BeltBar-…-kingmaker.zip` / `…-wotr.zip` | `BeltBar` |
 | [Belt Consumables Refill](../belt-consumables-refill) | both | `BeltConsumablesRefill-…-kingmaker.zip` / `…-wotr.zip` | `BeltConsumablesRefill` |
 | [Level 1 Companions & Free Respec](../level1-companions) | both | `Level1Companions-…-kingmaker.zip` / `…-wotr.zip` | `Level1Companions` |

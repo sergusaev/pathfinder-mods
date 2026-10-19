@@ -22,6 +22,22 @@ namespace BeltBar
     // top. In every cell sits a copy of an action bar slot, bound to the game's own slot logic: a belt item is used by
     // the same code as from any slot of the bar (the charges of a wand, the refill of the slot, the mark of an item
     // switched on).
+    // The owner of a navigation that has nothing below: told when down goes nowhere.
+    sealed class DownCloses : IConsoleNavigationOwner, INavigationDownDirectionHandler
+    {
+        readonly Action m_Close;
+
+        internal DownCloses(Action close) { m_Close = close; }
+
+        public void EntityFocused(IConsoleEntity entity) { }
+
+        public bool HandleDown()
+        {
+            m_Close();
+            return true;
+        }
+    }
+
     sealed class BeltRow : IDisposable
     {
         const string CellPrefix = "ActionBarWeaponSetConsoleView";
@@ -93,7 +109,8 @@ namespace BeltBar
             if (group != null) group.alpha = 1f;
             m_Sets.gameObject.SetActive(true);
 
-            m_Nav = new GridConsoleNavigationBehaviour(null, null, new Vector2Int(1, 0));
+            // Down from the row, with the stick as with the D-pad, closes it: up opened it.
+            m_Nav = new GridConsoleNavigationBehaviour(new DownCloses(() => m_Button.CloseRow(false)), null, new Vector2Int(1, 0));
             m_Nav.SetEntitiesHorizontal(entities);
             m_Nav.FocusOnFirstValidEntity();
 

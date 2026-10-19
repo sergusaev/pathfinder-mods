@@ -13,6 +13,7 @@ A Unity Mod Manager mod that lets you rotate the camera in Pathfinder: Kingmaker
 | Right stick, rotate mode | — | left/right rotates the camera, up/down zooms |
 | D-pad Up | zoom in (repeats while held) | toggle turn-based mode |
 | D-pad Down | inspect (repeats while held) | inspect (once per press) |
+| L3 (click the left stick) | highlight objects | highlight objects on holding: the press is left free, so [Action Bar Rows](../action-bar-rows) can switch its rows with it. The Highlight hint at the compass shows the hold ring |
 
 - The camera mode hint sits above the compass and names the mode the button switches to: "Rotate Camera" while moving, "Move Camera" while rotating. The texts are WotR's own (English, Russian, German, French, Chinese; other languages use English).
 - The turn-based mode hint stays where it was and now shows the D-pad Up icon.

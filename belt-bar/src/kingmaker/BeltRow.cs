@@ -127,6 +127,8 @@ namespace BeltBar
             m_Layer.AddButton(delegate { Confirm(); }, 8);
             m_Layer.AddButton(delegate { m_Button.CloseRow(false); }, 9);
             m_Layer.AddButton(delegate { m_Button.CloseRow(false); }, 7);
+            // The stick down too: the stick up opened the row.
+            m_Layer.AddButton(delegate { m_Button.CloseRow(false); }, 1, Rewired.InputActionEventType.NegativeButtonJustPressed);
             GamePad.Instance.PushLayer(m_Layer);
             Game.Instance.UI.Common.UISound.Play(UISoundType.ActionBarFocusOn);
         }

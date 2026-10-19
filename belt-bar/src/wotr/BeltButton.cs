@@ -22,7 +22,7 @@ namespace BeltBar
     // of the weapon set button with its window, so it looks the same; the icon is the belt the unit wears, a
     // placeholder when it wears none. The bar is made wider by the button; the slots and the weapon set button stay
     // where they were.
-    sealed class BeltButton : MonoBehaviour, IConsoleNavigationEntity, IConsoleEntity, IConfirmClickHandler
+    sealed class BeltButton : MonoBehaviour, IConsoleNavigationEntity, IConsoleEntity, IConfirmClickHandler, INavigationUpDirectionHandler
     {
         const string CopyName = "BeltBarSetView";
         // The button is 50 wide; the slots of the bar are 11 apart.
@@ -235,6 +235,15 @@ namespace BeltBar
         public void OnConfirmClick()
         {
             Open();
+        }
+
+        // Up from the button, with the stick as with the D-pad, opens the row, as the weapon set button opens its
+        // window. Without items there is nothing to open: up goes on as usual.
+        public bool HandleUp()
+        {
+            if (m_Pet || !m_HasItems) return false;
+            Open();
+            return true;
         }
 
         internal void Open()

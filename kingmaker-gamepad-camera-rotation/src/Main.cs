@@ -47,6 +47,7 @@ namespace GamepadCameraRotation
         internal const int DPadUp = 6;
         internal const int DPadDown = 7;
         internal const int RightStickButton = 19;
+        internal const int LeftStickButton = 18;
         const float DeadZone = 0.2f;
         const string LocalMapContext = "LocalMapInputContext";
 

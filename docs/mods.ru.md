@@ -19,6 +19,7 @@
 | Мод | Игра | Файл в релизе | Папка в `Mods` |
 |---|---|---|---|
 | [Unity Mod Manager in Game Menus](../umm-menu-button/README.ru.md) | обе | `UmmMenuButton-…-kingmaker.zip` / `…-wotr.zip` | `UmmMenuButton` |
+| [Action Bar Rows](../action-bar-rows/README.ru.md) | обе | `ActionBarRows-…-kingmaker.zip` / `…-wotr.zip` | `ActionBarRows` |
 | [Belt Bar](../belt-bar/README.ru.md) | обе | `BeltBar-…-kingmaker.zip` / `…-wotr.zip` | `BeltBar` |
 | [Belt Consumables Refill](../belt-consumables-refill/README.ru.md) | обе | `BeltConsumablesRefill-…-kingmaker.zip` / `…-wotr.zip` | `BeltConsumablesRefill` |
 | [Level 1 Companions & Free Respec](../level1-companions/README.ru.md) | обе | `Level1Companions-…-kingmaker.zip` / `…-wotr.zip` | `Level1Companions` |
