@@ -32,6 +32,7 @@ namespace WotrFixes
             new Harmony(modEntry.Info.Id).PatchAll(typeof(Main).Assembly);
             if (Settings.FrameInterval > 1) FramePacing.Apply();
             IncrementalGc.Sync(false);
+            QuitWatchdog.Arm();
             return true;
         }
 

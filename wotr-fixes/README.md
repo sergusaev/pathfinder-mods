@@ -56,6 +56,14 @@ Custom portraits are subfolders of `Portraits` with `Small.png` (185×242), `Med
 
 This used to be the separate mod Portrait Scroll Fix (gamepad) (`Mods/PortraitScrollFix`). Delete its folder: while the old mod is on, WotR Fixes leaves the scrolling to it, so the list is not scrolled twice, and says so in the log. Tested in the game on the Steam Deck as the old mod.
 
+### The game keeps running after quitting on the Steam Deck
+
+**Symptom.** After quitting to the desktop the game is gone from the screen, but Steam shows it still running and does not start it again; the game ends only when Steam is told to stop it.
+
+**Cause.** The game quits to the end: `Player.log` gets its last lines. But the process stays: its main thread is over while the threads of the engine (DXVK, sound, input) wait for it forever. In the Steam log every session on the deck ended only when the game was started next time.
+
+**Fix.** When the game has done its own work at quitting (`Game.HandleQuit`: settings, saves, temporary area files, logs), the mod starts a system timer. If the process is still running 3 seconds later, the timer ends it. Saves are not affected: they are written before that. If the game never gets to that work, a second timer ends the process 15 seconds after quitting starts. A game that ends by itself is gone before the timers fire. The UMM log gets the line `quit: the process is ended in 3 s if it is still running`. Tested in the game on the Steam Deck.
+
 ## Settings: smooth frames on the Steam Deck
 
 Both are off by default and live in the mod's settings in the Unity Mod Manager window. Measured on a Steam Deck OLED (90 Hz) with the graphics lowered: SSR and depth of field off, SSAO and shadows Medium, FXAA.
