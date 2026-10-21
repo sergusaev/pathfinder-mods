@@ -14,6 +14,7 @@ using Owlcat.Runtime.UI.ConsoleTools.GamepadInput;
 using Owlcat.Runtime.UI.ConsoleTools.HintTool;
 using Owlcat.Runtime.UI.ConsoleTools.NavigationTool;
 using TMPro;
+using TurnBased.Controllers;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -72,7 +73,7 @@ namespace ActionBarRows
         ConsoleHint m_Hint;
         IDisposable m_HintBind;
         InputBindStruct m_Bind;
-        bool m_Built, m_Failed;
+        bool m_Built, m_Failed, m_OthersTurn;
         int m_Count = 1;
 
         // The blocks: papers and frames. The slots' paper and frame are the game's own, the rest are copies. The
@@ -81,6 +82,8 @@ namespace ActionBarRows
         RectTransform m_Prediction, m_PredictionHints, m_PredictionPaper, m_PredictionFrame;
         bool m_PredictionCut;
         float m_FrameWidth0;
+        float[] m_FrameY;
+        Patch.Side m_Side;
         // The panel's actions laid out by the rows, side by side over the whole width of the slots block: five-foot
         // step, move, standard, swift, free; the full round one over move and standard. The move and the standard
         // share what the others leave.
@@ -199,18 +202,19 @@ namespace ActionBarRows
             // turn-based one at the top, above the prediction panel.
             float slotsWidth = content0.width + 2f * (m_Margin + m_EdgeX);
             float buttonsWidth = buttons0.width + 2f * (m_Margin + m_EdgeX);
-            // The sides are the ornaments of the two corners meeting in the middle; the slots frame grows by a plain
-            // stretch of its side put between them, one line of the picture taken right under the top corner's gem,
-            // where the side is a plain bar.
-            var frameY = new[] { 0f, 0.4f, 0.6f, 1f };
-            var slotsFrameY = new[] { 0f, 0.5f, 0.5f, 1f };
-            var plainSide = new[] { 0.835f, 0.84f };
+            // The corners with their gems and curls keep their size; the sides between them, the swirl in the middle
+            // gone, are the top edge turned on end (ActionBarConsoleBack, 1672 x 204: the top corner 82 pixels high,
+            // the bottom one 62, the top edge from 10 to 48 pixels down, its studs every 31 pixels).
+            var frameY = new[] { 0f, 82f / 204f, 1f - 62f / 204f, 1f };
+            var side = new Patch.Side { Bar = new Rect(620f, 10f, 61f, 38f), Outer = 8f, Inner = 46f, InsideY = 100f };
+            m_FrameY = frameY;
+            m_Side = side;
             var paperX = new[] { 0f, 0.03f, 0.97f, 1f };
             var paperY = new[] { 0f, 0.3f, 0.7f, 1f };
             foreach (var patch in new[]
             {
-                Patch.Make(m_SlotsFrame, Sides(slotsWidth, frame0.width), slotsFrameY, plainSide),
-                Patch.Make(m_ButtonsFrame, Sides(buttonsWidth, frame0.width), frameY),
+                Patch.Make(m_SlotsFrame, Sides(slotsWidth, frame0.width), frameY, side),
+                Patch.Make(m_ButtonsFrame, Sides(buttonsWidth, frame0.width), frameY, side),
                 Patch.Make(m_SlotsPaper, paperX, paperY),
                 Patch.Make(m_ButtonsPaper, paperX, paperY),
             })
@@ -610,6 +614,13 @@ namespace ActionBarRows
                     m_Built = true;
                     Refresh();
                 }
+                // Out of the party's turns the bar is the game's one row: the rows come back with the next turn.
+                bool othersTurn = OthersTurn();
+                if (othersTurn != m_OthersTurn)
+                {
+                    m_OthersTurn = othersTurn;
+                    Refresh();
+                }
                 Layout();
             }
             catch (Exception e)
@@ -626,7 +637,7 @@ namespace ActionBarRows
             try
             {
                 UnitEntityData unit = Vm.SelectedUnit.Value;
-                int count = unit != null ? Mathf.Clamp(unit.UISettings.Phase + 1, 1, MaxRows) : 1;
+                int count = unit != null && !m_OthersTurn ? Mathf.Clamp(unit.UISettings.Phase + 1, 1, MaxRows) : 1;
                 int page = Vm.CurrentPageIndex.Value;
                 for (int k = 0; k < m_Rows.Count; k++)
                 {
@@ -654,11 +665,19 @@ namespace ActionBarRows
             try
             {
                 UnitEntityData unit = Vm != null ? Vm.SelectedUnit.Value : null;
-                if (unit == null) return;
+                if (unit == null || m_OthersTurn) return;
                 unit.UISettings.Phase = (Mathf.Clamp(unit.UISettings.Phase, 0, MaxRows - 1) + 1) % MaxRows;
                 Refresh();
             }
             catch (Exception e) { Main.Error(e, "rows toggle"); }
+        }
+
+        // In turn-based combat, the turn of a unit the player does not control (an enemy, a neutral).
+        static bool OthersTurn()
+        {
+            if (!CombatController.IsInTurnBasedCombat()) return false;
+            var unit = Game.Instance.TurnBasedCombatController.CurrentTurn?.Rider;
+            return unit == null || !unit.IsDirectlyControllable;
         }
 
         bool NavigationMatches(int count)
@@ -786,7 +805,7 @@ namespace ActionBarRows
                 if (!m_PredictionCut)
                 {
                     m_PredictionCut = true;
-                    var cut = Patch.Make(m_PredictionFrame, Sides(predictionFrame.width, m_FrameWidth0), new[] { 0f, 0.4f, 0.6f, 1f });
+                    var cut = Patch.Make(m_PredictionFrame, Sides(predictionFrame.width, m_FrameWidth0), m_FrameY, m_Side);
                     if (cut != null) m_Patches.Add(cut);
                 }
                 Place(m_PredictionPaper, predictionPaper);

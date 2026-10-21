@@ -202,40 +202,15 @@ namespace SuccessChance
         internal static SpellPrediction Predict(AbilityData ability, UnitEntityData target)
         {
             var p = new SpellPrediction { Name = ability.Name };
+            if (ability.Blueprint.HasVariants) return p;
+            // A spell held as a charge (Inflict Wounds, Shocking Grasp) does its work by the touch it gives the
+            // caster: that touch, made from the spell as UnitUseAbility makes it for a reach spell.
+            var sticky = ability.Blueprint.StickyTouch;
+            if (sticky != null && sticky.TouchDeliveryAbility != null) ability = new AbilityData(ability, sticky.TouchDeliveryAbility);
             var blueprint = ability.Blueprint;
-            if (blueprint.HasVariants) return p;
             var caster = ability.Caster.Unit;
             var wrapper = new TargetWrapper(target);
-            // The parameters rule removes some facts after it (RemoveAfterCast) and before it (metamagic for one
-            // spell): it runs dry, its result calculated as its OnTrigger does.
-            AbilityParams parameters = null;
-#if WOTR
-            // As AbilityData.CalculateParams: an item's or a fact's own parameters, or a calculator component of the
-            // ability, else the rule with the ability's overrides.
-            if (ability.SourceItemEquipmentBlueprint != null || ability.Fact?.OverrideParams != null
-                || blueprint.GetComponent<Kingmaker.UnitLogic.Mechanics.Components.ContextAbilityParamsCalculator>() != null)
-                parameters = ability.CalculateParams();
-            else
-            {
-                var rule = new RuleCalculateAbilityParams(caster, ability)
-                {
-                    ReplaceDC = ability.OverrideDC,
-                    ReplaceSpellLevel = ability.OverrideSpellLevel,
-                    ReplaceCasterLevel = ability.OverrideCasterLevel,
-                    ReplaceStatBonusModifier = ability.OverrideCasterModifier,
-                    IgnoreDCBonuses = ability.IgnoreDCBonuses,
-                };
-#else
-            if (ability.SourceItemEquipmentBlueprint != null || ability.Fact?.OverrideParams != null)
-                parameters = ability.CalculateParams();
-            else
-            {
-                var rule = new RuleCalculateAbilityParams(caster, ability) { ReplaceDC = ability.OverrideDC, ReplaceSpellLevel = ability.OverrideSpellLevel };
-#endif
-                DryRun.Run(rule, () => rule.OnTrigger(Kingmaker.Game.Instance.Rulebook.Context));
-                parameters = rule.Result;
-            }
-            var context = new AbilityExecutionContext(ability, parameters, wrapper);
+            var context = new AbilityExecutionContext(ability, Params(ability, caster), wrapper);
 
             foreach (var component in blueprint.ComponentsArray)
             {
@@ -278,6 +253,95 @@ namespace SuccessChance
 
             if (target != caster && !blueprint.StickyTouch) p.SpellResistance = SpellResistance(context, target);
 
+            Effects(p, blueprint, context, target, wrapper);
+
+            // A touch whose effect is another spell it casts on the target (Inflict Wounds): that spell's saving throw
+            // and damage, made as ContextActionCastSpell makes it, its spell resistance checked again.
+            if (p.Save == null && p.DamageMax < 0 && p.Maneuver == null)
+            {
+                var cast = FindCast(blueprint);
+                if (cast != null)
+                {
+                    var spell = new AbilityData(cast.Spell, caster.Descriptor);
+#if WOTR
+                    if (cast.MarkAsChild) spell.IsChildSpell = true;
+                    if (cast.OverrideSpellbook) spell.OverrideSpellbook = ability.OverrideSpellbook ?? ability.Spellbook;
+#endif
+                    if (cast.OverrideDC) spell.OverrideDC = cast.DC.Calculate(context);
+                    if (cast.OverrideSpellLevel) spell.OverrideSpellLevel = cast.SpellLevel.Calculate(context);
+                    var inner = new AbilityExecutionContext(spell, Params(spell, caster), wrapper);
+                    if (target != caster && !cast.Spell.StickyTouch)
+                    {
+                        var resistance = SpellResistance(inner, target);
+                        if (p.SpellResistance == null) p.SpellResistance = resistance;
+                        else
+                        {
+                            p.SpellResistance.Pass *= resistance.Pass;
+                            p.SpellResistance.Immune |= resistance.Immune;
+                        }
+                    }
+                    Effects(p, cast.Spell, inner, target, wrapper);
+                }
+            }
+            return p;
+        }
+
+        // The parameters (DC, caster level) as the cast would calculate them.
+        static AbilityParams Params(AbilityData ability, UnitEntityData caster)
+        {
+            var blueprint = ability.Blueprint;
+            // The parameters rule removes some facts after it (RemoveAfterCast) and before it (metamagic for one
+            // spell): it runs dry, its result calculated as its OnTrigger does.
+            AbilityParams parameters = null;
+#if WOTR
+            // As AbilityData.CalculateParams: an item's or a fact's own parameters, or a calculator component of the
+            // ability, else the rule with the ability's overrides.
+            if (ability.SourceItemEquipmentBlueprint != null || ability.Fact?.OverrideParams != null
+                || blueprint.GetComponent<Kingmaker.UnitLogic.Mechanics.Components.ContextAbilityParamsCalculator>() != null)
+                parameters = ability.CalculateParams();
+            else
+            {
+                var rule = new RuleCalculateAbilityParams(caster, ability)
+                {
+                    ReplaceDC = ability.OverrideDC,
+                    ReplaceSpellLevel = ability.OverrideSpellLevel,
+                    ReplaceCasterLevel = ability.OverrideCasterLevel,
+                    ReplaceStatBonusModifier = ability.OverrideCasterModifier,
+                    IgnoreDCBonuses = ability.IgnoreDCBonuses,
+                };
+#else
+            if (ability.SourceItemEquipmentBlueprint != null || ability.Fact?.OverrideParams != null)
+                parameters = ability.CalculateParams();
+            else
+            {
+                var rule = new RuleCalculateAbilityParams(caster, ability) { ReplaceDC = ability.OverrideDC, ReplaceSpellLevel = ability.OverrideSpellLevel };
+#endif
+                DryRun.Run(rule, () => rule.OnTrigger(Kingmaker.Game.Instance.Rulebook.Context));
+                parameters = rule.Result;
+            }
+            return parameters;
+        }
+
+        // The first spell cast by the ability's effect on the target by its caster.
+        static ContextActionCastSpell FindCast(Kingmaker.UnitLogic.Abilities.Blueprints.BlueprintAbility blueprint)
+        {
+            foreach (var component in blueprint.ComponentsArray)
+            {
+                var run = component as AbilityEffectRunAction;
+                var cast = run == null ? null : Find<ContextActionCastSpell>(run.Actions, 0);
+#if WOTR
+                if (cast != null && cast.CastByTarget) cast = null;
+#endif
+                if (cast != null && cast.Spell != null && !cast.Spell.HasVariants) return cast;
+            }
+            return null;
+        }
+
+        // The first saving throw, the damage and a combat maneuver of the ability's effect.
+        static void Effects(SpellPrediction p, Kingmaker.UnitLogic.Abilities.Blueprints.BlueprintAbility blueprint, AbilityExecutionContext context,
+            UnitEntityData target, TargetWrapper wrapper)
+        {
+            var caster = context.MaybeCaster;
             foreach (var component in blueprint.ComponentsArray)
             {
                 var run = component as AbilityEffectRunAction;
@@ -321,7 +385,6 @@ namespace SuccessChance
                 if (rule != null) p.Maneuver = ManeuverChance.Predict(rule);
                 break;
             }
-            return p;
         }
 
 #if WOTR

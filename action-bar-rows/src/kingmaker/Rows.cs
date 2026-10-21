@@ -200,13 +200,17 @@ namespace ActionBarRows
             // kept; the frame of the buttons is too short for the middle one. The paper fills the opening of the frame
             // exactly with the middle of its picture: its own edges are soft, meant to be hidden under the frame.
             var frameX = new[] { 0f, 0.035f, 0.47f, 0.53f, 0.965f, 1f };
-            var frameY = new[] { 0f, 0.4f, 0.6f, 1f };
+            // The corners keep their size; the sides between them are the top edge turned on end
+            // (Tbm_BackgroundActionM, 817 x 86: corners 32 pixels high, the top edge from 2 to 17 pixels down, its
+            // stitches every 10 pixels).
+            var frameY = new[] { 0f, 32f / 86f, 1f - 32f / 86f, 1f };
+            var side = new Patch.Side { Bar = new Rect(150f, 2f, 100f, 15f), Outer = 3f, Inner = 18f, InsideY = 43f };
             var paperX = new[] { 0.15f, 0.85f };
             var paperY = new[] { 0.3f, 0.7f };
             foreach (var patch in new[]
             {
-                Patch.Make(m_SlotsFrame, frameX, frameY),
-                Patch.Make(m_ButtonsFrame, new[] { 0f, 0.035f, 0.965f, 1f }, frameY),
+                Patch.Make(m_SlotsFrame, frameX, frameY, side),
+                Patch.Make(m_ButtonsFrame, new[] { 0f, 0.035f, 0.965f, 1f }, frameY, side),
                 Patch.Make(m_SlotsPaper, paperX, paperY),
                 Patch.Make(m_ButtonsPaper, paperX, paperY),
             })
@@ -288,7 +292,7 @@ namespace ActionBarRows
                 int at = under.GetSiblingIndex();
                 m_PredictionPaper = Copy(paper, m_Root, "ActionBarPredictionPaper", at);
                 m_PredictionFrame = Copy(m_SlotsFrame, m_Root, "ActionBarPredictionFrame", at + 1);
-                foreach (var patch in new[] { Patch.Make(m_PredictionPaper, paperX, paperY), Patch.Make(m_PredictionFrame, frameX, frameY) })
+                foreach (var patch in new[] { Patch.Make(m_PredictionPaper, paperX, paperY), Patch.Make(m_PredictionFrame, frameX, frameY, side) })
                     if (patch != null) m_Patches.Add(patch);
                 m_PredictionPaper.gameObject.SetActive(false);
                 m_PredictionFrame.gameObject.SetActive(false);
