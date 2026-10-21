@@ -62,7 +62,7 @@ This used to be the separate mod Portrait Scroll Fix (gamepad) (`Mods/PortraitSc
 
 **Cause.** The game quits to the end: `Player.log` gets its last lines. But the process stays: its main thread is over while the threads of the engine (DXVK, sound, input) wait for it forever. In the Steam log every session on the deck ended only when the game was started next time.
 
-**Fix.** When the game has done its own work at quitting (`Game.HandleQuit`: settings, saves, temporary area files, logs), the mod starts a system timer. If the process is still running 3 seconds later, the timer ends it. Saves are not affected: they are written before that. If the game never gets to that work, a second timer ends the process 15 seconds after quitting starts. A game that ends by itself is gone before the timers fire. The UMM log gets the line `quit: the process is ended in 3 s if it is still running`. Tested in the game on the Steam Deck.
+**Fix.** When the game has done its own work at quitting (`Game.HandleQuit`: settings, saves, temporary area files, logs), the mod starts a system timer. If the process is still running 3 seconds later, the timer ends it. Saves are not affected: they are written before that. In the main menu the game has no such work (saves are written before it quits), so the timer starts at once; in a loaded game, if the game never gets to that work, a second timer ends the process 15 seconds after quitting starts. A game that ends by itself is gone before the timers fire. The UMM log gets the line `quit: the process is ended in 3 s if it is still running`. Tested in the game on the Steam Deck: a process stuck after quitting from the main menu is ended.
 
 ## Settings: smooth frames on the Steam Deck
 

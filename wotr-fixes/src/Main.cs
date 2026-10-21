@@ -38,32 +38,40 @@ namespace WotrFixes
 
         static readonly string[] Intervals = { "Game's own", "Every 2nd", "Every 3rd", "Every 4th" };
 
+        // Wrapped, so that the long lines fit the window's width instead of widening it.
+        static GUIStyle s_Text, s_Toggle;
+
         static void OnGUI(UnityModManager.ModEntry modEntry)
         {
+            if (s_Text == null)
+            {
+                s_Text = new GUIStyle(GUI.skin.label) { wordWrap = true };
+                s_Toggle = new GUIStyle(GUI.skin.toggle) { wordWrap = true };
+            }
             int hz = Screen.currentResolution.refreshRate;
             GUILayout.Label("Frame pacing: a frame every N refreshes of the screen (" + hz + " Hz now), the same time for every frame. "
                 + "On the Steam Deck use it instead of the frame limit of the quick access menu, which limits only what is shown: "
-                + "the game keeps drawing faster and the picture judders.");
+                + "the game keeps drawing faster and the picture judders.", s_Text);
             int selected = Mathf.Clamp(Settings.FrameInterval - 1, 0, Intervals.Length - 1);
-            int chosen = GUILayout.Toolbar(selected, Intervals);
+            int chosen = GUILayout.Toolbar(selected, Intervals, GUILayout.ExpandWidth(true));
             if (chosen != selected)
             {
                 Settings.FrameInterval = chosen == 0 ? 0 : chosen + 1;
                 FramePacing.Apply();
             }
             if (Settings.FrameInterval > 1 && hz > 0)
-                GUILayout.Label("  " + hz + " Hz / " + Settings.FrameInterval + " = " + Mathf.RoundToInt((float)hz / Settings.FrameInterval) + " fps");
+                GUILayout.Label("  " + hz + " Hz / " + Settings.FrameInterval + " = " + Mathf.RoundToInt((float)hz / Settings.FrameInterval) + " fps", s_Text);
 
             GUILayout.Space(10);
             bool gc = GUILayout.Toggle(Settings.IncrementalGc, " Incremental garbage collection: the collector's pauses (about 0.3 s "
                 + "every few minutes on the Steam Deck) are split into slices of 3 ms. Written to Wrath_Data/boot.config, takes "
-                + "effect at the next start of the game; written back at start if a Steam update or file check removed it.");
+                + "effect at the next start of the game; written back at start if a Steam update or file check removed it.", s_Toggle);
             if (gc != Settings.IncrementalGc)
             {
                 Settings.IncrementalGc = gc;
                 IncrementalGc.Sync(true);
             }
-            GUILayout.Label("  Now: " + IncrementalGc.Status());
+            GUILayout.Label("  Now: " + IncrementalGc.Status(), s_Text);
         }
     }
 }

@@ -9,9 +9,10 @@ namespace WotrFixes
     // On the Steam Deck the game does not end after quitting: Player.log is written to its last line and the window is
     // gone, but the main thread is over while 25 threads of the engine (DXVK, sound, input) wait on forever, and Steam
     // shows the game running until it is started again. The game's own work at quitting is Game.HandleQuit (prefs,
-    // saves, the area stash, logs), so a process still alive a few seconds after it is ended; if the game never gets
-    // there, a process still alive some seconds after quitting starts is ended. The timer is the system's own and calls
-    // TerminateProcess itself: threads of Mono stop while the engine shuts down.
+    // saves, the area stash, logs), called by the Runner of a loaded game, so a process still alive a few seconds after
+    // it is ended; a process that may never get there, a little later. Without a Runner (the main menu) there is nothing
+    // to wait for: the saves are written before the game asks to quit (SystemUtil.ApplicationQuit). The timer is the
+    // system's own and calls TerminateProcess itself: threads of Mono stop while the engine shuts down.
     static class QuitWatchdog
     {
         internal const uint AfterHandleQuitMs = 3000;
@@ -34,7 +35,10 @@ namespace WotrFixes
 
         static void OnQuitting()
         {
-            EndIn(AfterQuittingMs);
+            bool runner;
+            try { runner = UnityEngine.Object.FindObjectOfType<Runner>() != null; }
+            catch { runner = true; }
+            EndIn(runner ? AfterQuittingMs : AfterHandleQuitMs);
         }
 
         internal static void EndIn(uint delayMs)
