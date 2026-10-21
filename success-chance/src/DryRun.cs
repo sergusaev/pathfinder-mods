@@ -192,10 +192,28 @@ namespace SuccessChance
             }
         }
 
+        static readonly Dictionary<Type, PropertyInfo> s_Runtime = new Dictionary<Type, PropertyInfo>();
+
+        // The handler keeps what it set in the runtime of its fact, which it reaches only while that runtime is the
+        // context of the event: "did trigger" is called in it, as the event bus calls it (RulebookSubscribersList).
         static void Postfix(object __instance, RuleAttackRoll evt)
         {
             var handler = __instance as IRulebookHandler<RuleAttackRoll>;
-            if (DryRun.Active && handler != null) DryRun.AtEnd(() => handler.OnEventDidTrigger(evt));
+            if (!DryRun.Active || handler == null) return;
+            var runtime = Runtime(__instance);
+            DryRun.AtEnd(() =>
+            {
+                using (runtime?.RequestEventContext()) handler.OnEventDidTrigger(evt);
+            });
+        }
+
+        // The runtime of a fact's component, to call it later in its context.
+        internal static ISubscriptionProxy Runtime(object component)
+        {
+            PropertyInfo property;
+            var type = component.GetType();
+            if (!s_Runtime.TryGetValue(type, out property)) s_Runtime[type] = property = AccessTools.Property(type, "Runtime");
+            return property?.GetValue(component, null) as ISubscriptionProxy;
         }
     }
 
@@ -218,7 +236,11 @@ namespace SuccessChance
         static void Postfix(object __instance, object __state)
         {
             if (!DryRun.Active) return;
-            DryRun.AtEnd(() => Traverse.Create(__instance).Property("Data").Field("Spell").SetValue(__state));
+            var runtime = CleanedUpHandlers.Runtime(__instance);
+            DryRun.AtEnd(() =>
+            {
+                using (runtime?.RequestEventContext()) Traverse.Create(__instance).Property("Data").Field("Spell").SetValue(__state);
+            });
         }
     }
 

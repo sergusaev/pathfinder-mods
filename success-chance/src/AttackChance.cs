@@ -7,6 +7,7 @@ using Kingmaker.EntitySystem.Entities;
 using Kingmaker.Enums;
 using Kingmaker.Items;
 using Kingmaker.RuleSystem;
+using Kingmaker.PubSubSystem;
 using Kingmaker.RuleSystem.Rules;
 using Kingmaker.UI.SettingsUI;
 using Kingmaker.UnitLogic;
@@ -60,6 +61,10 @@ namespace SuccessChance
         public List<string> Notes = new List<string>();
         // Terms of abilities that turn on at the attack, named by their buff.
         public List<Part> PendingParts = new List<Part>();
+        // Damage those abilities add to the weapon's (Power Attack, Deadly Aim).
+        public int PendingDamage;
+        // A combat maneuver the attack makes on a hit (a wolf's trip with its bite), its chance counted with the hit.
+        public ManeuverPrediction Maneuver;
         public double Hit;
         public double Crit;
         // Damage of a hit that is not a critical one: the weapon's dice and bonuses (no sneak attack and other damage
@@ -88,6 +93,8 @@ namespace SuccessChance
             if (ParryBonus != int.MinValue) s += " | parry +" + ParryBonus;
             if (Fortification > 0) s += " | fortification " + Fortification + "%";
             if (Rerolls != null && Rerolls.Count > 0) s += " | d20: " + D20.Describe(Rerolls);
+            if (PendingDamage != 0) s += string.Format(" | damage {0:+0;-0} at the attack", PendingDamage);
+            if (Maneuver != null) s += " | on hit " + Maneuver;
             if (Notes.Count > 0) s += " | " + string.Join("; ", Notes.ToArray());
             return s;
         }
@@ -138,7 +145,7 @@ namespace SuccessChance
         // as WeaponParametersAttackBonus would add it. Components of other kinds are named in the notes. In WotR that
         // buff (and any other buff of the attacker) may in turn put a buff on right before each attack with a weapon
         // (AddInitiatorAttackWithWeaponTrigger, TriggerBeforeAttack): Power Attack's own bonus comes so.
-        static int OnAttackBonus(UnitEntityData attacker, ItemEntityWeapon weapon, RuleAttackWithWeapon attack, AttackPrediction p)
+        static int OnAttackBonus(UnitEntityData attacker, RuleCalculateWeaponStats stats, RuleAttackWithWeapon attack, AttackPrediction p)
         {
             var pending = new List<KeyValuePair<BlueprintBuff, string>>();
             foreach (var ability in attacker.Descriptor.ActivatableAbilities.Enumerable)
@@ -151,6 +158,7 @@ namespace SuccessChance
                 pending.Add(new KeyValuePair<BlueprintBuff, string>(bp.Buff, bp.Name));
             }
 #if WOTR
+            var weapon = stats.Weapon;
             var sources = new List<KeyValuePair<BlueprintBuff, string>>(pending);
             foreach (var buff in attacker.Descriptor.Buffs.Enumerable)
                 sources.Add(new KeyValuePair<BlueprintBuff, string>(buff.Blueprint, buff.Name));
@@ -162,7 +170,7 @@ namespace SuccessChance
             int total = 0;
             foreach (var entry in pending)
             {
-                int bonus = BuffAttackBonus(entry.Key, attacker, weapon, attack, p);
+                int bonus = BuffAttackBonus(entry.Key, attacker, stats, attack, p);
                 if (bonus != 0) p.Notes.Add(string.Format("{0} {1:+0;-0} (turns on at the attack)", entry.Value, bonus));
                 total += bonus;
             }
@@ -199,12 +207,25 @@ namespace SuccessChance
 #endif
 
         // The attack bonus a buff that is not on yet would give to an attack with this weapon.
-        static int BuffAttackBonus(BlueprintBuff buff, UnitEntityData attacker, ItemEntityWeapon weapon, RuleAttackWithWeapon attack, AttackPrediction p)
+        static int BuffAttackBonus(BlueprintBuff buff, UnitEntityData attacker, RuleCalculateWeaponStats stats, RuleAttackWithWeapon attack, AttackPrediction p)
         {
+            var weapon = stats.Weapon;
             int bonus = 0;
             MechanicsContext context = null;
             foreach (var component in buff.ComponentsArray)
             {
+                // Damage added to the weapon's, as the component adds it to the weapon stats of the attack.
+                var damageBonus = component as WeaponParametersDamageBonus;
+                if (damageBonus != null)
+                {
+                    if (context == null)
+                    {
+                        context = new MechanicsContext(attacker, attacker.Descriptor, buff);
+                        context.RecalculateRanks();
+                    }
+                    p.PendingDamage += DamageBonus(damageBonus, attacker, stats, context);
+                    continue;
+                }
                 // A bonus to the attack stat, as Fighting Defensively has: its value comes from the buff's
                 // context (ranks and properties of the unit), calculated here as the buff would on turning on.
                 var statBonus = component as AddStatBonus;
@@ -291,6 +312,156 @@ namespace SuccessChance
             return bonus;
         }
 
+#if WOTR
+        static readonly System.Reflection.FieldInfo CheckGrip = AccessTools.Field(typeof(WeaponParametersDamageBonus), "m_checkGripStyle");
+        static readonly System.Reflection.FieldInfo Grip = AccessTools.Field(typeof(WeaponParametersDamageBonus), "m_gripStyle");
+
+        // As WeaponParametersDamageBonus.OnEventAboutToTrigger(RuleCalculateWeaponStats), for a buff of rank 1.
+        static int DamageBonus(WeaponParametersDamageBonus c, UnitEntityData attacker, RuleCalculateWeaponStats stats, MechanicsContext context)
+        {
+            var weapon = stats.Weapon;
+            var bp = weapon.Blueprint;
+            int value = c.UseContextIstead ? c.ContextDamageBonus.Calculate(context) : c.DamageBonus;
+            if (attacker.HasFact(c.MythicBlueprint)) value++;
+            if (c.ScaleByBasicAttackBonus) value *= 1 + attacker.Stats.BaseAttackBonus.ModifiedValue / 4;
+            bool finesse = !c.OnlyFinessable || bp.Type.Category.HasSubCategory(WeaponSubCategory.Finessable)
+                || (attacker.Get<DamageGracePart>()?.HasEntry(bp.Category) ?? false)
+                || (c.CanBeUsedWithFightersFinesse && attacker.HasFact(c.FightersFinesse)
+                    && (attacker.Get<UnitPartWeaponTraining>()?.GetWeaponRank(weapon) ?? 0) > 0);
+            bool range = c.Ranged == bp.IsRanged;
+            bool hands = !c.OnlyTwoHanded || bp.IsTwoHanded;
+            bool dual = !c.DualWielding || (attacker.Body.PrimaryHand.HasWeapon && attacker.Body.SecondaryHand.HasWeapon);
+            bool offHand = !c.OnlyToOffHandBonus || weapon.Wielder?.Body.SecondaryHand?.MaybeWeapon == weapon;
+            bool specific = !c.OnlySpecificItemBlueprint || bp == c.Weapon;
+            var grip = (GripType)Grip.GetValue(c);
+            bool gripOk = !(bool)CheckGrip.GetValue(c) || (grip == GripType.TwoHanded && weapon.HoldInTwoHands) || (grip == GripType.OneHanded && !weapon.HoldInTwoHands);
+            if (c.PowerAttackScaling)
+            {
+                if (stats.IsSecondary) value /= 2;
+                else if (weapon.HoldInTwoHands)
+                    value = attacker.Descriptor.HasFact(c.GreaterPowerAttackBlueprint) ? value * 2
+                        : attacker.HasFact(c.MythicBlueprint) ? value * 5 / 3 : value * 3 / 2;
+            }
+            return finesse && range && hands && dual && offHand && specific && gripOk ? value : 0;
+        }
+#else
+        // As WeaponParametersDamageBonus.OnEventAboutToTrigger(RuleCalculateWeaponStats), for a buff of rank 1.
+        static int DamageBonus(WeaponParametersDamageBonus c, UnitEntityData attacker, RuleCalculateWeaponStats stats, MechanicsContext context)
+        {
+            var weapon = stats.Weapon;
+            var bp = weapon.Blueprint;
+            int value = c.DamageBonus;
+            if (c.ScaleByBasicAttackBonus) value *= 1 + attacker.Stats.BaseAttackBonus.ModifiedValue / 4;
+            bool finesse = !c.OnlyFinessable || bp.Type.Category.HasSubCategory(WeaponSubCategory.Finessable)
+                || (attacker.Get<DamageGracePart>()?.HasEntry(bp.Category) ?? false);
+            bool range = c.Ranged == bp.IsRanged;
+            bool hands = !c.OnlyTwoHanded || bp.IsTwoHanded;
+            if (c.PowerAttackScaling)
+            {
+                if ((bp.Type.IsLight && !bp.IsUnarmed && !bp.IsNatural) || weapon.IsSecondary) value /= 2;
+                else if (weapon.HoldInTwoHands)
+                    value = attacker.Descriptor.HasFact(c.GreaterPowerAttackBlueprint) ? value * 2 : value * 3 / 2;
+            }
+            return finesse && range && hands ? value : 0;
+        }
+#endif
+
+        // Bonuses to the target's armor class that its facts give only while an attack with a weapon goes on (against
+        // the attacker's alignment, against a kind of weapon, against attacks of opportunity: Protection from Evil and
+        // the like). The dry run has no such attack: their "about to trigger" is called with a copy of it, and their
+        // "did trigger" with the copy's end undoes them when the dry run ends. Bodyguard is left out: it spends an
+        // attack of opportunity.
+        static readonly HashSet<Type> AttackStartAC = new HashSet<Type>
+        {
+            typeof(ArmorClassBonusAgainstAlignment), typeof(ACBonusAgainstAttacks), typeof(ACBonusAgainstWeaponCategory),
+            typeof(ACBonusAgainstWeaponGroup), typeof(ACBonusAgainstWeaponSubcategory), typeof(ACBonusAgainstWeaponType),
+#if WOTR
+            typeof(ACBonusAgainstAttackOfOpportunity), typeof(ACContextBonusAgainstWeaponSubcategory),
+#endif
+        };
+
+        static void WeaponAttackStart(RuleAttackRoll roll)
+        {
+            var real = roll.RuleAttackWithWeapon;
+            var attack = new RuleAttackWithWeapon(roll.Initiator, roll.Target, roll.Weapon, roll.AttackBonusPenalty);
+            if (real != null)
+            {
+                attack.IsAttackOfOpportunity = real.IsAttackOfOpportunity;
+                attack.IsFirstAttack = real.IsFirstAttack;
+                attack.IsFullAttack = real.IsFullAttack;
+                attack.IsCharge = real.IsCharge;
+                attack.AttackNumber = real.AttackNumber;
+            }
+            var started = new List<Action>();
+#if WOTR
+            foreach (var fact in roll.Target.Facts.List)
+                foreach (var component in fact.Active ? fact.Components : Enumerable.Empty<Kingmaker.EntitySystem.EntityFactComponent>())
+                {
+                    var handler = component.SourceBlueprintComponent as IRulebookHandler<RuleAttackWithWeapon>;
+                    if (handler == null || !AttackStartAC.Contains(handler.GetType())) continue;
+                    var runtime = component as ISubscriptionProxy;
+                    if (Call(() => { using (runtime?.RequestEventContext()) handler.OnEventAboutToTrigger(attack); }))
+                        started.Add(() => { using (runtime?.RequestEventContext()) handler.OnEventDidTrigger(attack); });
+                }
+#else
+            var target = roll.Target.Descriptor;
+            var facts = new List<Kingmaker.Blueprints.Facts.Fact>(target.Progression.Features.Enumerable);
+            facts.AddRange(target.Buffs.Enumerable);
+            foreach (var fact in facts)
+            {
+                if (!fact.Active) continue;
+                foreach (var component in fact.Components)
+                {
+                    var handler = component as IRulebookHandler<RuleAttackWithWeapon>;
+                    if (handler == null || !AttackStartAC.Contains(handler.GetType())) continue;
+                    var f = fact;
+                    if (Call(() => { using (new Kingmaker.Designers.EventConditionActionSystem.ContextData.FactData(f)) handler.OnEventAboutToTrigger(attack); }))
+                        started.Add(() => { using (new Kingmaker.Designers.EventConditionActionSystem.ContextData.FactData(f)) handler.OnEventDidTrigger(attack); });
+                }
+            }
+#endif
+            DryRun.AtEnd(() =>
+            {
+                foreach (var end in started) Call(end);
+                attack.OnDidTrigger();
+            });
+        }
+
+        static bool Call(Action action)
+        {
+            try
+            {
+                action();
+                return true;
+            }
+            catch (Exception e)
+            {
+                Main.Log.Error("dry run: weapon attack handler: " + e.Message);
+                return false;
+            }
+        }
+
+        // The damage DistanceDamageBonus (Point Blank Shot) adds to a ranged weapon's damage, as it decides it when the
+        // damage is dealt.
+        static int DistanceDamage(UnitEntityData attacker, UnitEntityData target, ItemEntityWeapon weapon)
+        {
+            if (!weapon.Blueprint.IsRanged) return 0;
+            int total = 0;
+            foreach (var fact in ManeuverChance.Facts(attacker))
+                foreach (var component in fact.Blueprint.ComponentsArray)
+                {
+                    var bonus = component as DistanceDamageBonus;
+                    if (bonus == null) continue;
+#if WOTR
+                    if (fact.MaybeContext?.MaybeCaster?.Parts.Get<UnitPartDisableBonusForDamage>()?.DisableAdditionalDamage == true) continue;
+                    if (target.DistanceTo(attacker) <= bonus.Range.Meters + target.Corpulence + attacker.Corpulence) total += bonus.DamageBonus;
+#else
+                    if (target.DistanceTo(attacker) < bonus.Range.Meters) total += bonus.DamageBonus;
+#endif
+                }
+            return total;
+        }
+
         static void Calculate(RuleAttackRoll roll, AttackPrediction p)
         {
             var attacker = roll.Initiator;
@@ -308,6 +479,15 @@ namespace SuccessChance
                 p.CritDamageMin += i == 0 ? min * multiplier : min;
                 p.CritDamageMax += i == 0 ? max * multiplier : max;
             }
+            // Abilities that turn on at the attack: their attack bonus is added below, their damage goes with the
+            // weapon's own bonus, multiplied on a critical hit.
+            p.OnAttackBonus = OnAttackBonus(attacker, roll.WeaponStats, roll.RuleAttackWithWeapon, p);
+            // Point Blank Shot adds its damage only when the damage is dealt, multiplied on a critical hit too.
+            int dealt = p.PendingDamage + DistanceDamage(attacker, target, roll.Weapon);
+            p.DamageMin += dealt;
+            p.DamageMax += dealt;
+            p.CritDamageMin += dealt * multiplier;
+            p.CritDamageMax += dealt * multiplier;
             p.DamageMin = Math.Max(1, p.DamageMin);
             p.DamageMax = Math.Max(p.DamageMin, p.DamageMax);
             p.CritDamageMin = Math.Max(1, p.CritDamageMin);
@@ -344,10 +524,11 @@ namespace SuccessChance
                 }
             }
 
+            WeaponAttackStart(roll);
 #if WOTR
             // As RuleAttackRoll.OnTrigger: flat-footed forced by the roll, the roll's own bonuses copied to the attack
             // bonus, with the weapon stats of the roll.
-            var ac = Rulebook.Trigger(new RuleCalculateAC(attacker, target, roll.AttackType) { ForceFlatFooted = roll.ForceFlatFooted });
+            var ac =Rulebook.Trigger(new RuleCalculateAC(attacker, target, roll.AttackType) { ForceFlatFooted = roll.ForceFlatFooted });
             var abRule = new RuleCalculateAttackBonus(attacker, target, roll.WeaponStats, roll.AttackBonusPenalty) { TargetIsFlanked = roll.TargetIsFlanked };
             abRule.CopyModifiersFrom(roll);
             Rulebook.Trigger(abRule);
@@ -360,7 +541,6 @@ namespace SuccessChance
             p.ArmorClassParts = Breakdown.ArmorClass(ac, target);
             p.AttackBonus = abRule.Result;
             p.AttackBonusParts = Breakdown.AttackBonus(abRule, attacker);
-            p.OnAttackBonus = OnAttackBonus(attacker, roll.Weapon, roll.RuleAttackWithWeapon, p);
             p.AttackBonus += p.OnAttackBonus;
             p.AttackBonusParts.AddRange(p.PendingParts);
             int ab = p.AttackBonus, acValue = p.TargetAC;
@@ -418,6 +598,7 @@ namespace SuccessChance
             }
             p.Hit = p.PassConcealment * hit;
             p.Crit = p.PassConcealment * crit;
+            p.Maneuver = ManeuverChance.OnHit(attacker, target, roll.Weapon, abRule);
         }
     }
 }

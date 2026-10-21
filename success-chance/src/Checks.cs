@@ -47,6 +47,12 @@ namespace SuccessChance
                     if (sr.Context != null && sr.Initiator != null) s_Pending[evt] = SpellChance.SpellResistance(sr.Context, sr.Target);
                     return;
                 }
+                var maneuver = evt as RuleCombatManeuver;
+                if (maneuver != null)
+                {
+                    if (maneuver.Initiator != null && maneuver.Target != null) s_Pending[evt] = ManeuverChance.Predict(ManeuverChance.Copy(maneuver));
+                    return;
+                }
                 var roll = evt as RuleAttackRoll;
                 if (roll != null && roll.RuleAttackWithWeapon == null && roll.Weapon != null && roll.Target != null)
                     s_Pending[evt] = AttackChance.Predict(roll.Initiator, roll.Target, roll.Weapon, roll.AttackBonusPenalty, null, roll.Reason);
@@ -70,8 +76,34 @@ namespace SuccessChance
         }
     }
 
-    class SpellChecks : IGlobalRulebookHandler<RuleSavingThrow>, IGlobalRulebookHandler<RuleSpellResistanceCheck>
+    class SpellChecks : IGlobalRulebookHandler<RuleSavingThrow>, IGlobalRulebookHandler<RuleSpellResistanceCheck>,
+        IGlobalRulebookHandler<RuleCombatManeuver>
     {
+        public void OnEventAboutToTrigger(RuleCombatManeuver evt)
+        {
+        }
+
+        public void OnEventDidTrigger(RuleCombatManeuver evt)
+        {
+            var p = EarlyPredictions.Take(evt) as ManeuverPrediction;
+            if (p == null || !Main.Settings.Logging) return;
+            try
+            {
+                int die = GameRules.Die(evt);
+                bool mismatch = die > 0 && (evt.InitiatorCMB != p.CMB || evt.TargetCMD != p.CMD);
+                var sb = new System.Text.StringBuilder();
+                sb.AppendFormat("{0} -> {1} maneuver [{2}]: {3}\n    real: {4}", AttackCheck.Name(evt.Initiator), AttackCheck.Name(evt.Target),
+                    AttackCheck.ReasonName(evt), p, evt.Success ? "success" : "failed");
+                if (die > 0) sb.AppendFormat(", d20 {0} + {1} vs CMD {2}", die, evt.InitiatorCMB, evt.TargetCMD);
+                if (mismatch) sb.Append("\n    <<< MISMATCH");
+                ChanceLog.Write(sb.ToString());
+            }
+            catch (Exception e)
+            {
+                Main.Error("maneuver check", e);
+            }
+        }
+
         public void OnEventAboutToTrigger(RuleSavingThrow evt)
         {
         }

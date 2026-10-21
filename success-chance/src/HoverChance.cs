@@ -214,11 +214,30 @@ namespace SuccessChance
                 if (s_Cache.Count > 200) s_Cache.Clear();
                 s_Cache[key] = m_Text;
                 if (Main.Settings.LogAttacks)
-                    ChanceLog.Write(string.Format("hover {0} -> {1}{2}: {3:0.0} ms", AttackCheck.Name(attacker), AttackCheck.Name(target),
-                        ability != null ? " [" + ability.Name + "]" : "", ms));
+                    ChanceLog.Write(string.Format("hover {0} -> {1}{2}: {3:0.0} ms: {4}", AttackCheck.Name(attacker), AttackCheck.Name(target),
+                        ability != null ? " [" + ability.Name + "]" : "", ms, Plain(m_Text)));
             }
             if (newTarget || m_Place == null) Locate();
-            else if (m_Label != null && m_Label.text != m_Text) m_Label.text = m_Text;
+            else if (m_Label != null && m_Label.text != m_Text) SetText(m_Text);
+        }
+
+        // Without a layout in the block (WotR) the box is as wide as the longest line and centred over the head, the
+        // lines aligned left in it and standing on its bottom edge, so that more lines go up.
+        void SetText(string text)
+        {
+            m_Label.text = text ?? "";
+            if (!m_FitWidth) return;
+            float width = string.IsNullOrEmpty(text) ? 0 : m_Label.GetPreferredValues(m_Label.text).x;
+            m_Rect.sizeDelta = new Vector2(Mathf.Ceil(width) + 2, m_Rect.sizeDelta.y);
+        }
+
+        bool m_FitWidth;
+
+        // The text as shown, without its colors, its lines on one line (for the log).
+        static string Plain(string text)
+        {
+            if (text == null) return "nothing";
+            return System.Text.RegularExpressions.Regex.Replace(text, "<[^>]*>", "").Replace("\n", " | ");
         }
 
         // The overtip of the target, searched once for the entry and again only when overtips are bound anew.
@@ -247,7 +266,7 @@ namespace SuccessChance
                 var text = child.GetComponent<CombatTextController>();
                 if (text != null && child.gameObject.activeSelf) s_GameTexts.Add(text);
             }
-            m_Label.text = m_Text ?? "";
+            SetText(m_Text);
             // Placed as the game's own combat text (a miss, damage): in the block's layout, nothing calculated.
             m_Rect.SetAsLastSibling();
         }
@@ -409,24 +428,31 @@ namespace SuccessChance
             return predictions;
         }
 
+        // One line an attack, in the order of the series (the first one, with the best bonus, on top): its chance, its
+        // damage, the critical hit and a maneuver the hit makes.
         internal static string SeriesText(List<AttackPrediction> predictions)
         {
             if (predictions == null || predictions.Count == 0) return null;
-            var first = predictions[0];
-            // One attack: its chance, its damage and the critical hit. A series, shortly: the first attack with its
-            // critical hit, the last one, and the damage if every attack hits (the full list goes to the breakdown).
-            if (predictions.Count == 1)
-                return Colored(first.Hit, first.Hit) + ", " + Damage(first.DamageMin, first.DamageMax) + CritText(first);
+            var lines = new List<string>();
+            foreach (var p in predictions) lines.Add(AttackText(p));
+            return string.Join("\n", lines.ToArray());
+        }
+
+        static string AttackText(AttackPrediction p)
+        {
+            return Colored(p.Hit, p.Hit) + ", " + Damage(p.DamageMin, p.DamageMax) + CritText(p) + OnHitText(p);
+        }
+
+        // The maneuver of a hit, its chance counted with the hit's.
+        static string OnHitText(AttackPrediction p)
+        {
+            var m = p.Maneuver;
+            if (m == null) return "";
             bool ru = LocalizationManager.CurrentLocale == Locale.ruRU;
-            var last = predictions[predictions.Count - 1];
-            int min = 0, max = 0;
-            foreach (var p in predictions)
-            {
-                min += p.DamageMin;
-                max += p.DamageMax;
-            }
-            return string.Format("{0} {1}{2} / {3} {4}, {5} {6}", Ordinal(1, ru), Colored(first.Hit, first.Hit), CritText(first),
-                Ordinal(predictions.Count, ru), Colored(last.Hit, last.Hit), ru ? "общий" : "total", Damage(min, max));
+            string name = ManeuverChance.Name(m.Type, ru).ToLowerInvariant();
+            if (m.Immune) return ", " + name + " " + (ru ? "невозможно" : "impossible");
+            double chance = p.Hit * m.Success;
+            return ", " + name + " " + Colored(chance, chance);
         }
 
 #if !WOTR
@@ -460,8 +486,9 @@ namespace SuccessChance
             return "<color=#" + ColorUtility.ToHtmlStringRGB(Red) + ">" + min + "-" + max + "</color>";
         }
 
-        // The attack roll, the spell resistance and the chance the target fails its save; nothing when the spell
-        // rolls none of them.
+        // The attack roll, the spell resistance, the chance the target fails its save and a maneuver's chance; nothing
+        // when the spell rolls none of them. Projectiles with an attack roll each (Scorching Ray) are a line each, as
+        // many as the spell sends; those without one (Magic Missile) put their count before the damage.
         internal static string SpellText(SpellPrediction p)
         {
             if (p == null || p.Empty) return null;
@@ -476,15 +503,35 @@ namespace SuccessChance
                 double fail = 1 - p.Save.Pass;
                 parts.Add(SaveName(p.Save.Type, ru) + " " + Colored(fail, fail));
             }
+            if (p.Maneuver != null)
+            {
+                string name = ManeuverChance.Name(p.Maneuver.Type, ru);
+                parts.Add(p.Maneuver.Immune ? name + " " + (ru ? "невозможно" : "impossible")
+                    : name + " " + Colored(p.Maneuver.Success, p.Maneuver.Success));
+            }
+            bool lines = p.Attack != null && p.Projectiles > 1;
+            int times = lines ? 1 : p.Projectiles;
             // The damage after the last part (after the save: on a failed save / on a passed one), or alone.
             if (p.DamageMax >= 0)
             {
-                string damage = Damage(p.DamageMin, p.DamageMax);
-                if (p.Save != null && p.SavedMax >= 0) damage += " / " + Damage(p.SavedMin, p.SavedMax);
+                string damage = Damage(p.DamageMin, p.DamageMax, times);
+                if (p.Save != null && p.SavedMax >= 0) damage += " / " + Damage(p.SavedMin, p.SavedMax, times);
                 if (parts.Count > 0) parts[parts.Count - 1] += ", " + damage;
                 else parts.Add((ru ? "Урон " : "Damage ") + damage);
             }
-            return string.Join(" ", parts.ToArray());
+            string line = string.Join(" ", parts.ToArray());
+            if (!lines) return line;
+            var all = new string[p.Projectiles];
+            for (int i = 0; i < all.Length; i++) all[i] = line;
+            return string.Join("\n", all);
+        }
+
+        // The damage of several projectiles: their count before the damage of one, "4x(2-5)" (a plain x: the game's
+        // fonts may have no multiplication sign).
+        static string Damage(int min, int max, int times)
+        {
+            if (times <= 1) return Damage(min, max);
+            return "<color=#" + ColorUtility.ToHtmlStringRGB(Red) + ">" + times + "x(" + min + "-" + max + ")</color>";
         }
 
         internal static string SaveName(SavingThrowType type, bool ru)
@@ -579,13 +626,15 @@ namespace SuccessChance
             m_Rect = (RectTransform)go.transform;
             m_Rect.sizeDelta = new Vector2(Mathf.Max(m_Rect.sizeDelta.x, 1000), m_Rect.sizeDelta.y);
 #if WOTR
-            // WotR has no layout in the block: the widget stands by its pivot, which is on its left edge, and its text
-            // is aligned left, so the line would start over the head and run to the right: centred over the head.
+            // WotR has no layout in the block: the widget stands by its pivot, which is on its left edge, so the text
+            // would start over the head and run to the right: the box is centred over the head and fitted to the text
+            // (SetText).
             if (place.GetComponent<LayoutGroup>() == null)
             {
                 m_Rect.anchorMin = m_Rect.anchorMax = m_Rect.pivot = new Vector2(0.5f, 0.5f);
                 m_Rect.anchoredPosition = Vector2.zero;
-                m_Label.alignment = TextAlignmentOptions.Center;
+                m_Label.alignment = TextAlignmentOptions.BottomLeft;
+                m_FitWidth = true;
             }
 #endif
             ChanceLog.Write(string.Format("hover label made in {0} ({1}), font {2} (template {3}, auto {4}..{5}), layout {6}", place.name,

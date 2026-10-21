@@ -87,8 +87,14 @@ namespace SuccessChance
         public int DamageMax = -1;
         public int SavedMin = -1;
         public int SavedMax = -1;
+        // Projectiles the spell sends at the target (Magic Missile, Scorching Ray): each one is a whole spell on the
+        // target, with its own attack roll, spell resistance and damage.
+        public int Projectiles = 1;
+        // A combat maneuver of the ability's effect (Trip, Bull Rush).
+        public ManeuverPrediction Maneuver;
 
-        public bool Empty => Attack == null && Save == null && DamageMax < 0 && (SpellResistance == null || SpellResistance.Pass >= 1);
+        public bool Empty => Attack == null && Save == null && DamageMax < 0 && Maneuver == null
+            && (SpellResistance == null || SpellResistance.Pass >= 1);
     }
 
     static class SpellChance
@@ -237,6 +243,17 @@ namespace SuccessChance
                 if (touch != null && touch.TouchWeapon != null && p.Attack == null)
                     p.Attack = AttackChance.Predict(caster, target, Weapon(touch.TouchWeapon), 0, null, context);
                 var projectile = component as AbilityDeliverProjectile;
+                if (projectile != null && projectile.Type != AbilityProjectileType.Line && projectile.Type != AbilityProjectileType.Cone)
+                {
+                    // As AbilityDeliverProjectile: the count from the ability's rank, at most one per projectile it
+                    // has; a hacked spell of a magus sends one.
+                    context.RecalculateRanks();
+                    int count = projectile.UseMaxProjectilesCount ? context[projectile.MaxProjectilesCountRank] : projectile.Projectiles.Length;
+                    p.Projectiles = Math.Max(1, Math.Min(count, projectile.Projectiles.Length));
+#if WOTR
+                    if (ability.MagicHackData != null) p.Projectiles = 1;
+#endif
+                }
                 if (projectile != null && projectile.NeedAttackRoll && projectile.Type != AbilityProjectileType.Line && projectile.Type != AbilityProjectileType.Cone && p.Attack == null)
                 {
 #if WOTR
@@ -292,6 +309,16 @@ namespace SuccessChance
                 var damage = run == null ? null : Find<ContextActionDealDamage>(run.Actions, 0);
                 if (damage == null || DamageKind.GetValue(damage)?.ToString() != "Damage" || damage.ReadPreRolledFromSharedValue) continue;
                 Damage(p, damage, context);
+                break;
+            }
+
+            foreach (var component in blueprint.ComponentsArray)
+            {
+                var run = component as AbilityEffectRunAction;
+                var maneuver = run == null ? null : Find<ContextActionCombatManeuver>(run.Actions, 0);
+                if (maneuver == null) continue;
+                var rule = ManeuverChance.Rule(maneuver, context, caster, target);
+                if (rule != null) p.Maneuver = ManeuverChance.Predict(rule);
                 break;
             }
             return p;

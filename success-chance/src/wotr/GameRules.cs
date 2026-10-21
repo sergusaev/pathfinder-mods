@@ -46,6 +46,9 @@ namespace SuccessChance
         // The die of the attack roll (0 when it was not rolled).
         internal static int Die(RuleAttackRoll roll) => roll.D20?.Result ?? 0;
 
+        // The die of a combat maneuver (0 when it was not rolled).
+        internal static int Die(RuleCombatManeuver maneuver) => maneuver.InitiatorRoll?.Result ?? 0;
+
         static readonly FieldInfo SpellPenetrationBonus = AccessTools.Field(typeof(RuleSpellResistanceCheck), "m_AdditionalSpellPenetration");
         static readonly MethodInfo SpellResistanceSetter = AccessTools.PropertySetter(typeof(RuleSpellResistanceCheck), nameof(RuleSpellResistanceCheck.SpellResistance));
 

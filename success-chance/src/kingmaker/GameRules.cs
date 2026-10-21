@@ -36,6 +36,8 @@ namespace SuccessChance
 
         internal static int Die(RuleAttackRoll roll) => roll.Roll.Value;
 
+        internal static int Die(RuleCombatManeuver maneuver) => maneuver.InitiatorRoll.Value;
+
         internal static int Result(RuleCalculateAC ac) => ac.TargetAC;
 
         internal static bool AlwaysChance(UnitEntityData unit) => false;
