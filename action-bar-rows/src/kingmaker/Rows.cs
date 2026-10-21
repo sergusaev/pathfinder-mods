@@ -383,9 +383,12 @@ namespace ActionBarRows
         }
 
         // The rectangle of a transform in the panel's own coordinates.
+        // The corners are taken into one array for all calls: measured every frame.
+        static readonly Vector3[] s_Corners = new Vector3[4];
+
         Rect Box(RectTransform rect)
         {
-            var corners = new Vector3[4];
+            var corners = s_Corners;
             rect.GetWorldCorners(corners);
             Vector2 a = m_Root.InverseTransformPoint(corners[0]), b = m_Root.InverseTransformPoint(corners[2]);
             return Rect.MinMaxRect(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y), Mathf.Max(a.x, b.x), Mathf.Max(a.y, b.y));

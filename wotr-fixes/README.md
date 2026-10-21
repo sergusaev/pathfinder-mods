@@ -56,9 +56,17 @@ Custom portraits are subfolders of `Portraits` with `Small.png` (185×242), `Med
 
 This used to be the separate mod Portrait Scroll Fix (gamepad) (`Mods/PortraitScrollFix`). Delete its folder: while the old mod is on, WotR Fixes leaves the scrolling to it, so the list is not scrolled twice, and says so in the log. Tested in the game on the Steam Deck as the old mod.
 
+## Settings: smooth frames on the Steam Deck
+
+Both are off by default and live in the mod's settings in the Unity Mod Manager window. Measured on a Steam Deck OLED (90 Hz) with the graphics lowered: SSR and depth of field off, SSAO and shadows Medium, FXAA.
+
+**Frame pacing.** With vsync the game shows a frame every refresh of the screen or none. When it cannot draw a frame every refresh, frames stay on the screen for different times: on the Deck at about 35 fps they took 22, 33 and 44 ms by turns, and the picture judders. The frame limit of the Deck's quick access menu does not help: it limits only the frames shown, while the game goes on drawing faster (about 57 frames a second with 30 shown). The setting "a frame every N refreshes" (2nd, 3rd or 4th) makes the engine itself wait for every N-th refresh (`QualitySettings.vSyncCount`): on the 90 Hz Deck "every 3rd" gives 30 fps, every frame 33 ms. The setting is kept when the game applies its graphics settings. On the Deck turn the quick access menu frame limit off or set it to the same rate.
+
+**Incremental garbage collection.** The engine stops the game for the whole collection of unused memory: on the Deck about 0.3 s every two to three minutes of play. With incremental collection the engine does it in slices of 3 ms between frames. The engine reads it only from `Wrath_Data/boot.config` at start (`gc-max-time-slice=3`), so the setting writes that line and takes effect at the next start of the game. A Steam update or file check puts the game's own `boot.config` back; the mod writes the line again at the next start, so the collection is incremental again from the start after that. Turned off in the settings, the line is taken out. The settings show whether incremental collection is on now.
+
 ## Installing
 
-Unpack the release zip into the game's `Mods` folder, so that the mod is in `Mods/WotrFixes`. Nothing to bind and no settings. Setting up Unity Mod Manager: [Steam Deck](../docs/steam-deck.md), [Windows](../docs/windows.md); installing the mod: [by hand](../docs/mods.md).
+Unpack the release zip into the game's `Mods` folder, so that the mod is in `Mods/WotrFixes`. Nothing to bind; the settings are optional (above). Setting up Unity Mod Manager: [Steam Deck](../docs/steam-deck.md), [Windows](../docs/windows.md); installing the mod: [by hand](../docs/mods.md).
 
 ## Building
 

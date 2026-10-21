@@ -348,16 +348,32 @@ namespace ActionBarRows
             m_VariantsRow[variants] = row;
         }
 
-        // The slots themselves: their container has no size of its own.
+        // The slots themselves: their container has no size of its own. Measured every frame, so without LINQ: the
+        // garbage of every frame brings the game's long collections sooner.
         Rect SlotsBox()
         {
-            return Union(m_MainSlots.Where(s => s != null).Select(s => Box((RectTransform)s.transform)));
+            Rect union = Rect.zero;
+            bool any = false;
+            foreach (var slot in m_MainSlots)
+                if (slot != null) Grow(ref union, ref any, Box((RectTransform)slot.transform));
+            return union;
         }
 
         // The buttons themselves: their views are wider than they are.
         Rect ButtonsBox()
         {
-            return Union(m_Buttons.Where(b => b.gameObject.activeSelf).Select(b => Box((RectTransform)b.Find(ButtonPath))));
+            Rect union = Rect.zero;
+            bool any = false;
+            foreach (var button in m_Buttons)
+                if (button.gameObject.activeSelf) Grow(ref union, ref any, Box((RectTransform)button.Find(ButtonPath)));
+            return union;
+        }
+
+        static void Grow(ref Rect union, ref bool any, Rect box)
+        {
+            union = any ? Rect.MinMaxRect(Mathf.Min(union.xMin, box.xMin), Mathf.Min(union.yMin, box.yMin),
+                Mathf.Max(union.xMax, box.xMax), Mathf.Max(union.yMax, box.yMax)) : box;
+            any = true;
         }
 
         static Rect Union(IEnumerable<Rect> rects)
@@ -367,10 +383,12 @@ namespace ActionBarRows
             return Rect.MinMaxRect(boxes.Min(b => b.xMin), boxes.Min(b => b.yMin), boxes.Max(b => b.xMax), boxes.Max(b => b.yMax));
         }
 
-        // The rectangle of a transform in the bar's coordinates.
+        // The rectangle of a transform in the bar's coordinates. The corners are taken into one array for all calls.
+        static readonly Vector3[] s_Corners = new Vector3[4];
+
         Rect Box(RectTransform rect)
         {
-            var corners = new Vector3[4];
+            var corners = s_Corners;
             rect.GetWorldCorners(corners);
             Vector2 a = m_Main.InverseTransformPoint(corners[0]), b = m_Main.InverseTransformPoint(corners[2]);
             return Rect.MinMaxRect(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y), Mathf.Max(a.x, b.x), Mathf.Max(a.y, b.y));
@@ -523,11 +541,19 @@ namespace ActionBarRows
             rect.anchoredPosition = new Vector2(position.x, lifted.Written);
         }
 
-        // What a transform shows: its pictures and texts, which may reach out of its own rectangle.
+        // What a transform shows: its pictures and texts, which may reach out of its own rectangle. Measured every
+        // frame: the list of graphics is one for all calls.
+        static readonly List<Graphic> s_Graphics = new List<Graphic>();
+
         Rect Visible(Transform root)
         {
-            var boxes = root.GetComponentsInChildren<Graphic>().Where(g => g.enabled).Select(g => Box(g.rectTransform)).ToList();
-            return boxes.Count == 0 ? Box((RectTransform)root) : Union(boxes);
+            Rect union = Rect.zero;
+            bool any = false;
+            root.GetComponentsInChildren(s_Graphics);
+            foreach (var graphic in s_Graphics)
+                if (graphic.enabled) Grow(ref union, ref any, Box(graphic.rectTransform));
+            s_Graphics.Clear();
+            return any ? union : Box((RectTransform)root);
         }
 
         // Puts a transform on a rectangle given in the bar's coordinates, whatever its parent.
