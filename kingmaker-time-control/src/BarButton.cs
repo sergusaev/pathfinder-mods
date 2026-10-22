@@ -237,7 +237,8 @@ namespace TimeControl
                 var game = Game.Instance;
                 bool show = Main.Settings.BarButton && Main.InGame && !game.IsControllerGamepad && !game.CutsceneLock
                     && (game.CurrentMode == GameModeType.Default || game.CurrentMode == GameModeType.Pause || game.CurrentMode == GameModeType.GlobalMap
-                        || game.CurrentMode == GameModeType.EscMode);
+                        || game.CurrentMode == GameModeType.EscMode)
+                    && !ServiceWindowShown(game);
                 // Only for a button that is seen: in gamepad mode the game's menu buttons never load, the search would go on forever.
                 if (show) Restyle();
                 if (m_Row.gameObject.activeSelf != show)
@@ -265,6 +266,14 @@ namespace TimeControl
                 Main.Error(e, "bar button");
                 enabled = false;
             }
+        }
+
+        // The local map keeps the game in its default mode, so that the world goes on, but covers the HUD as the other
+        // windows of the service book do.
+        static bool ServiceWindowShown(Game game)
+        {
+            var window = game.UI.ServiceWindow;
+            return window != null && window.WindowTabs != null && window.WindowTabs.IsShow;
         }
 
         // Into the game's HUD canvas just before its tooltips, as the buff bar; until the HUD exists it stays on its own canvas.
