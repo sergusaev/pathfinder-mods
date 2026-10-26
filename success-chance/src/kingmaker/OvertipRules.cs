@@ -53,6 +53,40 @@ namespace SuccessChance
             }
         }
 
+        // The name part's Show is empty, so its IsShown never changes, and the overtip fades the name in or out
+        // (UnitOvertipView.TweenComponentsToPlace) only when some other part appears or disappears. When hit points
+        // are always shown, nothing else changes as the cursor leaves a unit, and its name stayed over its head. Here
+        // the name's own show and the hovering (NeedName out of combat) lay the overtip out too, once on each change.
+        [HarmonyPatch(typeof(OvertipViewPartName), nameof(OvertipViewPartName.Show))]
+        static class NameShown
+        {
+            static readonly System.Collections.Generic.Dictionary<OvertipViewPartName, bool> s_Hovered =
+                new System.Collections.Generic.Dictionary<OvertipViewPartName, bool>();
+
+            static void Postfix(OvertipViewPartName __instance, bool state)
+            {
+                try
+                {
+                    // A change of IsShown lays the overtip out by itself (UnitOvertipView.BindViewImplementation).
+                    __instance.IsShown.Value = state;
+                    var vm = Model(__instance);
+                    if (vm == null) return;
+                    bool hovered = vm.ObjectIsHovered.Value, last;
+                    if (s_Hovered.TryGetValue(__instance, out last) && last == hovered) return;
+                    if (s_Hovered.Count > 500) s_Hovered.Clear();
+                    s_Hovered[__instance] = hovered;
+                    __instance.GetComponentInParent<UnitOvertipView>()?.TweenComponentsToPlace();
+                }
+                catch (Exception e)
+                {
+                    if (!s_NameFailed) Main.Error("name overtip", e);
+                    s_NameFailed = true;
+                }
+            }
+        }
+
+        static bool s_NameFailed;
+
         // The gamepad settings have checkboxes to always show the hit points of enemies or companions, which the keyboard
         // interface has not: they are kept, over the keyboard rule.
         static bool HitPoints(OvertipViewPartBase part, EntityOvertipVM vm)

@@ -20,10 +20,12 @@ using Kingmaker.UnitLogic.Mechanics;
 using Kingmaker.UnitLogic.Mechanics.Components;
 using Kingmaker.Designers.Mechanics.Buffs;
 using Kingmaker.UnitLogic.Buffs.Blueprints;
-#if WOTR
 using Kingmaker.UnitLogic.Mechanics.Actions;
+#if WOTR
 using Kingmaker.Blueprints.Items.Weapons;
 using Kingmaker.Utility;
+#else
+using Kingmaker.Controllers.Combat;
 #endif
 #if WOTR
 using DamageGracePart = Kingmaker.UnitLogic.Parts.UnitPartDamageGrace;
@@ -65,6 +67,8 @@ namespace SuccessChance
         public int PendingDamage;
         // A combat maneuver the attack makes on a hit (a wolf's trip with its bite), its chance counted with the hit.
         public ManeuverPrediction Maneuver;
+        // A spell the hit brings (Spellstrike, a held charge, a ray of an eldritch archer), by this attack's roll.
+        public SpellPrediction Charge;
         public double Hit;
         public double Crit;
         // Damage of a hit that is not a critical one: the weapon's dice and bonuses (no sneak attack and other damage
@@ -207,7 +211,8 @@ namespace SuccessChance
 #endif
 
         // The attack bonus a buff that is not on yet would give to an attack with this weapon.
-        static int BuffAttackBonus(BlueprintBuff buff, UnitEntityData attacker, RuleCalculateWeaponStats stats, RuleAttackWithWeapon attack, AttackPrediction p)
+        static int BuffAttackBonus(BlueprintBuff buff, UnitEntityData attacker, RuleCalculateWeaponStats stats, RuleAttackWithWeapon attack, AttackPrediction p,
+            int depth = 0)
         {
             var weapon = stats.Weapon;
             int bonus = 0;
@@ -264,6 +269,27 @@ namespace SuccessChance
                     int av = abilityValue.Value.Calculate(context);
                     bonus += av;
                     p.PendingParts.Add(new Part(buff.Name + " [" + abilityValue.Descriptor + "]", av));
+                    continue;
+                }
+                // Buffs the buff puts on its owner as it turns on (Fighting Defensively's dodge bonus): counted the same
+                // way, a few levels deep; other actions are named in the notes.
+                var actions = component as AddFactContextActions;
+                if (actions != null)
+                {
+                    if (actions.Activated?.Actions == null) continue;
+                    foreach (var action in actions.Activated.Actions)
+                    {
+                        var apply = action as ContextActionApplyBuff;
+                        if (apply?.Buff != null && depth < 3)
+                        {
+                            if (apply.Buff != buff && !attacker.Descriptor.Buffs.HasFact(apply.Buff))
+                                bonus += BuffAttackBonus(apply.Buff, attacker, stats, attack, p, depth + 1);
+                            continue;
+                        }
+                        if (action == null) continue;
+                        string note = buff.Name + ": " + action.GetType().Name + " on turning on not counted";
+                        if (!p.Notes.Contains(note)) p.Notes.Add(note);
+                    }
                     continue;
                 }
                 var w = component as WeaponParametersAttackBonus;
@@ -462,6 +488,54 @@ namespace SuccessChance
             return total;
         }
 
+#if !WOTR
+        // Enemies with Power Attack: PowerAttackWatcher turns it on or off right before their roll, and the buff is put
+        // on or removed at once, so the choice applies to this roll. The watcher is silenced in a dry run; its choice is
+        // made here by its own formula, reading the ability only (nothing is switched, nothing to undo). It turns on
+        // whenever it is off, and off when the hit chance it costs outweighs its damage.
+        static void PowerAttackAi(RuleAttackRoll roll, AttackPrediction p)
+        {
+            var attacker = roll.Initiator;
+            if (roll.AttackType.IsTouch() || attacker.IsPlayerFaction) return;
+            var hand = attacker.GetThreatHand()?.MaybeWeapon;
+            if (hand == null || roll.Weapon != hand) return;
+            foreach (var fact in ManeuverChance.Facts(attacker))
+                foreach (var component in fact.Blueprint.ComponentsArray)
+                {
+                    var watcher = component as PowerAttackWatcher;
+                    var ability = watcher != null ? attacker.Descriptor.GetFact(watcher.PowerAttackBlueprint) as ActivatableAbility : null;
+                    var buff = ability?.Blueprint.Buff;
+                    if (buff == null) continue;
+                    // Running by the time of the roll: already, or put on as the attack starts (counted above).
+                    bool pending = ability.IsOn && !ability.IsRunning && ability.Blueprint.ActivateOnUnitAction
+                        && ability.Blueprint.ActivateOnUnitActionType == AbilityActivateOnUnitActionType.Attack;
+                    bool running = ability.IsRunning || pending;
+                    bool buffOn = pending || attacker.Descriptor.Buffs.HasFact(buff);
+                    int n = attacker.Stats.BaseAttackBonus.ModifiedValue / 4 + 1;
+                    int strength = attacker.Stats.Strength.Bonus;
+                    double on = (4.5 + 2 * n + strength) * Math.Max(p.AttackBonus + 21 - p.TargetAC - (running ? 0 : n), 1) * 0.05;
+                    double off = (4.5 + strength) * Math.Max(p.AttackBonus + 21 - p.TargetAC + (running ? n : 0), 1) * 0.05;
+                    int sign;
+                    if (ability.IsOn && off > on) sign = buffOn ? -1 : 0;
+                    else if (!ability.IsOn) sign = buffOn ? 0 : 1;
+                    else sign = 0;
+                    if (sign == 0) continue;
+                    // The buff's terms (as if it were not on yet), added or taken back under its own name.
+                    var terms = new AttackPrediction();
+                    int bonus = sign * BuffAttackBonus(buff, attacker, roll.WeaponStats, roll.RuleAttackWithWeapon, terms);
+                    int damage = sign * terms.PendingDamage;
+                    p.AttackBonus += bonus;
+                    if (bonus != 0) p.AttackBonusParts.Add(new Part(buff.Name, bonus));
+                    p.DamageMin = Math.Max(1, p.DamageMin + damage);
+                    p.DamageMax = Math.Max(p.DamageMin, p.DamageMax + damage);
+                    p.CritDamageMin = Math.Max(1, p.CritDamageMin + damage * p.CriticalMultiplier);
+                    p.CritDamageMax = Math.Max(p.CritDamageMin, p.CritDamageMax + damage * p.CriticalMultiplier);
+                    p.Notes.Add(string.Format("{0}: AI turns it {1} at the roll ({2:+0;-0})", ability.Blueprint.Name, sign > 0 ? "on" : "off", bonus));
+                    return;
+                }
+        }
+#endif
+
         static void Calculate(RuleAttackRoll roll, AttackPrediction p)
         {
             var attacker = roll.Initiator;
@@ -543,6 +617,9 @@ namespace SuccessChance
             p.AttackBonusParts = Breakdown.AttackBonus(abRule, attacker);
             p.AttackBonus += p.OnAttackBonus;
             p.AttackBonusParts.AddRange(p.PendingParts);
+#if !WOTR
+            PowerAttackAi(roll, p);
+#endif
             int ab = p.AttackBonus, acValue = p.TargetAC;
             // WotR: a feature lets a natural 1 hit if the total does (State.Features.AlwaysChance).
             bool alwaysChance = GameRules.AlwaysChance(attacker);

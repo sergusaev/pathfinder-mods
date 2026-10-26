@@ -92,6 +92,8 @@ namespace SuccessChance
         public int Projectiles = 1;
         // A combat maneuver of the ability's effect (Trip, Bull Rush).
         public ManeuverPrediction Maneuver;
+        // The damage is doubled by a confirmed critical hit of the attack that brings it (ContextActionDealDamage).
+        public bool DamageCrits;
 
         public bool Empty => Attack == null && Save == null && DamageMax < 0 && Maneuver == null
             && (SpellResistance == null || SpellResistance.Pass >= 1);
@@ -198,8 +200,9 @@ namespace SuccessChance
         }
 
         // The ability cast on the target: the parameters (DC, caster level) as the cast would calculate them, then the
-        // attack roll of a touch or a ray, the spell resistance and the first saving throw of its effect.
-        internal static SpellPrediction Predict(AbilityData ability, UnitEntityData target)
+        // attack roll of a touch or a ray, the spell resistance and the first saving throw of its effect. A spell brought
+        // by an attack with a weapon (Spellstrike) has no attack roll of its own: it goes by the weapon's.
+        internal static SpellPrediction Predict(AbilityData ability, UnitEntityData target, bool byWeapon = false)
         {
             var p = new SpellPrediction { Name = ability.Name };
             if (ability.Blueprint.HasVariants) return p;
@@ -214,9 +217,12 @@ namespace SuccessChance
 
             foreach (var component in blueprint.ComponentsArray)
             {
+                // A touch with Reach goes as a ray (AbilityDeliverTouch).
                 var touch = component as AbilityDeliverTouch;
-                if (touch != null && touch.TouchWeapon != null && p.Attack == null)
-                    p.Attack = AttackChance.Predict(caster, target, Weapon(touch.TouchWeapon), 0, null, context);
+                var touchWeapon = touch == null ? null
+                    : context.HasMetamagic(Kingmaker.UnitLogic.Abilities.Metamagic.Reach) ? BlueprintRoot.Instance.SystemMechanics.RayWeapon : touch.TouchWeapon;
+                if (touchWeapon != null && p.Attack == null && !byWeapon)
+                    p.Attack = AttackChance.Predict(caster, target, Weapon(touchWeapon), 0, null, context);
                 var projectile = component as AbilityDeliverProjectile;
                 if (projectile != null && projectile.Type != AbilityProjectileType.Line && projectile.Type != AbilityProjectileType.Cone)
                 {
@@ -229,7 +235,8 @@ namespace SuccessChance
                     if (ability.MagicHackData != null) p.Projectiles = 1;
 #endif
                 }
-                if (projectile != null && projectile.NeedAttackRoll && projectile.Type != AbilityProjectileType.Line && projectile.Type != AbilityProjectileType.Cone && p.Attack == null)
+                if (projectile != null && projectile.NeedAttackRoll && projectile.Type != AbilityProjectileType.Line && projectile.Type != AbilityProjectileType.Cone && p.Attack == null
+                    && !byWeapon)
                 {
 #if WOTR
                     // As AbilityDeliverProjectile: the melee weapon for Hand of the Apprentice, the main hand for a
@@ -404,6 +411,7 @@ namespace SuccessChance
             int sides = damage.Value.DiceType.Sides();
             int bonus = damage.Value.BonusValue.Calculate(context);
             if (dice <= 0 && bonus <= 0) return;
+            p.DamageCrits = !damage.IgnoreCritical;
             float min = dice + bonus, max = dice * sides + bonus;
             if (context.HasMetamagic(Kingmaker.UnitLogic.Abilities.Metamagic.Maximize)) min = max;
             if (context.HasMetamagic(Kingmaker.UnitLogic.Abilities.Metamagic.Empower))

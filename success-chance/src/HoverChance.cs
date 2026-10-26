@@ -209,7 +209,7 @@ namespace SuccessChance
             if (!s_Cache.TryGetValue(key, out m_Text))
             {
                 var watch = System.Diagnostics.Stopwatch.StartNew();
-                m_Text = ability != null ? SpellText(SpellChance.Predict(ability, target)) : AttacksText(attacker, target, full);
+                m_Text = ability != null ? AbilityText(ability, target) : AttacksText(attacker, target, full);
                 double ms = watch.Elapsed.TotalMilliseconds;
                 if (s_Cache.Count > 200) s_Cache.Clear();
                 s_Cache[key] = m_Text;
@@ -340,8 +340,9 @@ namespace SuccessChance
 
         static readonly Dictionary<string, string> s_Cache = new Dictionary<string, string>();
 
-        // Who, whom, with what and from how far (ranged penalties, concealment by distance); the rest that changes a
-        // chance clears the cache (Changed).
+        // Who, whom, with what and from how far (ranged penalties, concealment by distance), and the spell the attacker
+        // holds for a weapon to bring (a charge, a ray of an eldritch archer: not a buff, no event); the rest that
+        // changes a chance clears the cache (Changed).
         static string Signature(UnitEntityData attacker, UnitEntityData target, AbilityData ability, bool full)
         {
             var body = attacker.Body;
@@ -350,6 +351,8 @@ namespace SuccessChance
                 attacker.UniqueId, target.UniqueId, Id(ability), full ? "f" : "s",
                 Id(body.PrimaryHand.MaybeWeapon), Id(body.SecondaryHand.MaybeWeapon),
                 ((int)(attacker.DistanceTo(target) / 1.5f)).ToString(),
+                Id(attacker.Get<Kingmaker.UnitLogic.Parts.UnitPartTouch>()?.Ability),
+                Id(attacker.Get<Kingmaker.UnitLogic.Parts.UnitPartMagus>()?.EldritchArcherSpell),
             });
         }
 
@@ -390,6 +393,17 @@ namespace SuccessChance
             return SeriesText(Series(attacker, target, full));
         }
 
+        // An ability cast on the target: its own chance, or the attack with the weapon that brings it (Spellstrike).
+        static string AbilityText(AbilityData ability, UnitEntityData target)
+        {
+            var spell = ability;
+            var weapon = Spellstrike.Weapon(ref spell, target);
+            if (weapon == null) return SpellText(SpellChance.Predict(ability, target));
+            var p = AttackChance.Predict(spell.Caster.Unit, target, weapon, 0);
+            p.Charge = SpellChance.Predict(spell, target, true);
+            return AttackText(p);
+        }
+
         // The predictions of the attacks of a full attack (only the first one when it is not full).
         internal static List<AttackPrediction> Series(UnitEntityData attacker, UnitEntityData target, bool full)
         {
@@ -423,8 +437,21 @@ namespace SuccessChance
                 attacks.Add(new KeyValuePair<ItemEntityWeapon, int>(weapon, 0));
             }
             if (!full) attacks.RemoveRange(1, attacks.Count - 1);
+            // A spell held for a weapon to bring goes with the first attack that can bring it (it is spent on the first
+            // hit, so after a miss it goes with the next one: shown once).
             var predictions = new List<AttackPrediction>();
-            foreach (var a in attacks) predictions.Add(AttackChance.Predict(attacker, target, a.Key, a.Value));
+            bool charged = false;
+            foreach (var a in attacks)
+            {
+                var p = AttackChance.Predict(attacker, target, a.Key, a.Value);
+                var spell = charged ? null : Spellstrike.WithAttack(attacker, a.Key);
+                if (spell != null)
+                {
+                    p.Charge = SpellChance.Predict(spell, target, true);
+                    charged = true;
+                }
+                predictions.Add(p);
+            }
             return predictions;
         }
 
@@ -440,7 +467,19 @@ namespace SuccessChance
 
         static string AttackText(AttackPrediction p)
         {
-            return Colored(p.Hit, p.Hit) + ", " + Damage(p.DamageMin, p.DamageMax) + CritText(p) + OnHitText(p);
+            return Colored(p.Hit, p.Hit) + ", " + Damage(p.DamageMin, p.DamageMax) + ChargeText(p.Charge) + CritText(p) + OnHitText(p);
+        }
+
+        // The spell a hit brings, after the weapon's damage: "+ 5-30", or with its own resistance and save
+        // "+ Fortitude 45%, 10-60 / 5-30".
+        static string ChargeText(SpellPrediction c)
+        {
+            if (c == null) return "";
+            bool ru = LocalizationManager.CurrentLocale == Locale.ruRU;
+            var parts = SpellParts(c, ru);
+            string damage = SpellDamage(c, c.Projectiles);
+            if (parts.Count == 0) return " + " + (damage ?? c.Name);
+            return " + " + string.Join(" ", parts.ToArray()) + (damage != null ? ", " + damage : "");
         }
 
         // The maneuver of a hit, its chance counted with the hit's.
@@ -471,8 +510,11 @@ namespace SuccessChance
             bool ru = LocalizationManager.CurrentLocale == Locale.ruRU;
             // The crit is colored by how much of the weapon's threat range it gets (the confirmation and the rest).
             double threat = p.CanCrit ? (21 - Math.Max(2, p.CriticalEdge)) / 20.0 : 0;
-            return string.Format(" ({0} {1}, {2})", ru ? "крит" : "crit", Colored(p.Crit, threat > 0 ? p.Crit / threat : 0),
-                Damage(p.CritDamageMin, p.CritDamageMax));
+            // A spell the hit brings is doubled by the critical hit too (its damage on a failed save).
+            var c = p.Charge;
+            string charge = c != null && c.DamageCrits && c.DamageMax >= 0 ? " + " + Damage(c.DamageMin * 2, c.DamageMax * 2, c.Projectiles) : "";
+            return string.Format(" ({0} {1}, {2}{3})", ru ? "крит" : "crit", Colored(p.Crit, threat > 0 ? p.Crit / threat : 0),
+                Damage(p.CritDamageMin, p.CritDamageMax), charge);
         }
 
         internal static string Ordinal(int n, bool ru)
@@ -495,6 +537,27 @@ namespace SuccessChance
             bool ru = LocalizationManager.CurrentLocale == Locale.ruRU;
             var parts = new List<string>();
             if (p.Attack != null) parts.Add((ru ? "Попадание " : "Hit ") + Colored(p.Attack.Hit, p.Attack.Hit));
+            parts.AddRange(SpellParts(p, ru));
+            bool lines = p.Attack != null && p.Projectiles > 1;
+            int times = lines ? 1 : p.Projectiles;
+            // The damage after the last part (after the save: on a failed save / on a passed one), or alone.
+            string damage = SpellDamage(p, times);
+            if (damage != null)
+            {
+                if (parts.Count > 0) parts[parts.Count - 1] += ", " + damage;
+                else parts.Add((ru ? "Урон " : "Damage ") + damage);
+            }
+            string line = string.Join(" ", parts.ToArray());
+            if (!lines) return line;
+            var all = new string[p.Projectiles];
+            for (int i = 0; i < all.Length; i++) all[i] = line;
+            return string.Join("\n", all);
+        }
+
+        // The spell resistance, the chance the target fails its save and a maneuver's chance.
+        static List<string> SpellParts(SpellPrediction p, bool ru)
+        {
+            var parts = new List<string>();
             var sr = p.SpellResistance;
             if (sr != null && sr.Immune && !sr.Ignored) parts.Add(ru ? "Невосприимчив" : "Immune");
             else if (sr != null && sr.Pass < 1) parts.Add((ru ? "Сопротивление " : "Resistance ") + Colored(sr.Pass, sr.Pass));
@@ -509,21 +572,16 @@ namespace SuccessChance
                 parts.Add(p.Maneuver.Immune ? name + " " + (ru ? "невозможно" : "impossible")
                     : name + " " + Colored(p.Maneuver.Success, p.Maneuver.Success));
             }
-            bool lines = p.Attack != null && p.Projectiles > 1;
-            int times = lines ? 1 : p.Projectiles;
-            // The damage after the last part (after the save: on a failed save / on a passed one), or alone.
-            if (p.DamageMax >= 0)
-            {
-                string damage = Damage(p.DamageMin, p.DamageMax, times);
-                if (p.Save != null && p.SavedMax >= 0) damage += " / " + Damage(p.SavedMin, p.SavedMax, times);
-                if (parts.Count > 0) parts[parts.Count - 1] += ", " + damage;
-                else parts.Add((ru ? "Урон " : "Damage ") + damage);
-            }
-            string line = string.Join(" ", parts.ToArray());
-            if (!lines) return line;
-            var all = new string[p.Projectiles];
-            for (int i = 0; i < all.Length; i++) all[i] = line;
-            return string.Join("\n", all);
+            return parts;
+        }
+
+        // The damage on a failed save (or with no save) / on a passed one; null when the spell deals none.
+        static string SpellDamage(SpellPrediction p, int times)
+        {
+            if (p.DamageMax < 0) return null;
+            string damage = Damage(p.DamageMin, p.DamageMax, times);
+            if (p.Save != null && p.SavedMax >= 0) damage += " / " + Damage(p.SavedMin, p.SavedMax, times);
+            return damage;
         }
 
         // The damage of several projectiles: their count before the damage of one, "4x(2-5)" (a plain x: the game's

@@ -115,7 +115,11 @@ namespace SuccessChance
             if (!Main.Settings.Logging || evt.Weapon == null || evt.Target == null) return;
             try
             {
-                m_Pending[evt] = AttackChance.Predict(evt.Initiator, evt.Target, evt.Weapon, evt.AttackBonusPenalty, evt);
+                var p = AttackChance.Predict(evt.Initiator, evt.Target, evt.Weapon, evt.AttackBonusPenalty, evt);
+                // A spell the hit brings (Spellstrike, a held charge, a ray of an eldritch archer).
+                var spell = Spellstrike.WithAttack(evt.Initiator, evt.Weapon);
+                if (spell != null) p.Notes.Add("carries " + spell.Name);
+                m_Pending[evt] = p;
             }
             catch (Exception e)
             {
