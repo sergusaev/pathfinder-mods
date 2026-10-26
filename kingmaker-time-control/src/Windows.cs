@@ -20,6 +20,7 @@ namespace TimeControl
         List<string> m_Lines;
         int m_Offset;
         TextMeshProUGUI m_Body;
+        ModBar.ModScrollbar m_Bar;
         Action m_Confirm;
         Action m_Alt;
 
@@ -31,6 +32,9 @@ namespace TimeControl
             w.m_Alt = alt;
             w.m_Body = Ui.Text(w.Panel, "", 21, Theme.Text);
             w.m_Body.lineSpacing = 4;
+            w.m_Body.margin = new Vector4(0, 0, ModBar.ModScrollbar.Width + 4, 0);
+            w.m_Bar = ModBar.ModScrollbar.Create(w.m_Body.rectTransform, null);
+            w.m_Bar.Moved = first => w.Scroll(Mathf.RoundToInt(first) - w.m_Offset);
             var hints = new List<Hint>();
             if (confirm != null) hints.Add(new Hint(RewiredActionType.Confirm, confirmLabel));
             if (alt != null) hints.Add(new Hint(RewiredActionType.Func02, altLabel));
@@ -48,6 +52,7 @@ namespace TimeControl
             if (m_Offset > 0) text = "<color=" + Theme.Muted + ">· · ·</color>\n" + text;
             if (m_Offset + VisibleLines < m_Lines.Count) text += "\n<color=" + Theme.Muted + ">" + string.Format(S.More, m_Lines.Count - m_Offset - VisibleLines) + "</color>";
             m_Body.text = text;
+            m_Bar.Set(m_Offset, VisibleLines, m_Lines.Count);
         }
 
         protected override void OnConfirm()
@@ -66,6 +71,11 @@ namespace TimeControl
         }
 
         protected override void OnMove(int direction)
+        {
+            Scroll(direction);
+        }
+
+        void Scroll(int direction)
         {
             int next = Mathf.Clamp(m_Offset + direction, 0, Math.Max(0, m_Lines.Count - VisibleLines));
             if (next == m_Offset) return;
@@ -188,6 +198,7 @@ namespace TimeControl
         GameObject m_HelpBox;
         TextMeshProUGUI m_HelpText;
         float m_HelpOffset;
+        ModBar.ModScrollbar m_RowsBar, m_HelpBar;
         // The label the A hint shows on the deadlines tab: Track or Stop tracking, after the selected row.
         bool m_HintUntrack;
         readonly float[] m_Pending = new float[8];
@@ -240,6 +251,14 @@ namespace TimeControl
                 row.Pointer.Live = () => m_Top + at < m_Items.Count && !m_Items[m_Top + at].Header;
                 m_Rows.Add(row);
             }
+            list.GetComponent<UnityEngine.UI.VerticalLayoutGroup>().padding.right = (int)ModBar.ModScrollbar.Width + 4;
+            m_RowsBar = ModBar.ModScrollbar.Create((RectTransform)list.transform, null);
+            m_RowsBar.Moved = first =>
+            {
+                m_Top = Mathf.Clamp(Mathf.RoundToInt(first), 0, Math.Max(0, m_Items.Count - VisibleRows));
+                m_Cursor = Mathf.Clamp(m_Cursor, m_Top, Math.Min(m_Items.Count - 1, m_Top + VisibleRows - 1));
+                Render();
+            };
             // The help in the rows' place, as high, scrolled inside it.
             m_HelpBox = new GameObject("Help", typeof(RectTransform));
             m_HelpBox.transform.SetParent(Panel, false);
@@ -252,7 +271,14 @@ namespace TimeControl
             helpRect.anchorMax = new Vector2(1, 1);
             helpRect.pivot = new Vector2(0.5f, 1);
             helpRect.sizeDelta = Vector2.zero;
+            helpRect.offsetMax = new Vector2(-ModBar.ModScrollbar.Width - 4, helpRect.offsetMax.y);
             m_HelpText.gameObject.AddComponent<UnityEngine.UI.ContentSizeFitter>().verticalFit = UnityEngine.UI.ContentSizeFitter.FitMode.PreferredSize;
+            m_HelpBar = ModBar.ModScrollbar.Create((RectTransform)m_HelpBox.transform, null);
+            m_HelpBar.Moved = first =>
+            {
+                m_HelpOffset = first;
+                ScrollHelp(0);
+            };
             m_HelpBox.SetActive(false);
             m_Detail = Ui.Text(Panel, "", 19, Theme.Dim);
             m_Detail.gameObject.AddComponent<UnityEngine.UI.LayoutElement>().minHeight = 52;
@@ -722,7 +748,8 @@ namespace TimeControl
             float box = ((RectTransform)m_HelpBox.transform).rect.height;
             float max = Mathf.Max(0, m_HelpText.preferredHeight - box);
             m_HelpOffset = Mathf.Clamp(m_HelpOffset + delta, 0, max);
-            m_HelpText.rectTransform.anchoredPosition = new Vector2(0, m_HelpOffset);
+            m_HelpText.rectTransform.anchoredPosition = new Vector2(m_HelpText.rectTransform.anchoredPosition.x, m_HelpOffset);
+            m_HelpBar.Set(m_HelpOffset, box, m_HelpText.preferredHeight);
         }
 
         protected override void OnChange(int direction)
@@ -839,6 +866,7 @@ namespace TimeControl
                 m_Tabs.text = string.Join(TabSeparator, parts.ToArray());
             }
             m_Date.text = string.Format(S.Today, Timers.Date(Game.Instance.Player.GameTime));
+            m_RowsBar.Set(m_Top, VisibleRows, m_Items.Count);
             for (int i = 0; i < VisibleRows; i++)
             {
                 int index = m_Top + i;

@@ -33,8 +33,8 @@ namespace TimeControl
 
         // The button hints under a window, as under the game's Formation window: one tiled plate under the sheet,
         // the hints far apart on it, the console icon and a white label in small capitals.
-        const string HintPlateName = "backHintTile";
-        internal const float HintPlateHeight = 90f;
+        // Lower in keyboard and mouse mode, over the portraits of the party.
+        internal static float HintPlateHeight { get { return ModBar.HintTile.RowHeight; } }
         internal const float HintGap = 12f;
         internal const float HintSpacing = 50f;
         internal const float HintIconSize = 36f;
@@ -63,7 +63,8 @@ namespace TimeControl
         internal static Color Text { get { return Paper ? new Color(0.17f, 0.09f, 0.05f) : new Color(0.92f, 0.9f, 0.85f); } }
         internal static Color Title { get { return Paper ? new Color(0.16f, 0.07f, 0.04f) : new Color(0.93f, 0.8f, 0.5f); } }
         internal static Color Dim { get { return Paper ? new Color(0.36f, 0.25f, 0.16f) : new Color(0.65f, 0.62f, 0.56f); } }
-        internal static Color Row { get { return Paper ? new Color(0.36f, 0.22f, 0.1f, 0.07f) : new Color(1f, 1f, 1f, 0.04f); } }
+        // Rows are not filled: only the selected row and the one under the pointer are lit.
+        internal static Color Row { get { return Color.clear; } }
         internal static Color RowSelected { get { return Paper ? new Color(0.55f, 0.3f, 0.1f, 0.3f) : new Color(0.62f, 0.47f, 0.2f, 0.55f); } }
         internal static Color RowHover { get { return Paper ? new Color(0.55f, 0.3f, 0.1f, 0.14f) : new Color(0.93f, 0.8f, 0.5f, 0.14f); } }
         internal static Color Line { get { return Paper ? new Color(0.3f, 0.18f, 0.08f, 0.3f) : new Color(1f, 1f, 1f, 0.12f); } }
@@ -77,21 +78,13 @@ namespace TimeControl
         internal static void HintPlate(Image image)
         {
             image.raycastTarget = false;
-            if (s_HintPlate == null)
+            try
             {
-                try
-                {
-                    var sprite = Resources.FindObjectsOfTypeAll<Sprite>().FirstOrDefault(s => s.name == HintPlateName);
-                    // The game draws the tile 90 high whatever its pixels: a copy with that pixel density keeps the
-                    // tiled borders the size the game shows them.
-                    if (sprite != null)
-                        s_HintPlate = Sprite.Create(sprite.texture, sprite.textureRect, new Vector2(0.5f, 0.5f),
-                            100f * sprite.rect.height / HintPlateHeight, 0, SpriteMeshType.FullRect, sprite.border);
-                }
-                catch (Exception e)
-                {
-                    Main.Error(e, "hint plate");
-                }
+                s_HintPlate = ModBar.HintTile.Get(HintPlateHeight);
+            }
+            catch (Exception e)
+            {
+                Main.Error(e, "hint plate");
             }
             if (s_HintPlate != null)
             {
@@ -550,6 +543,7 @@ namespace TimeControl
                 rect.anchoredPosition = new Vector2(0, -Theme.HintGap);
                 rect.sizeDelta = new Vector2(0, Theme.HintPlateHeight);
                 Theme.HintPlate(row.AddComponent<Image>());
+                ModBar.AbovePortraits.Attach(Panel, rect, Theme.HintGap);
                 row.GetComponent<HorizontalLayoutGroup>().padding = Theme.HintPadding;
                 row.AddComponent<ContentSizeFitter>().horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
                 HintHolder = row.transform;

@@ -22,8 +22,6 @@ namespace TimeControl
 
         // Button next to the buff bar in keyboard and mouse mode.
         public bool BarButton = true;
-        public float BarOffsetX;
-        public float BarOffsetY;
 
         public bool ShowHidden = true;
         // Deadlines after which something fails are tracked as soon as they appear.
@@ -161,13 +159,7 @@ namespace TimeControl
             if (GUILayout.Button("Open the deadlines window", GUILayout.Width(260)) && InGame)
                 TimersWindow.Open(0);
             GUILayout.EndHorizontal();
-            Settings.BarButton = GUILayout.Toggle(Settings.BarButton, " Button to the right of the buff bar (keyboard and mouse mode)");
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Button offset X: " + Settings.BarOffsetX.ToString("0"), GUILayout.Width(150));
-            Settings.BarOffsetX = Mathf.Round(GUILayout.HorizontalSlider(Settings.BarOffsetX, -300f, 600f, GUILayout.Width(250)));
-            GUILayout.Label("  Y: " + Settings.BarOffsetY.ToString("0"), GUILayout.Width(60));
-            Settings.BarOffsetY = Mathf.Round(GUILayout.HorizontalSlider(Settings.BarOffsetY, -200f, 400f, GUILayout.Width(250)));
-            GUILayout.EndHorizontal();
+            Settings.BarButton = GUILayout.Toggle(Settings.BarButton, " Button in the block of the mods' buttons over the game's menu buttons, after the buff bar (keyboard and mouse mode)");
             Settings.ShowHidden = GUILayout.Toggle(Settings.ShowHidden, " Show hidden timers (ones the game does not show)");
             Settings.AutoTrackCritical = GUILayout.Toggle(Settings.AutoTrackCritical, " Track deadlines after which something fails as soon as they appear");
             Settings.PauseOnAlert = GUILayout.Toggle(Settings.PauseOnAlert, " Pause the game when an alert pops up");

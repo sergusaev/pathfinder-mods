@@ -7,87 +7,47 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using ModBar;
 
 namespace TimeControl
 {
-    // Keyboard and mouse mode: a button with an hourglass in the look of the game's menu buttons, in the frame of the game's
-    // button sheet cut to this one button. It stands right of the quick cast bar of Buff It 2 The Limit, level with it;
-    // without that bar (or that mod), alone at the left edge of the screen on top of the game's menu buttons. A click opens
+    // Keyboard and mouse mode: a button with an hourglass in the look of the game's menu buttons, in the block of the mods'
+    // buttons over the game's menu buttons (ModBar: after the buffs, before the scrolls, under one frame). A click opens
     // the deadlines window.
     class BarButton : MonoBehaviour
     {
-        const float ButtonSize = 48f;
-        // TBM_backButton as the buff bar uses it: its top 4.5 units are empty, so the frame goes that much down onto the
-        // game's sheet; the inner edge of its right side is 17.5 units in; its left end needs only its small ornament.
-        const float FrameSink = 4.5f;
-        const int FrameLeft = 2;
-        const int FrameRight = 18;
-        const int FrameTop = 18;
-        const float FrameLeftBorder = 64f;
-        static readonly Vector2 FallbackPos = new Vector2(0f, 132f);
-
         static BarButton s_Instance;
-        static Sprite s_Frame;
-        static bool s_FrameFromHud;
         float m_NextStyle;
-        RectTransform m_Row;
-        RectTransform m_Host;
         GameObject m_Tip;
         bool m_TipPaper;
         TextMeshProUGUI m_TipTitle;
         TextMeshProUGUI m_TipText;
-        CanvasGroup m_Group;
-        float m_NextSearch;
-        RectTransform m_BuffRow;
-        float m_NextBuffSearch;
-        float m_NextAnchorSearch;
-        float m_Size = ButtonSize;
-        RectTransform m_Anchor;
+        RectTransform m_Button;
         bool m_Styled;
 
         internal static void Ensure()
         {
             if (s_Instance != null || !Main.Settings.BarButton) return;
-            var go = new GameObject("TimeControl_Bar", typeof(RectTransform));
+            var go = new GameObject("TimeControl_Bar");
             DontDestroyOnLoad(go);
-            var canvas = go.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 31000;
-            var scaler = go.AddComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920, 1080);
-            scaler.matchWidthOrHeight = 0.5f;
-            go.AddComponent<GraphicRaycaster>();
             s_Instance = go.AddComponent<BarButton>();
-            s_Instance.Build();
+            BarSegment.Add("TimeControl", BarSegment.TimeOrder, Shown, s_Instance.MakeButton);
         }
 
-        void Build()
+        // The mod's own condition; the block adds the game's (its menu buttons in view, mouse mode).
+        static bool Shown()
         {
-            var rowGo = new GameObject("Row", typeof(RectTransform));
-            rowGo.transform.SetParent(transform, false);
-            m_Row = (RectTransform)rowGo.transform;
-            m_Row.anchorMin = m_Row.anchorMax = m_Row.pivot = Vector2.zero;
-            MakeFrame(m_Row);
-            var layout = rowGo.AddComponent<HorizontalLayoutGroup>();
-            layout.padding = new RectOffset(FrameLeft, FrameRight, FrameTop, 0);
-            layout.childControlWidth = false;
-            layout.childControlHeight = false;
-            layout.childForceExpandWidth = false;
-            layout.childForceExpandHeight = false;
-            var fitter = rowGo.AddComponent<ContentSizeFitter>();
-            fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
-            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            m_Group = rowGo.AddComponent<CanvasGroup>();
-            MakeButton();
-            MakeTip(transform);
+            var game = Game.Instance;
+            return Main.Settings.BarButton && Main.InGame && !game.CutsceneLock
+                && (game.CurrentMode == GameModeType.Default || game.CurrentMode == GameModeType.Pause || game.CurrentMode == GameModeType.GlobalMap
+                    || game.CurrentMode == GameModeType.EscMode);
         }
 
-        // The tooltip on the game's parchment; made again once the parchment is loaded, if it was made before.
+        // The tooltip on the game's parchment, over the block; made again once the parchment is loaded, if it was made before.
         void MakeTip(Transform parent)
         {
             m_TipPaper = Theme.Paper;
-            m_Tip = new GameObject("Tip", typeof(RectTransform));
+            m_Tip = new GameObject("TimeControl_Tip", typeof(RectTransform));
             m_Tip.transform.SetParent(parent, false);
             var tipRect = (RectTransform)m_Tip.transform;
             tipRect.anchorMin = tipRect.anchorMax = tipRect.pivot = Vector2.zero;
@@ -108,77 +68,23 @@ namespace TimeControl
             m_Tip.SetActive(false);
         }
 
-        // The frame of the game's menu buttons cut to one button: the left end with its small ornament, the right end with its
-        // ornament and side, as narrow as the button between them allows (canvas units are pixels at 100 per unit).
-        static void MakeFrame(RectTransform parent)
-        {
-            var go = new GameObject("Frame", typeof(RectTransform));
-            go.transform.SetParent(parent, false);
-            go.transform.SetAsFirstSibling();
-            var rect = (RectTransform)go.transform;
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.offsetMin = rect.offsetMax = Vector2.zero;
-            go.AddComponent<LayoutElement>().ignoreLayout = true;
-            var image = go.AddComponent<Image>();
-            image.raycastTarget = false;
-            image.sprite = FrameSprite();
-            if (image.sprite != null) image.type = Image.Type.Tiled;
-            else image.color = new Color(0.06f, 0.05f, 0.04f, 0.75f);
-        }
-
-        // The frame sprite, kept for the session: the local map's HUD brings TBM_backButton and takes it away with it, the
-        // global map has only its own sheet (globalmap_leftbackmeny, the same frame), which serves until the HUD is seen.
-        static Sprite FrameSprite()
-        {
-            if (s_Frame != null && s_FrameFromHud) return s_Frame;
-            var sprites = Resources.FindObjectsOfTypeAll<Sprite>();
-            var plate = sprites.FirstOrDefault(sp => sp.name == "TBM_backButton");
-            bool hud = plate != null;
-            if (!hud && s_Frame != null) return s_Frame;
-            if (!hud) plate = sprites.FirstOrDefault(sp => sp.name == "globalmap_leftbackmeny");
-            if (plate == null) return null;
-            try
-            {
-                var border = plate.border;
-                float width = (FrameLeft + ButtonSize + FrameRight) * plate.pixelsPerUnit / 100f;
-                float left = Mathf.Min(FrameLeftBorder, width / 2f);
-                float right = Mathf.Min(border.z, width - left);
-                s_Frame = Sprite.Create(plate.texture, plate.textureRect, new Vector2(0.5f, 0.5f), plate.pixelsPerUnit, 0,
-                    SpriteMeshType.FullRect, new Vector4(left, 0, right, border.w));
-                s_FrameFromHud = hud;
-                Main.Log("bar button: frame from " + plate.name + ", " + plate.textureRect.size + " border " + border + " ppu " + plate.pixelsPerUnit);
-            }
-            catch (Exception e)
-            {
-                Main.Error(e, "bar button frame");
-            }
-            return s_Frame;
-        }
-
-        // The game's sprites come with its screens, not with the mod: until the button and the frame have their look, try
-        // again every second, on whichever map; a frame from the global map's sheet gives way to the HUD's when it comes.
+        // The game's sprites come with its screens, not with the mod: until the button has its look, try again every
+        // second, on whichever map.
         void Restyle()
         {
-            if (Time.unscaledTime < m_NextStyle) return;
-            m_NextStyle = Time.unscaledTime + (m_Styled ? 5f : 1f);
-            var frame = m_Row.Find("Frame");
-            var current = frame == null ? null : frame.GetComponent<Image>().sprite;
-            if (m_Styled && current != null && s_FrameFromHud && current == s_Frame) return;
+            if (m_Styled || m_Button == null || Time.unscaledTime < m_NextStyle) return;
+            m_NextStyle = Time.unscaledTime + 1f;
             ButtonStyle.Retry();
-            bool styled = ButtonStyle.Get(Hourglass.Texture, ButtonStyle.State.Normal) != null;
-            var sprite = FrameSprite();
-            if (styled == m_Styled && sprite == current) return;
-            for (int i = m_Row.childCount - 1; i >= 0; i--) DestroyImmediate(m_Row.GetChild(i).gameObject);
-            MakeFrame(m_Row);
-            MakeButton();
+            if (ButtonStyle.Get(Hourglass.Texture, ButtonStyle.State.Normal) == null) return;
+            var segment = (RectTransform)m_Button.parent;
+            DestroyImmediate(m_Button.gameObject);
+            MakeButton(segment);
         }
 
-        void MakeButton()
+        void MakeButton(RectTransform segment)
         {
-            var go = new GameObject("TimeControl_Button", typeof(RectTransform));
-            go.transform.SetParent(m_Row, false);
-            ((RectTransform)go.transform).sizeDelta = new Vector2(ButtonSize, ButtonSize);
+            m_Button = BarSegment.Button(segment, "TimeControl_Button");
+            var go = m_Button.gameObject;
             var image = go.AddComponent<Image>();
             image.preserveAspect = true;
             var icon = Hourglass.Texture;
@@ -201,17 +107,24 @@ namespace TimeControl
             var events = go.AddComponent<BarEvents>();
             events.Click = () => TimersWindow.Toggle();
             events.Enter = () => ShowTip((RectTransform)go.transform);
-            events.Exit = () => m_Tip.SetActive(false);
+            events.Exit = HideTip;
+        }
+
+        void HideTip()
+        {
+            if (m_Tip != null) m_Tip.SetActive(false);
         }
 
         void ShowTip(RectTransform over)
         {
-            if (m_TipPaper != Theme.Paper)
+            var parent = BarSegment.TipParent as RectTransform;
+            if (parent == null || !BarSegment.Live) return;
+            if (m_Tip == null || m_TipPaper != Theme.Paper || m_Tip.transform.parent != parent)
             {
-                var parent = m_Tip.transform.parent;
-                DestroyImmediate(m_Tip);
+                if (m_Tip != null) DestroyImmediate(m_Tip);
                 MakeTip(parent);
             }
+            m_Tip.transform.SetAsLastSibling();
             m_TipTitle.text = Theme.Initial(S.WindowTitle);
             var lines = Tracker.Current.Where(x => Tracker.IsTracked(x.Key) && x.Remaining > TimeSpan.Zero).Take(5).Select(t => t.Line).ToArray();
             m_TipText.text = string.Join("\n", lines);
@@ -220,144 +133,22 @@ namespace TimeControl
             foreach (Transform child in m_Tip.transform)
                 if (child.name == "Separator" || child.name == "Rule") child.gameObject.SetActive(lines.Length > 0);
             m_Tip.SetActive(true);
-            var tipRect = (RectTransform)m_Tip.transform;
-            tipRect.anchoredPosition = new Vector2(m_Row.anchoredPosition.x + over.anchoredPosition.x - ButtonSize / 2, m_Row.anchoredPosition.y + m_Row.rect.height + 8f);
+            ((RectTransform)m_Tip.transform).anchoredPosition = BarSegment.Above(over, parent) + new Vector2(0f, 8f);
         }
 
         void Update()
         {
             try
             {
-                if (m_Row == null)
-                {
-                    m_Host = null;
-                    Build();
-                }
-                Attach();
-                var game = Game.Instance;
-                bool show = Main.Settings.BarButton && Main.InGame && !game.IsControllerGamepad && !game.CutsceneLock
-                    && (game.CurrentMode == GameModeType.Default || game.CurrentMode == GameModeType.Pause || game.CurrentMode == GameModeType.GlobalMap
-                        || game.CurrentMode == GameModeType.EscMode)
-                    && !ServiceWindowShown(game);
-                // Only for a button that is seen: in gamepad mode the game's menu buttons never load, the search would go on forever.
-                if (show) Restyle();
-                if (m_Row.gameObject.activeSelf != show)
-                {
-                    m_Row.gameObject.SetActive(show);
-                    if (!show) m_Tip.SetActive(false);
-                }
-                // Under the Esc menu the button is seen, as the game's, but not pressed.
-                bool live = game.CurrentMode != GameModeType.EscMode;
-                if (m_Group.blocksRaycasts != live)
-                {
-                    m_Group.blocksRaycasts = m_Group.interactable = live;
-                    if (!live) m_Tip.SetActive(false);
-                }
-                if (show)
-                {
-                    m_Row.anchoredPosition = Position() + new Vector2(Main.Settings.BarOffsetX, Main.Settings.BarOffsetY);
-                    // As large as the game's buttons next to it: 48 on the local map, 56 on the global map.
-                    var button = m_Row.Find("TimeControl_Button") as RectTransform;
-                    if (button != null && button.sizeDelta.x != m_Size) button.sizeDelta = new Vector2(m_Size, m_Size);
-                }
+                if (m_Button != null && m_Button.gameObject.activeInHierarchy) Restyle();
+                // The block faded or went away under the pointer: the tooltip goes with it.
+                if (m_Tip != null && m_Tip.activeSelf && (m_Button == null || !m_Button.gameObject.activeInHierarchy || !BarSegment.Live)) HideTip();
             }
             catch (Exception e)
             {
                 Main.Error(e, "bar button");
                 enabled = false;
             }
-        }
-
-        // The local map keeps the game in its default mode, so that the world goes on, but covers the HUD as the other
-        // windows of the service book do.
-        static bool ServiceWindowShown(Game game)
-        {
-            var window = game.UI.ServiceWindow;
-            return window != null && window.WindowTabs != null && window.WindowTabs.IsShow;
-        }
-
-        // Into the game's HUD canvas just before its tooltips, as the buff bar; until the HUD exists it stays on its own canvas.
-        void Attach()
-        {
-            if (m_Host != null || Time.unscaledTime < m_NextSearch) return;
-            m_NextSearch = Time.unscaledTime + 1f;
-            var staticCanvas = GameObject.Find("StaticCanvas");
-            var tooltips = staticCanvas == null ? null : staticCanvas.transform.Find("Tooltips");
-            if (tooltips == null) return;
-            m_Host = (RectTransform)new GameObject("TimeControl_BarHost", typeof(RectTransform)).transform;
-            m_Host.SetParent(tooltips.parent, false);
-            m_Host.anchorMin = Vector2.zero;
-            m_Host.anchorMax = Vector2.one;
-            m_Host.offsetMin = m_Host.offsetMax = Vector2.zero;
-            m_Host.SetSiblingIndex(tooltips.GetSiblingIndex());
-            m_Row.SetParent(m_Host, false);
-            m_Tip.transform.SetParent(m_Host, false);
-        }
-
-        // The row of Buff It 2 The Limit's quick cast bar when the bar is shown.
-        RectTransform BuffRow()
-        {
-            if (m_BuffRow == null && Time.unscaledTime >= m_NextBuffSearch)
-            {
-                m_NextBuffSearch = Time.unscaledTime + 1f;
-                var host = GameObject.Find("BI2TL_PadBarHost");
-                m_BuffRow = host == null ? null : host.transform.Find("Row") as RectTransform;
-            }
-            return m_BuffRow != null && m_BuffRow.gameObject.activeSelf && m_BuffRow.parent.gameObject.activeInHierarchy ? m_BuffRow : null;
-        }
-
-        // Right of the buff bar, frame to frame and level with it; without the bar, at the left edge of the screen on top of
-        // the game's menu buttons, as the bar would be.
-        Vector2 Position()
-        {
-            var root = (RectTransform)m_Row.parent;
-            Vector2 local;
-            m_Size = ButtonSize;
-            var buffRow = BuffRow();
-            if (buffRow != null)
-            {
-                var corners = new Vector3[4];
-                buffRow.GetWorldCorners(corners);
-                var screen = RectTransformUtility.WorldToScreenPoint(Cam(buffRow), corners[3]);
-                if (RectTransformUtility.ScreenPointToLocalPointInRectangle(root, screen, Cam(root), out local)) return local - root.rect.min;
-            }
-            // The game's menu buttons: on the local map the HUD's block of buttons, on the global map the sheet under its row of
-            // buttons, whose top edge is its frame.
-            if ((m_Anchor == null || !m_Anchor.gameObject.activeInHierarchy) && Time.unscaledTime >= m_NextAnchorSearch)
-            {
-                m_NextAnchorSearch = Time.unscaledTime + 0.5f;
-                var anchor = GameObject.Find("Menu_Buttons48px") ?? GameObject.Find("GlobalMapCanvas/GameMenu/Background");
-                m_Anchor = anchor == null ? null : anchor.transform as RectTransform;
-            }
-            if (m_Anchor == null || !m_Anchor.gameObject.activeInHierarchy) return FallbackPos;
-            float top = float.MinValue;
-            var c = new Vector3[4];
-            var cam = Cam(m_Anchor);
-            // The top of the buttons themselves, the block's own rectangle may reach higher; the sheet is measured as it is.
-            bool sheet = m_Anchor.name == "Background";
-            var row = sheet ? m_Anchor.parent.Find("SystemButtons") : null;
-            m_Size = row != null && row.childCount > 0 ? ((RectTransform)row.GetChild(0)).rect.height : ButtonSize;
-            foreach (var rect in m_Anchor.GetComponentsInChildren<RectTransform>(false))
-            {
-                if (sheet ? rect != m_Anchor : rect.parent != m_Anchor) continue;
-                rect.GetWorldCorners(c);
-                foreach (var corner in c)
-                {
-                    var screen = RectTransformUtility.WorldToScreenPoint(cam, corner);
-                    top = Mathf.Max(top, screen.y);
-                }
-            }
-            if (top == float.MinValue || !RectTransformUtility.ScreenPointToLocalPointInRectangle(root, new Vector2(0f, top), Cam(root), out local)) return FallbackPos;
-            local -= root.rect.min;
-            return new Vector2(0f, local.y - FrameSink);
-        }
-
-        static Camera Cam(Component c)
-        {
-            var canvas = c.GetComponentInParent<Canvas>();
-            if (canvas == null) return null;
-            canvas = canvas.rootCanvas;
-            return canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
         }
     }
 
