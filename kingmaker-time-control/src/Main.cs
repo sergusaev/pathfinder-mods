@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using HarmonyLib;
 using Kingmaker;
 using UnityEngine;
@@ -64,7 +65,35 @@ namespace TimeControl
                 Menus = new[] { typeof(Kingmaker.UI._ConsoleUI.InGameMenu.InGameMenuView), typeof(Kingmaker.UI._ConsoleUI.InGameMenu.GlobalMapMenuView) }
             });
             new Harmony(modEntry.Info.Id).PatchAll(typeof(Main).Assembly);
+            // Bag of Tricks options that stop or bend the game's clock and deadlines: the timers, the skip and the
+            // coefficients of this mod would show and do something else than the game then does.
+            ModBar.ToolConflicts.Watch(modEntry, () => S.WindowTitle,
+                new ModBar.ToolOption("toggleStopGameTime", "Stop Passing Of Time") { Off = RepatchTimeTick },
+                new ModBar.ToolOption("toggleFreezeTimedQuestAt90Days", "Freeze Timed Quest At 90 Days Left"),
+                new ModBar.ToolOption("togglePreventQuestFailure", "Prevent Quest Failure"),
+                new ModBar.ToolOption("toggleInstantEvent", "Instant Kingdom Events"),
+                new ModBar.ToolOption("travelSpeedMultiplier", "Travel Time Scale Multiplier", 1f));
             return true;
+        }
+
+        // Bag of Tricks stops the clock with a transpiler of TimeController.Tick that looks at its option when the method
+        // is patched; its own switch patches the method again (Harmony 1.2) so that the transpiler runs anew. Done the same.
+        static void RepatchTimeTick()
+        {
+            var harmony = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(a => a.GetName().Name == "0Harmony12");
+            var type = harmony == null ? null : harmony.GetType("Harmony12.HarmonyInstance");
+            var create = type == null ? null : type.GetMethod("Create", new[] { typeof(string) });
+            var patch = type == null ? null : type.GetMethods().FirstOrDefault(m => m.Name == "Patch" && m.GetParameters().Length >= 1
+                && m.GetParameters()[0].ParameterType == typeof(System.Reflection.MethodBase));
+            var tick = AccessTools.Method(typeof(Kingmaker.Controllers.TimeController), "Tick");
+            if (create == null || patch == null || tick == null)
+            {
+                Mod.Logger.Warning("Bag of Tricks \"Stop Passing Of Time\" is off, but its patch of the clock could not be made again: the clock runs after the next start.");
+                return;
+            }
+            var args = new object[patch.GetParameters().Length];
+            args[0] = tick;
+            patch.Invoke(create.Invoke(null, new object[] { "kingmaker.stopgametime" }), args);
         }
 
         internal static void Log(string message)

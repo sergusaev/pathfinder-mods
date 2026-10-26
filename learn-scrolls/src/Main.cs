@@ -65,6 +65,14 @@ namespace LearnScrolls
             modEntry.OnUpdate = OnUpdate;
             Cards.Register();
             new Harmony(modEntry.Info.Id).PatchAll(typeof(Main).Assembly);
+#if WOTR
+            // ToyBox's spellbook has its own button that learns every scroll for the selected character.
+            ModBar.ToolConflicts.Watch(modEntry, () => Strings.Title, new ModBar.ToolOption("toggleEnhancedSpellbook", "Enable Enhanced Spellbook")
+            {
+                LeftoverType = "ToyBox.EnhancedSpellbookController",
+                LeftoverPath = "MainContainer/LearnAllSpells"
+            });
+#endif
             return true;
         }
 

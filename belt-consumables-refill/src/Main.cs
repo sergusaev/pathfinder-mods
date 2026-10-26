@@ -36,6 +36,12 @@ namespace BeltConsumablesRefill
             modEntry.OnSaveGUI = e => Settings.Save(e);
             new Harmony(modEntry.Info.Id).PatchAll(typeof(Main).Assembly);
             EventBus.Subscribe(new Cleanup());
+            ModBar.ToolConflicts.Watch(modEntry, () => modEntry.Info.DisplayName,
+#if KINGMAKER
+                new ModBar.ToolOption("togglAutoEquipConsumables", "Automatically Refill Consumables In Belt Solts"));
+#else
+                new ModBar.ToolOption("togglAutoEquipConsumables", "Refill consumables in belt slots if in inventory"));
+#endif
             return true;
         }
 

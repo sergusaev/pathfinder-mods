@@ -71,6 +71,7 @@ namespace GamepadCameraRotation
             modEntry.OnSaveGUI = e => Settings.Save(e);
             modEntry.OnUpdate = OnUpdate;
             new Harmony(modEntry.Info.Id).PatchAll(typeof(Main).Assembly);
+            ModBar.ToolConflicts.Watch(modEntry, () => modEntry.Info.DisplayName, new ModBar.ToolOption("toggleEnableCameraRotation", "Camera Rotation"));
             return true;
         }
 
