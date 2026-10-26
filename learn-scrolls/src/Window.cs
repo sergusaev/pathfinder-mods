@@ -795,7 +795,8 @@ namespace LearnScrolls
             w.m_Font = font;
             w.m_BuiltForKeyboard = KeyboardMode;
             ModBar.KeyCapRoot.Attach(root);
-            var title = w.Text(root.transform, Theme.Initial(Strings.Title), 30, FontStyles.Bold, Theme.Title);
+            // Centred by a tag: Kingmaker drops the alignment of a text made on a hidden window.
+            var title = w.Text(root.transform, "<align=center>" + Theme.Initial(Strings.Title) + "</align>", 30, FontStyles.Bold, Theme.Title);
             title.alignment = TextAlignmentOptions.Center;
             Theme.Separator(root.transform);
 
