@@ -23,6 +23,7 @@ All mods are on the release pages: [pathfinder-mods](https://github.com/sergusae
 | [Belt Bar](../belt-bar) | both | `BeltBar` | `BeltBar` |
 | [Belt Consumables Refill](../belt-consumables-refill) | both | `BeltConsumablesRefill` | `BeltConsumablesRefill` |
 | [Level 1 Companions & Free Respec](../level1-companions) | both | `Level1Companions` | `Level1Companions` |
+| [Scrolls](../learn-scrolls) | both | `LearnScrolls` | `LearnScrolls` |
 | [Success Chance](../success-chance) | both | `SuccessChance` | `SuccessChance` |
 | [Kingmaker Fixes](../kingmaker-fixes) | Kingmaker | `KingmakerFixes` | `KingmakerFixes` |
 | [Camera Rotation and Compass](../kingmaker-gamepad-camera-rotation) | Kingmaker | `GamepadCameraRotation` | `GamepadCameraRotation` |

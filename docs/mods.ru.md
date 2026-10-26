@@ -23,6 +23,7 @@
 | [Belt Bar](../belt-bar/README.ru.md) | обе | `BeltBar` | `BeltBar` |
 | [Belt Consumables Refill](../belt-consumables-refill/README.ru.md) | обе | `BeltConsumablesRefill` | `BeltConsumablesRefill` |
 | [Level 1 Companions & Free Respec](../level1-companions/README.ru.md) | обе | `Level1Companions` | `Level1Companions` |
+| [Scrolls («Свитки»)](../learn-scrolls/README.ru.md) | обе | `LearnScrolls` | `LearnScrolls` |
 | [Success Chance](../success-chance/README.ru.md) | обе | `SuccessChance` | `SuccessChance` |
 | [Kingmaker Fixes](../kingmaker-fixes/README.ru.md) | Kingmaker | `KingmakerFixes` | `KingmakerFixes` |
 | [Camera Rotation and Compass](../kingmaker-gamepad-camera-rotation/README.ru.md) | Kingmaker | `GamepadCameraRotation` | `GamepadCameraRotation` |

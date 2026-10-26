@@ -1,0 +1,11 @@
+{
+  "Id": "LearnScrolls",
+  "DisplayName": "Scrolls",
+  "Author": "sergusaev",
+  "Version": "0.2.0",
+  "HomePage": "https://github.com/sergusaev/pathfinder-mods",
+  "ManagerVersion": "0.22.0",
+  "AssemblyName": "LearnScrolls.dll",
+  "EntryMethod": "LearnScrolls.Main.Load",
+  "Requirements": []
+}
