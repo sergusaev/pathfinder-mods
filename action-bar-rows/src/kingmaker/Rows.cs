@@ -595,16 +595,21 @@ namespace ActionBarRows
                     view.Bind(slotVm);
                 }
             }
-            // The game unselects only the slots of its own page.
+            // The game unselects only the slots of its own page, and before it selects the new one. Ours are
+            // unselected after: a slot still selected while it is being unselected counts the turn's prediction
+            // for itself, so the new slot counts it again.
             m_VmSubscriptions.Add(vm.CurrentSlot.Subscribe(current =>
             {
+                bool unselected = false;
                 foreach (var row in m_Rows)
                     foreach (var slotVm in row.Vms)
                         if (slotVm != current)
                         {
+                            unselected |= slotVm.Select.Value;
                             slotVm.SetSelect(false);
                             slotVm.SetTooltip(false);
                         }
+                if (unselected && current != null && Vm.Active.Value) current.SetSelect(true);
                 UpdatePageLabel();
             }));
             var move = MoveSlotField.GetValue(vm) as ReactiveProperty<IndexedMechanicSlot>;
