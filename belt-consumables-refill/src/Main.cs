@@ -42,8 +42,8 @@ namespace BeltConsumablesRefill
         static void OnGUI(UnityModManager.ModEntry modEntry)
         {
             Settings.Refill = GUILayout.Toggle(Settings.Refill, " Refill belt slots from the party inventory when a consumable is used up");
-            Settings.ShowStock = GUILayout.Toggle(Settings.ShowStock, " Show belt stock: the slot counts the free items of the same kind in the inventory");
-            Settings.Cleanup = GUILayout.Toggle(Settings.Cleanup, " On area load remove item abilities left without their item (\"0 charges\")");
+            Settings.ShowStock = GUILayout.Toggle(Settings.ShowStock, " Show belt stock: each slot shows how many more items of the same kind are in the inventory");
+            Settings.Cleanup = GUILayout.Toggle(Settings.Cleanup, " On area load, remove item abilities whose item is gone (\"0 charges\")");
             if (Cleanup.LastReport != null)
                 GUILayout.Label("Last cleanup: " + Cleanup.LastReport);
             string conflict = OtherRefill.Describe();

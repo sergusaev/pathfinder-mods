@@ -38,14 +38,14 @@ namespace Level1Companions
             GUILayout.Label($"Story companions join at level {Limit}; respec also returns them to level {Limit}.");
             if (GUILayout.Button("Respec (free)", GUILayout.Width(320)))
                 Respec.Open();
-            GUILayout.Label($"A story companion goes back to level {Limit} and keeps its class, stats and abilities of level {Limit}. The main character and mercenaries are rebuilt from scratch, everything can be changed, as by the game's respec.");
+            GUILayout.Label($"A story companion goes back to level {Limit} and keeps their level {Limit} class, stats and abilities. The main character and mercenaries are rebuilt from scratch, everything can be changed, as by the game's respec.");
 #if WOTR
             GUILayout.Label("Mythic levels are not touched: a respec keeps the mythic experience and the mythic path.");
-            GUILayout.Label("The respec window closes with \"Complete\" as soon as the respec is applied; the levels left are taken later with the portrait button.");
+            GUILayout.Label("The respec window closes with \"Complete\" as soon as the respec is applied; the remaining levels are taken later with the level-up button on the portrait.");
 #endif
             if (Respec.Status != null)
                 GUILayout.Label(Respec.Status);
-            GUILayout.Label("Set Auto Level Up to \"Off\" (or \"Main character only\") in the difficulty settings, otherwise the game levels companions up by their recommended build.");
+            GUILayout.Label("Set Auto Level Up to \"Off\" (or \"Main character only\") in the difficulty settings, otherwise the game levels companions up using their recommended builds.");
             GUILayout.Label($"Companion blueprints patched: {Patched.Count} (preset level limit -> {Limit}):");
             foreach (var p in Patched.OrderBy(p => p.Key.name))
                 GUILayout.Label($"    {p.Key.name}: {p.Value}");

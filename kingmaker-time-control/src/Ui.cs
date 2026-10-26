@@ -352,6 +352,7 @@ namespace TimeControl
         public TextMeshProUGUI Right;
         public Image Icon;
         public Pointer Pointer;
+        public ModBar.ModControl Control;
     }
 
     class Hint
@@ -518,6 +519,7 @@ namespace TimeControl
             modal.Overlay = overlay;
             modal.m_Canvas = canvas;
             modal.Panel = rect;
+            ModBar.KeyCapRoot.Attach(overlay);
             modal.TitleText = Ui.Text(root.transform, Theme.Initial(title), 30, Theme.Title, FontStyles.Bold);
             modal.TitleText.alignment = TextAlignmentOptions.Center;
             Theme.Separator(root.transform);
@@ -574,9 +576,11 @@ namespace TimeControl
                     var size = icon.AddComponent<LayoutElement>();
                     size.preferredWidth = size.preferredHeight = Theme.HintIconSize;
                 }
+                else if (Ui.Keyboard)
+                    ModBar.KeyCaps.Create(item.transform, KeyLabel(hint.Button), Theme.HintIconSize, Theme.Font);
                 else
                 {
-                    var key = Ui.Text(item.transform, "[" + (Ui.Keyboard ? KeyLabel(hint.Button) : PadLabel(hint.Button)) + "]", 19, Theme.HintLabel, FontStyles.Bold);
+                    var key = Ui.Text(item.transform, "[" + PadLabel(hint.Button) + "]", 19, Theme.HintLabel, FontStyles.Bold);
                     key.enableWordWrapping = false;
                 }
                 var label = Ui.Text(item.transform, hint.Label, Theme.HintLabelSize, Theme.HintLabel, Theme.HintLabelStyle);

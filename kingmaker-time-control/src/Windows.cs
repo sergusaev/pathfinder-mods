@@ -178,6 +178,36 @@ namespace TimeControl
             public bool Eye;
             public Action Confirm;
             public Action<int> Change;
+            // The control in the right column, in the look of the game's settings: a slider at Index of Count (Slide
+            // sets it), a switch (On; Confirm turns it), a choice (Change steps it) or a button (Confirm).
+            public ModBar.ModControl.Kind Control;
+            public string Value;
+            public int Index, Count;
+            public bool On;
+            public Action<int> Slide;
+        }
+
+        // The controls' place: as high as a row's text, so the sheet keeps its size.
+        const float ControlWidth = 300f, ControlHeight = 26f;
+
+        // The values of a coefficient as StepFactor goes through them: by 0.05 to 1, by 0.1 to 2, by 0.25 to 10.
+        static readonly float[] FactorSteps = MakeFactorSteps();
+
+        static float[] MakeFactorSteps()
+        {
+            var steps = new List<float>();
+            for (int i = 2; i <= 20; i++) steps.Add(i * 0.05f);
+            for (int i = 11; i <= 20; i++) steps.Add(i * 0.1f);
+            for (int i = 9; i <= 40; i++) steps.Add(i * 0.25f);
+            return steps.Select(Factors.Clamp).ToArray();
+        }
+
+        static int FactorIndex(float value)
+        {
+            int best = 0;
+            for (int i = 1; i < FactorSteps.Length; i++)
+                if (Mathf.Abs(FactorSteps[i] - value) < Mathf.Abs(FactorSteps[best] - value)) best = i;
+            return best;
         }
 
         const int VisibleRows = 13;
@@ -249,6 +279,10 @@ namespace TimeControl
                 var row = MakeRow(list.transform, 20);
                 row.Pointer.Click = e => ClickRow(at, e);
                 row.Pointer.Live = () => m_Top + at < m_Items.Count && !m_Items[m_Top + at].Header;
+                row.Control = ModBar.ModControl.Create((RectTransform)row.Bg.transform, row.Text, ControlWidth, ControlHeight);
+                row.Control.Step = d => StepControl(at, d);
+                row.Control.Slide = v => SlideControl(at, v);
+                row.Control.Press = () => PressControl(at);
                 m_Rows.Add(row);
             }
             list.GetComponent<UnityEngine.UI.VerticalLayoutGroup>().padding.right = (int)ModBar.ModScrollbar.Width + 4;
@@ -446,15 +480,36 @@ namespace TimeControl
             {
                 int at = i;
                 float now = Main.GetFactor(i);
-                string value = "<b>" + Factors.Text(m_Pending[i]) + "</b>";
-                if (!Mathf.Approximately(now, m_Pending[i])) value = string.Format(S.Pending, value, Factors.Text(now));
-                m_Items.Add(new Item { Text = names[i], Right = "-   " + value + "   +", Change = d => StepFactor(at, d) });
+                string text = names[i];
+                if (!Mathf.Approximately(now, m_Pending[i])) text += "  <color=" + Theme.Muted + ">" + string.Format(S.Now, Factors.Text(now)) + "</color>";
+                m_Items.Add(new Item
+                {
+                    Text = text,
+                    Change = d => StepFactor(at, d),
+                    Control = ModBar.ModControl.Kind.Slider,
+                    Value = Factors.Text(m_Pending[i]).TrimStart('×'),
+                    Index = FactorIndex(m_Pending[i]),
+                    Count = FactorSteps.Length,
+                    Slide = v =>
+                    {
+                        m_Pending[at] = FactorSteps[v];
+                        Rebuild();
+                    }
+                });
             }
             bool pending = Enumerable.Range(0, 8).Any(i => !Mathf.Approximately(Main.GetFactor(i), m_Pending[i]));
-            m_Items.Add(new Item { Text = (pending ? "<b>" : "") + S.Apply + (pending ? "</b>" : ""), Confirm = ApplyFactors });
+            m_Items.Add(new Item
+            {
+                Text = (pending ? "<b>" : "") + S.Apply + (pending ? "</b>" : ""),
+                Confirm = ApplyFactors,
+                Control = ModBar.ModControl.Kind.Button,
+                Value = S.ButtonApply
+            });
             m_Items.Add(new Item
             {
                 Text = S.Reset,
+                Control = ModBar.ModControl.Kind.Button,
+                Value = S.ButtonReset,
                 Confirm = () =>
                 {
                     for (int i = 0; i < 8; i++) m_Pending[i] = 1f;
@@ -464,11 +519,31 @@ namespace TimeControl
             m_Items.Add(new Item { Text = "<color=" + Theme.Accent + ">" + string.Format(S.Section, S.SecSpan) + "</color>", Header = true });
             int hours = m_SpanDays * 24 + m_SpanHours;
             string after = Timers.Date(Game.Instance.Player.GameTime + TimeSpan.FromHours(hours));
-            m_Items.Add(new Item { Text = S.SpanDays, Right = "-   <b>" + S.Days(m_SpanDays) + "</b>   +", Detail = after, Change = d => { m_SpanDays = Mathf.Clamp(m_SpanDays + d, 0, 365); Rebuild(); } });
-            m_Items.Add(new Item { Text = S.SpanHours, Right = "-   <b>" + S.Hours(m_SpanHours) + "</b>   +", Detail = after, Change = d => { m_SpanHours = (m_SpanHours + d + 24) % 24; Rebuild(); } });
-            m_Items.Add(new Item { Text = S.SkipRow + " (" + S.Span(hours) + ")", Detail = after, Confirm = AskSkip });
+            m_Items.Add(new Item
+            {
+                Text = S.SpanDays,
+                Detail = after,
+                Change = d => { m_SpanDays = Mathf.Clamp(m_SpanDays + d, 0, 365); Rebuild(); },
+                Control = ModBar.ModControl.Kind.Slider,
+                Value = m_SpanDays.ToString(),
+                Index = m_SpanDays,
+                Count = 366,
+                Slide = v => { m_SpanDays = v; Rebuild(); }
+            });
+            m_Items.Add(new Item
+            {
+                Text = S.SpanHours,
+                Detail = after,
+                Change = d => { m_SpanHours = (m_SpanHours + d + 24) % 24; Rebuild(); },
+                Control = ModBar.ModControl.Kind.Slider,
+                Value = m_SpanHours.ToString(),
+                Index = m_SpanHours,
+                Count = 24,
+                Slide = v => { m_SpanHours = v; Rebuild(); }
+            });
+            m_Items.Add(new Item { Text = S.SkipRow + " (" + S.Span(hours) + ")", Detail = after, Confirm = AskSkip, Control = ModBar.ModControl.Kind.Button, Value = S.ButtonSkip });
             string before = Timers.Date(Game.Instance.Player.GameTime - TimeSpan.FromHours(Math.Min(hours, Rewinder.MaxHours)));
-            m_Items.Add(new Item { Text = S.RewindRow + " (" + S.Span(hours) + ")", Detail = before, Confirm = AskRewind });
+            m_Items.Add(new Item { Text = S.RewindRow + " (" + S.Span(hours) + ")", Detail = before, Confirm = AskRewind, Control = ModBar.ModControl.Kind.Button, Value = S.ButtonRewind });
         }
 
         void SetupItems()
@@ -482,11 +557,11 @@ namespace TimeControl
                 return;
             }
             m_Items.Add(new Item { Text = "<b>" + timer.Line + "</b>", Detail = TimerDetail(timer), Header = true });
-            string deadline = tracked.DeadlineHours > 0 ? string.Format(S.SetupDeadline, S.Span(tracked.DeadlineHours)) : S.SetupDeadlineZero;
             m_Items.Add(new Item
             {
-                Text = deadline,
-                Right = "-   +",
+                Text = S.SetupDeadlineRow,
+                Control = ModBar.ModControl.Kind.Choice,
+                Value = tracked.DeadlineHours > 0 ? S.Span(tracked.DeadlineHours) : S.DeadlineAtOnce,
                 Detail = TimerDetail(timer),
                 Change = d =>
                 {
@@ -504,7 +579,9 @@ namespace TimeControl
                 bool on = tracked.Alerts.Contains(a);
                 m_Items.Add(new Item
                 {
-                    Text = (on ? "<color=" + Theme.Good + ">+</color> " : "<color=" + Theme.Muted + ">–</color> ") + string.Format(S.SetupAlert, S.Offset(a)),
+                    Text = string.Format(S.SetupAlert, S.Offset(a)),
+                    Control = ModBar.ModControl.Kind.Switch,
+                    On = on,
                     Detail = TimerDetail(timer),
                     Confirm = () =>
                     {
@@ -518,6 +595,8 @@ namespace TimeControl
             m_Items.Add(new Item
             {
                 Text = "<color=" + Theme.Bad + ">" + S.SetupStop + "</color>",
+                Control = ModBar.ModControl.Kind.Button,
+                Value = S.ButtonStop,
                 Confirm = () =>
                 {
                     Tracker.Untrack(m_SetupKey);
@@ -798,6 +877,14 @@ namespace TimeControl
             int index = m_Top + at;
             if (index >= m_Items.Count || m_Items[index].Header) return;
             var item = m_Items[index];
+            // The control takes its own clicks; the rest of its row only selects it.
+            if (item.Control != ModBar.ModControl.Kind.None && item.Control != ModBar.ModControl.Kind.Button)
+            {
+                if (item.Control == ModBar.ModControl.Kind.Switch && index == m_Cursor) OnConfirm();
+                m_Cursor = index;
+                Render();
+                return;
+            }
             if (item.Change != null)
             {
                 m_Cursor = index;
@@ -813,6 +900,41 @@ namespace TimeControl
                 m_Cursor = index;
                 Render();
             }
+        }
+
+        Item ControlItem(int at)
+        {
+            int index = m_Top + at;
+            if (index >= m_Items.Count) return null;
+            m_Cursor = index;
+            return m_Items[index];
+        }
+
+        // An arrow of a choice, or a side of a switch: the switch turns only when the side is not its state.
+        void StepControl(int at, int direction)
+        {
+            var item = ControlItem(at);
+            if (item == null) return;
+            if (item.Control == ModBar.ModControl.Kind.Switch)
+            {
+                if (item.On != direction > 0 && item.Confirm != null) item.Confirm();
+                else Render();
+            }
+            else if (item.Change != null) item.Change(direction);
+        }
+
+        void SlideControl(int at, int value)
+        {
+            var item = ControlItem(at);
+            if (item != null && item.Slide != null) item.Slide(value);
+        }
+
+        void PressControl(int at)
+        {
+            var item = ControlItem(at);
+            if (item == null || item.Confirm == null) return;
+            Render();
+            item.Confirm();
         }
 
         void ClickTabs(PointerEventData e)
@@ -876,6 +998,7 @@ namespace TimeControl
                 {
                     row.Text.text = "";
                     row.Right.text = "";
+                    row.Control.Hide();
                     row.Icon.gameObject.SetActive(false);
                     row.Pointer.Normal = Color.clear;
                     row.Pointer.Refresh();
@@ -884,6 +1007,14 @@ namespace TimeControl
                 var item = m_Items[index];
                 row.Text.text = item.Text;
                 row.Right.text = item.Right ?? "";
+                switch (item.Control)
+                {
+                    case ModBar.ModControl.Kind.Slider: row.Control.SetSlider(item.Index, item.Count, item.Value); break;
+                    case ModBar.ModControl.Kind.Switch: row.Control.SetSwitch(item.On, S.SwitchOn, S.SwitchOff); break;
+                    case ModBar.ModControl.Kind.Choice: row.Control.SetChoice(item.Value); break;
+                    case ModBar.ModControl.Kind.Button: row.Control.SetButton(item.Value); break;
+                    default: row.Control.Hide(); break;
+                }
                 if (item.Eye)
                 {
                     row.Icon.sprite = Icons.Eye;

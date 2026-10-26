@@ -106,9 +106,9 @@ namespace LearnScrolls
         static void OnGUI(UnityModManager.ModEntry modEntry)
         {
             var s = Settings;
-            s.BarButtons = GUILayout.Toggle(s.BarButtons, " Buttons in the block of the mods' buttons over the game's menu buttons, after the buffs and the time (keyboard and mouse mode)");
-            s.ExcludeOpposition = GUILayout.Toggle(s.ExcludeOpposition, " Do not learn spells of opposition schools");
-            GUILayout.Label("The criteria and the help are in the mod's window: its button over the game's menu buttons, or its card in the gamepad menu.");
+            s.BarButtons = GUILayout.Toggle(s.BarButtons, " Buttons in the mod button block above the game's menu buttons, after the buff and time buttons (keyboard and mouse mode)");
+            s.ExcludeOpposition = GUILayout.Toggle(s.ExcludeOpposition, " Don't learn opposition school spells");
+            GUILayout.Label("Distribution rules and help are in the mod window: open it with its button above the game's menu buttons or its card in the gamepad menu.");
             if (GUILayout.Button("Open the window", GUILayout.Width(200)) && InGame) Window.Toggle();
         }
 

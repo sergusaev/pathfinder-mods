@@ -118,7 +118,7 @@ namespace TimeControl
             GUILayout.Label("<b>Duration coefficients</b> (×0.5 = twice as fast, ×2 = twice as long; fractions allowed, 0.1 … 10)");
             string[] labels = {
                 "Kingdom event resolution", "Kingdom projects", "Claiming and upgrading regions", "Advisor rank-ups",
-                "Ruler's time spent on projects", "Building construction (new buildings)", "Travel time on the global map", "Camping and sleeping time"
+                "Ruler time on projects", "Building construction (new buildings)", "Travel time on the global map", "Camping and sleeping time"
             };
             bool pending = false;
             for (int i = 0; i < 8; i++)
@@ -159,8 +159,8 @@ namespace TimeControl
             if (GUILayout.Button("Open the deadlines window", GUILayout.Width(260)) && InGame)
                 TimersWindow.Open(0);
             GUILayout.EndHorizontal();
-            Settings.BarButton = GUILayout.Toggle(Settings.BarButton, " Button in the block of the mods' buttons over the game's menu buttons, after the buff bar (keyboard and mouse mode)");
-            Settings.ShowHidden = GUILayout.Toggle(Settings.ShowHidden, " Show hidden timers (ones the game does not show)");
+            Settings.BarButton = GUILayout.Toggle(Settings.BarButton, " Button in the mod button block above the game's menu buttons, after the buff bar (keyboard and mouse mode)");
+            Settings.ShowHidden = GUILayout.Toggle(Settings.ShowHidden, " Show hidden timers (those the game does not display)");
             Settings.AutoTrackCritical = GUILayout.Toggle(Settings.AutoTrackCritical, " Track deadlines after which something fails as soon as they appear");
             Settings.PauseOnAlert = GUILayout.Toggle(Settings.PauseOnAlert, " Pause the game when an alert pops up");
 

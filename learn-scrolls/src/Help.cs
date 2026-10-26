@@ -88,7 +88,7 @@ namespace LearnScrolls
 
         static string Button(RewiredActionType action)
         {
-            if (Window.KeyboardMode) return Letters(Window.KeyLabel(action));
+            if (Window.KeyboardMode) return ModBar.KeyCaps.Inline(Window.KeyLabel(action));
             Resolve();
             if (s_Asset != null && s_Asset.GetSpriteIndexFromName(s_Prefix + action) >= 0) return "<size=" + s_IconPercent + "%><sprite name=\"" + s_Prefix + action + "\"></size>";
             return Letters(Window.PadLabel(action));
@@ -127,6 +127,7 @@ namespace LearnScrolls
 
         static string Tokens(string text)
         {
+            text = ModBar.KeyCaps.Keys(text);
             if (text.IndexOf('{') < 0) return text;
             return Token.Replace(text, m =>
             {

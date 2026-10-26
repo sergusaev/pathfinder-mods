@@ -71,7 +71,7 @@ namespace TimeControl
 
         static string Button(RewiredActionType action)
         {
-            if (Ui.Keyboard) return Letters(Modal.KeyName(action));
+            if (Ui.Keyboard) return ModBar.KeyCaps.Inline(Modal.KeyName(action));
             Resolve();
             if (s_Asset != null && s_Asset.GetSpriteIndexFromName(s_Prefix + action) >= 0) return "<size=135%><sprite name=\"" + s_Prefix + action + "\"></size>";
             return Letters(Modal.PadName(action));
@@ -84,6 +84,7 @@ namespace TimeControl
 
         static string Tokens(string text)
         {
+            text = ModBar.KeyCaps.Keys(text);
             if (text.IndexOf('{') < 0) return text;
             return Token.Replace(text, m =>
             {

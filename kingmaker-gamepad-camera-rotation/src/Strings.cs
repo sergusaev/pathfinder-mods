@@ -67,7 +67,7 @@ namespace GamepadCameraRotation
             get
             {
                 return Pick("На север: {0} или щелчок по компасу", "Nach Norden: {0} oder Klick auf den Kompass",
-                    "Vers le nord : {0} ou clic sur la boussole", "朝北：{0} 或点击罗盘", "North: {0} or click the compass");
+                    "Vers le nord : {0} ou clic sur la boussole", "朝北：{0} 或点击罗盘", "Face north: {0} or click the compass");
             }
         }
 

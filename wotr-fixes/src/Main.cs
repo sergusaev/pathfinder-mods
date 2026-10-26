@@ -49,9 +49,9 @@ namespace WotrFixes
                 s_Toggle = new GUIStyle(GUI.skin.toggle) { wordWrap = true };
             }
             int hz = Screen.currentResolution.refreshRate;
-            GUILayout.Label("Frame pacing: a frame every N refreshes of the screen (" + hz + " Hz now), the same time for every frame. "
-                + "On the Steam Deck use it instead of the frame limit of the quick access menu, which limits only what is shown: "
-                + "the game keeps drawing faster and the picture judders.", s_Text);
+            GUILayout.Label("Frame pacing: one frame every N screen refreshes (" + hz + " Hz now), with equal time for every frame. "
+                + "On the Steam Deck, use it instead of the frame limit in the Quick Access menu, which only limits what is displayed: "
+                + "the game keeps rendering faster and the picture judders.", s_Text);
             int selected = Mathf.Clamp(Settings.FrameInterval - 1, 0, Intervals.Length - 1);
             int chosen = GUILayout.Toolbar(selected, Intervals, GUILayout.ExpandWidth(true));
             if (chosen != selected)
@@ -65,7 +65,7 @@ namespace WotrFixes
             GUILayout.Space(10);
             bool gc = GUILayout.Toggle(Settings.IncrementalGc, " Incremental garbage collection: the collector's pauses (about 0.3 s "
                 + "every few minutes on the Steam Deck) are split into slices of 3 ms. Written to Wrath_Data/boot.config, takes "
-                + "effect at the next start of the game; written back at start if a Steam update or file check removed it.", s_Toggle);
+                + "effect the next time the game starts; restored at startup if a Steam update or file check removed it.", s_Toggle);
             if (gc != Settings.IncrementalGc)
             {
                 Settings.IncrementalGc = gc;

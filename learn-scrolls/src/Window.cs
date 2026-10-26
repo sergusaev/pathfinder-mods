@@ -92,7 +92,15 @@ namespace LearnScrolls
             internal TextMeshProUGUI Text;
             internal TextMeshProUGUI Value;
             internal Pointer Pointer;
+            internal ModBar.ModControl Control;
         }
+
+        // The switches and the button of the settings, in the look of the game's own.
+#if KINGMAKER
+        const float ControlWidth = 230f, ControlHeight = 32f;
+#else
+        const float ControlWidth = 210f, ControlHeight = 34f;
+#endif
 
         internal static bool IsOpen
         {
@@ -356,37 +364,41 @@ namespace LearnScrolls
                 var row = MakeRow(m_SetList, 20, 0);
                 row.Pointer.Click = () => ClickSetting(at);
                 if (at == CriteriaFields.Length) row.Pointer.Live = () => false;
+                row.Control = ModBar.ModControl.Create((RectTransform)row.Go.transform, row.Text, ControlWidth, ControlHeight);
+                row.Control.Step = d => StepSetting(at, d);
+                row.Control.Press = () => ClickSetting(at);
                 m_SetRows.Add(row);
             }
             var labels = Strings.Criteria;
             for (int i = 0; i < count; i++)
             {
                 var row = m_SetRows[i];
+                row.Value.text = "";
                 if (i < CriteriaFields.Length)
                 {
                     bool on = Criterion(i);
                     row.Text.text = (i + 1) + ". " + labels[i];
                     row.Text.color = on ? Theme.Text : Theme.Dim;
-                    row.Value.text = on ? "<color=" + Theme.Good + ">" + Strings.On + "</color>" : "<color=" + Theme.Muted + ">" + Strings.Off + "</color>";
+                    row.Control.SetSwitch(on, Strings.SwitchOn, Strings.SwitchOff);
                 }
                 else if (i == CriteriaFields.Length)
                 {
                     row.Text.text = (i + 1) + ". " + Strings.PartyOrder;
                     row.Text.color = Theme.Dim;
-                    row.Value.text = "";
+                    row.Control.Hide();
                 }
                 else if (i == CriteriaFields.Length + 1)
                 {
                     bool on = Main.Settings.ExcludeOpposition;
                     row.Text.text = Strings.ExcludeOpposition;
                     row.Text.color = on ? Theme.Text : Theme.Dim;
-                    row.Value.text = on ? "<color=" + Theme.Good + ">" + Strings.On + "</color>" : "<color=" + Theme.Muted + ">" + Strings.Off + "</color>";
+                    row.Control.SetSwitch(on, Strings.SwitchOn, Strings.SwitchOff);
                 }
                 else
                 {
                     row.Text.text = "<b>" + Strings.Defaults + "</b>";
                     row.Text.color = Theme.Text;
-                    row.Value.text = "";
+                    row.Control.SetButton(Strings.Restore);
                 }
                 row.Bg.color = i == m_SetCursor ? Theme.RowSelected : i == CriteriaFields.Length ? Theme.RowOutside : Theme.Row;
             }
@@ -509,6 +521,19 @@ namespace LearnScrolls
             m_CharCursor = at;
             RenderCharacters();
             Learn(m_Entries[at]);
+        }
+
+        // A side of a switch: on to the right, off to the left; nothing when it is so already.
+        void StepSetting(int at, int direction)
+        {
+            bool on = direction > 0;
+            if (at < CriteriaFields.Length ? Criterion(at) == on : at != CriteriaFields.Length + 1 || Main.Settings.ExcludeOpposition == on)
+            {
+                m_SetCursor = at;
+                RenderSettings();
+                return;
+            }
+            ClickSetting(at);
         }
 
         void ClickSetting(int at)
@@ -769,6 +794,7 @@ namespace LearnScrolls
             w.m_Canvas = canvas;
             w.m_Font = font;
             w.m_BuiltForKeyboard = KeyboardMode;
+            ModBar.KeyCapRoot.Attach(root);
             var title = w.Text(root.transform, Theme.Initial(Strings.Title), 30, FontStyles.Bold, Theme.Title);
             title.alignment = TextAlignmentOptions.Center;
             Theme.Separator(root.transform);
@@ -926,9 +952,7 @@ namespace LearnScrolls
         {
             if (m_BuiltForKeyboard)
             {
-                var key = Text(parent, "[" + KeyLabel(button) + "]", 19, FontStyles.Bold, color ?? Theme.Title);
-                key.enableWordWrapping = false;
-                return key.gameObject;
+                return ModBar.KeyCaps.Create(parent, KeyLabel(button), size, m_Font);
             }
             Sprite sprite = null;
             try { sprite = GamePadIcons.Instance != null ? GamePadIcons.Instance.GetIcon(button) : null; }

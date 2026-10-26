@@ -18,10 +18,10 @@ namespace LearnScrolls
         internal static string Title => T("Свитки", "Scrolls");
 
         internal static string LearnTip => T("Изучить всё для всех: кто какие свитки из инвентаря изучит — сначала список, потом подтверждение.",
-            "Learn everything for everyone: who learns which scrolls of the inventory — the list first, then a confirmation.");
+            "Learn all for everyone: see who learns which scroll from the inventory, then confirm.");
 
         internal static string WindowTip => T("Окно мода: персонажи и что каждый может изучить, правила раздачи, справка.",
-            "The mod's window: the characters and what each can learn, the rules of the share-out, help.");
+            "Mod window: characters and what each can learn, distribution rules, help.");
 
         internal static string TabCharacters => T("Персонажи", "Characters");
         internal static string TabSettings => T("Настройки", "Settings");
@@ -48,14 +48,14 @@ namespace LearnScrolls
             return many;
         }
 
-        internal static string NothingToLearn => T("Из свитков в инвентаре изучать нечего.", "There is nothing to learn from the scrolls in the inventory.");
+        internal static string NothingToLearn => T("Из свитков в инвентаре изучать нечего.", "No scrolls in the inventory can be learned.");
 
         internal static string Learned(int count)
         {
             return T("Изучено: ", "Learned: ") + count + ".";
         }
 
-        internal static string Question => T("Изучить свитки из инвентаря?", "Learn the scrolls from the inventory?");
+        internal static string Question => T("Изучить свитки из инвентаря?", "Learn scrolls from the inventory?");
 
         internal static string SpellLevel(int level)
         {
@@ -66,17 +66,17 @@ namespace LearnScrolls
 
         internal static string WouldGoTo(string names)
         {
-            return T("по общей раздаче достался бы: ", "the party plan gives it to ") + names;
+            return T("по общей раздаче достался бы: ", "party distribution assigns it to ") + names;
         }
 
         // Settings page.
         internal static string CriteriaNote => T("Кому достаётся свиток, копий которого меньше, чем желающих. Правила проверяются по порядку, каждое следующее — только среди равных по предыдущим.",
-            "Who gets a scroll there are fewer copies of than characters who can learn it. The rules are tried in order, each next one only between the characters the ones before left equal.");
+            "Who gets a scroll when there are fewer copies than characters who can learn it. Rules are checked in order; each one only breaks ties left by the previous ones.");
 
         internal static string[] Criteria => Ru
             ? new[]
             {
-                "Может колдовать заклинания этого круга уже сейчас",
+                "Уже может колдовать заклинания этого круга",
                 "Заклинание не из противоположной школы",
                 "Выше уровень заклинателя",
                 "Школа специализации",
@@ -89,25 +89,28 @@ namespace LearnScrolls
             }
             : new[]
             {
-                "Can cast spells of its level now",
-                "The spell is not of an opposition school",
+                "Can already cast spells of this level",
+                "Spell is not from an opposition school",
                 "Higher caster level",
-                "The school of specialization",
+                "Specialist school",
                 "Spell Focus in the school",
                 "Higher casting ability score",
-                "Touch and attack spells to a magus",
+                "Touch and attack spells go to a magus",
                 "Fewer known spells of this level",
                 "Lower spell level for the class",
-                "The main character first",
+                "Main character first",
             };
 
-        internal static string PartyOrder => T("Порядок в группе (всегда)", "The order in the party (always)");
+        internal static string PartyOrder => T("Порядок в группе (всегда)", "Party order (always)");
 
-        internal static string ExcludeOpposition => T("Не изучать заклинания противоположных школ", "Do not learn spells of opposition schools");
+        internal static string ExcludeOpposition => T("Не изучать заклинания противоположных школ", "Don't learn opposition school spells");
         internal static string Defaults => T("По умолчанию", "Defaults");
 
         internal static string On => T("вкл.", "on");
         internal static string Off => T("выкл.", "off");
+        internal static string SwitchOn => T("Вкл", "On");
+        internal static string SwitchOff => T("Выкл", "Off");
+        internal static string Restore => T("Вернуть", "Restore");
 
         // Hints.
         internal static string HintSelect => T("Выбрать", "Select");
@@ -145,34 +148,34 @@ namespace LearnScrolls
 {B}| закрыть окно
 @pad {START}| меню игры поверх окна мода; после него окно возвращается
 @pad - В окне со списком правый стик прокручивает список.
-@kb - Стрелки и Enter делают то же, что W/S и E; Esc или правая кнопка мыши закрывают окно.
+@kb - Стрелки и [[Enter]] делают то же, что [[W/S]] и [[E]]; [[Esc]] или правая кнопка мыши закрывают окно.
 @kb - Мышь: щелчок по строке, колесо прокручивает справку и список в окне игры.";
 
         const string HelpEn =
 @"# What the mod does
-Teaches wizards, magi and the other copiers every scroll of the inventory at once, the way the game itself does it: the scroll is spent, the spell goes into the book.
-# Learn everything for everyone
-@kb - The button with a scroll over the game's menu buttons.
-@pad - The Whole party item of the Characters tab.
-- Every scroll goes to someone who can learn it; when there are fewer copies than characters who can, the rules of the Settings tab decide.
-- The game's window with the list comes first: the characters, under each its spells with the level and the school. Nothing is learned before the confirmation. Recipes of the inventory are learned by the whole party.
-- The school is [+green+] {LIKE} when it is the character's specialization, [-red-] {DISLIKE} when it is its opposition school (it casts such a spell worse), plain otherwise.
-- Next to a character: how many scrolls the party plan gives it; the characters' numbers add up to the Whole party's.
+Teaches wizards, magi and other scroll copiers every scroll in the inventory at once, the same way the game does: the scroll is consumed and the spell goes into the spellbook.
+# Learn all for everyone
+@kb - The scroll button above the game's menu buttons.
+@pad - The Whole party item on the Characters tab.
+- Each scroll goes to someone who can learn it; when there are fewer copies than candidates, the rules on the Settings tab decide.
+- First the game's list window opens: the characters, each with their spells, spell levels and schools. Nothing is learned until you confirm. Recipes in the inventory are learned by the whole party.
+- A [+green+] {LIKE} school is the character's specialization, a [-red-] {DISLIKE} one is their opposition school (they cast such spells at a penalty), uncoloured is a regular school.
+- Next to each character: how many scrolls the party distribution assigns them; the numbers add up to the Whole party total.
 # Characters
-- Pick a character: it learns everything it can, also what the party plan would give to someone else; such spells are marked in the list.
+- Pick a character to have them learn everything they can, including scrolls the party distribution would give to someone else; such spells are marked in the list.
 # What is not learned
-- A spell already in the book; a spell not on the class's list; a spell the casting ability score is too low for (10 + the spell level is needed).
-- A spell of an opposition school, when Do not learn spells of opposition schools is on in the Settings (off by default).
+- A spell already in the spellbook; a spell not on the class list; a spell the casting ability score is too low for (10 + spell level is required).
+- A spell from an opposition school, when Don't learn opposition school spells is on in Settings (off by default).
 # Controls
-@pad - The window opens with the Scrolls card of the game's menu.
-@kb - The window opens with the second button over the game's menu buttons.
-{UP} {DOWN}| select a row; in the help, scroll
-{A}| act
-{LB} {RB}| the next tab
+@pad - The window opens from the Scrolls card in the game's menu.
+@kb - The window opens with the second button above the game's menu buttons.
+{UP} {DOWN}| select a row; scroll the help
+{A}| activate
+{LB} {RB}| switch tab
 {B}| close the window
-@pad {START}| the game's menu over the mod's window; the window comes back after it
-@pad - In the window with the list the right stick scrolls the list.
-@kb - The arrows and Enter do what W/S and E do; Esc or the right mouse button close the window.
-@kb - Mouse: a click on a row; the wheel scrolls the help and the list in the game's window.";
+@pad {START}| open the game's menu over the mod window; the window returns afterwards
+@pad - In the list window, the right stick scrolls the list.
+@kb - Arrow keys and [[Enter]] work like [[W/S]] and [[E]]; [[Esc]] or the right mouse button closes the window.
+@kb - Mouse: click a row; the wheel scrolls the help and the list in the game's window.";
     }
 }

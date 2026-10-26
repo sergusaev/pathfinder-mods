@@ -82,7 +82,7 @@ namespace GamepadCameraRotation
             Settings.ZoomSpeed = GUILayout.HorizontalSlider(Settings.ZoomSpeed, 0.2f, 3f, GUILayout.Width(300));
             Settings.InvertRotation = GUILayout.Toggle(Settings.InvertRotation, "Invert rotation");
             Settings.InvertZoom = GUILayout.Toggle(Settings.InvertZoom, "Invert zoom");
-            GUILayout.Label("Compass hints gap from the compass: " + Settings.HintsGap.ToString("0"));
+            GUILayout.Label("Gap between the compass and its hints: " + Settings.HintsGap.ToString("0"));
             float x = GUILayout.HorizontalSlider(Settings.HintsGap, 0f, 60f, GUILayout.Width(300));
             GUILayout.Label("Compass hints offset Y: " + Settings.HintsOffsetY.ToString("0"));
             float y = GUILayout.HorizontalSlider(Settings.HintsOffsetY, -60f, 60f, GUILayout.Width(300));
@@ -97,12 +97,12 @@ namespace GamepadCameraRotation
 
             GUILayout.Space(10);
             GUILayout.Label("Keyboard and mouse:");
-            GUILayout.Label("Middle mouse drag rotates, Alt + middle mouse moves the camera. Mouse rotation, deg per pixel: " + Settings.MouseRotationSpeed.ToString("0.00"));
+            GUILayout.Label("Dragging with the middle mouse button rotates, Alt + middle mouse button pans the camera. Mouse rotation, deg per pixel: " + Settings.MouseRotationSpeed.ToString("0.00"));
             Settings.MouseRotationSpeed = GUILayout.HorizontalSlider(Settings.MouseRotationSpeed, 0.05f, 1f, GUILayout.Width(300));
             KeyField(1, "Rotate left: Alt +", ref Settings.RotateLeftKey, true);
             KeyField(2, "Rotate right: Alt +", ref Settings.RotateRightKey, true);
-            KeyField(3, "North (area default):", ref Settings.NorthKey, false);
-            bool compass = GUILayout.Toggle(Settings.PcCompass, "Compass in the clock next to the system buttons (click: north)");
+            KeyField(3, "Face north (area default):", ref Settings.NorthKey, false);
+            bool compass = GUILayout.Toggle(Settings.PcCompass, "Compass in the clock next to the system buttons (click to face north)");
             GUILayout.Label("Compass scale: " + Settings.PcCompassScale.ToString("0.00"));
             float scale = GUILayout.HorizontalSlider(Settings.PcCompassScale, 0.5f, 1.5f, GUILayout.Width(300));
             GUILayout.Label("Compass offset X: " + Settings.PcCompassOffsetX.ToString("0"));
