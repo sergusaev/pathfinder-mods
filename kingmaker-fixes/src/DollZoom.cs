@@ -19,8 +19,7 @@ namespace KingmakerFixes
 {
     // The character doll zooms with the mouse wheel and the right mouse button of the keyboard and mouse interface only;
     // in the gamepad interface the right stick turns it, but nothing zooms it. Here the right stick up and down zooms it,
-    // and so does the mouse wheel over the doll in either interface. The camera moves toward the doll's head, as the
-    // game's wheel zoom does.
+    // and so does the mouse wheel over the doll in either interface. The picture is enlarged around the doll's head (Lens).
     static class DollZoom
     {
         // RewiredConsts.Action.RightStickX / RightStickY.
@@ -141,56 +140,105 @@ namespace KingmakerFixes
     }
 
     // The gamepad doll room has the game's DollCamera switched off: it never zooms, and DollCamera.Current stays empty.
-    // Here the camera itself is moved toward the head the room points it at (DollCamera.LookAt), turning to it on the
-    // way as the game's zoom does, and put back where it stood when the doll is hidden.
+    // Here the zoom asked for glides and goes to Lens.
     static class GamepadZoom
     {
-        static readonly FieldInfo Target = AccessTools.Field(typeof(DollCamera), "m_Target");
-        // Wheel notches from the doll's full view to the closest one, and the part of the way to the head that is.
+        internal static readonly FieldInfo Target = AccessTools.Field(typeof(DollCamera), "m_Target");
+        // Wheel notches from the doll's full view to the closest one.
         const float Notches = 10f;
-        const float Reach = 0.7f;
-        // How fast the camera catches up with the zoom asked for, per second: a wheel notch glides instead of jumping.
+        // How fast the zoom catches up with the one asked for, per second: a wheel notch glides instead of jumping.
         const float Smooth = 10f;
 
-        static Transform s_Camera;
-        static Vector3 s_Position;
-        static Quaternion s_Rotation;
+        static DollCamera s_Camera;
         static float s_Zoom, s_Goal;
 
         internal static void By(DollCamera camera, float notches)
         {
-            if (s_Camera != camera.transform)
+            if (s_Camera != camera)
             {
                 Reset();
-                s_Camera = camera.transform;
-                s_Position = s_Camera.position;
-                s_Rotation = s_Camera.rotation;
+                s_Camera = camera;
             }
             s_Goal = Mathf.Clamp01(s_Goal + notches / Notches);
         }
 
-        // Every frame while the doll is shown: the doll turns, so the head is followed.
+        // Every frame while the doll is shown.
         internal static void Hold(DollCamera camera)
         {
-            if (s_Camera == null || s_Camera != camera.transform) return;
+            if (s_Camera == null || s_Camera != camera) return;
             s_Zoom = Mathf.Lerp(s_Zoom, s_Goal, 1f - Mathf.Exp(-Smooth * Mathf.Min(Time.unscaledDeltaTime, 0.1f)));
             if (Mathf.Abs(s_Zoom - s_Goal) < 0.001f) s_Zoom = s_Goal;
-            var head = Target?.GetValue(camera) as Transform;
-            if (head == null || s_Zoom <= 0f)
-            {
-                s_Camera.SetPositionAndRotation(s_Position, s_Rotation);
-                return;
-            }
-            var position = Vector3.Lerp(s_Position, head.position, s_Zoom * Reach);
-            var look = Quaternion.LookRotation(head.position - position);
-            s_Camera.SetPositionAndRotation(position, Quaternion.Slerp(s_Rotation, look, s_Zoom));
+            Lens.Apply(camera, s_Zoom);
         }
 
         internal static void Reset()
         {
-            if (s_Camera != null) s_Camera.SetPositionAndRotation(s_Position, s_Rotation);
+            Lens.Release();
             s_Camera = null;
             s_Zoom = s_Goal = 0f;
+        }
+    }
+
+    // The doll is zoomed by enlarging a part of the picture around its head as it stood when the zoom began; the camera
+    // stays where the room put it. The game moved the camera toward the head bone and turned it there: the backdrop slid
+    // along, a tall doll showed the black above it, and the camera shook with the head in the idle animation. The part
+    // enlarged is kept inside the picture, so no edge of the backdrop shows and a head the full view shows stays whole.
+    static class Lens
+    {
+        // Enlargement at full zoom.
+        const float Most = 3f;
+        // The part is centred this far above the head bone (at the base of the skull), about at the eyes.
+        const float AboveHead = 0.12f;
+
+        static DollCamera s_Owner;
+        static Camera s_Camera;
+        static bool s_Anchored;
+        static Vector2 s_Anchor;
+
+        // zoom: 0 the full view, 1 the closest.
+        internal static void Apply(DollCamera owner, float zoom)
+        {
+            if (owner != s_Owner)
+            {
+                Release();
+                s_Owner = owner;
+                s_Camera = owner.GetComponent<Camera>() ?? owner.GetComponentInChildren<Camera>(true);
+                if (s_Camera == null) Main.Log.Error("doll zoom: no camera on " + owner.name);
+            }
+            if (s_Camera == null) return;
+            s_Camera.ResetProjectionMatrix();
+            if (zoom <= 0f)
+            {
+                s_Anchored = false;
+                return;
+            }
+            if (!s_Anchored)
+            {
+                var head = GamepadZoom.Target?.GetValue(owner) as Transform;
+                var point = head != null ? s_Camera.WorldToViewportPoint(head.position + Vector3.up * AboveHead) : new Vector3(0.5f, 0.5f, 1f);
+                if (point.z <= 0f) point = new Vector3(0.5f, 0.5f, 1f);
+                s_Anchor = new Vector2(point.x * 2f - 1f, point.y * 2f - 1f);
+                s_Anchored = true;
+                Main.Log.Log($"doll zoom: {(owner.isActiveAndEnabled ? "keyboard and mouse" : "gamepad")} interface, head at {point.x:0.00}, {point.y:0.00} of the view");
+            }
+            // The part shown is centre ± 1/z in clip space, kept within ±1; on screen p' = z (p - centre).
+            float z = Mathf.Lerp(1f, Most, zoom);
+            float room = 1f - 1f / z;
+            float cx = Mathf.Clamp(s_Anchor.x, -room, room), cy = Mathf.Clamp(s_Anchor.y, -room, room);
+            var enlarge = Matrix4x4.identity;
+            enlarge[0, 0] = z;
+            enlarge[1, 1] = z;
+            enlarge[0, 3] = -z * cx;
+            enlarge[1, 3] = -z * cy;
+            s_Camera.projectionMatrix = enlarge * s_Camera.projectionMatrix;
+        }
+
+        internal static void Release()
+        {
+            if (s_Camera != null) s_Camera.ResetProjectionMatrix();
+            s_Owner = null;
+            s_Camera = null;
+            s_Anchored = false;
         }
     }
 
@@ -215,6 +263,63 @@ namespace KingmakerFixes
             catch (Exception e)
             {
                 Main.Log.Error("doll zoom, character creation page: " + e);
+            }
+        }
+    }
+
+    // The game's doll camera of the keyboard and mouse interface (DollCamera.DirtyZoom) moves toward the head and turns
+    // to it, the turn following the zoom asked for and the position gliding after it. A wheel notch is added every frame
+    // until a coroutine clears it, one or two frames by the order of updates, and the zoom goes past its limits while the
+    // wheel turns and springs back after. Here a notch is added once, the zoom stays within its limits, the camera stays
+    // put and Lens enlarges the picture, as in the gamepad interface.
+    [HarmonyPatch(typeof(DollCamera), "DirtyZoom")]
+    static class SmoothDollCamera
+    {
+        static readonly FieldInfo CurrentField = AccessTools.Field(typeof(DollCamera), "m_CurrentZoom");
+        static readonly FieldInfo SmoothedField = AccessTools.Field(typeof(DollCamera), "m_CurrentSmoothZoom");
+        static readonly FieldInfo DeltaField = AccessTools.Field(typeof(DollCamera), "m_DeltaZoom");
+        static readonly FieldInfo MinField = AccessTools.Field(typeof(DollCamera), "m_MinZoom");
+        static readonly FieldInfo MaxField = AccessTools.Field(typeof(DollCamera), "m_MaxZoom");
+        static readonly FieldInfo SmoothField = AccessTools.Field(typeof(DollCamera), "m_SmoothZoom");
+        static readonly FieldInfo StartField = AccessTools.Field(typeof(DollCamera), "m_StartPosition");
+        static readonly FieldInfo StartRotationField = AccessTools.Field(typeof(DollCamera), "m_StartRotation");
+        static bool s_Logged, s_Failed;
+
+        static bool Prefix(DollCamera __instance)
+        {
+            if (s_Failed) return true;
+            try
+            {
+                float min = (float)MinField.GetValue(__instance), max = (float)MaxField.GetValue(__instance);
+                float smooth = (float)SmoothField.GetValue(__instance);
+                if (!s_Logged)
+                {
+                    s_Logged = true;
+                    Main.Log.Log($"doll camera: zoom {min}..{max}, smoothing {smooth}");
+                }
+                if (min == max) return true;
+                float zoom = Mathf.Clamp((float)CurrentField.GetValue(__instance) + (float)DeltaField.GetValue(__instance), Mathf.Min(min, max), Mathf.Max(min, max));
+                float glide = zoom;
+                if (smooth != 0f && __instance.isActiveAndEnabled)
+                {
+                    float k = 1f - Mathf.Exp(-smooth * Mathf.Min(Time.unscaledDeltaTime, 0.1f));
+                    glide = Mathf.Lerp((float)SmoothedField.GetValue(__instance), zoom, k);
+                    if (Mathf.Abs(glide - zoom) < 0.0005f) glide = zoom;
+                }
+                CurrentField.SetValue(__instance, zoom);
+                DeltaField.SetValue(__instance, 0f);
+                SmoothedField.SetValue(__instance, glide);
+                // The full view is at m_MaxZoom (ZoomNormalized 1), the closest at m_MinZoom.
+                float normalized = Mathf.Clamp01((glide - min) / Mathf.Abs(max - min));
+                __instance.transform.SetPositionAndRotation((Vector3)StartField.GetValue(__instance), (Quaternion)StartRotationField.GetValue(__instance));
+                Lens.Apply(__instance, 1f - normalized);
+                return false;
+            }
+            catch (Exception e)
+            {
+                s_Failed = true;
+                Main.Log.Error("doll camera: " + e + ", the game's zoom is back");
+                return true;
             }
         }
     }
