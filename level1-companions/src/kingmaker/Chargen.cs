@@ -1,7 +1,11 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using HarmonyLib;
 using Kingmaker;
+using Kingmaker.EntitySystem.Entities;
+using Kingmaker.UI.CharSelect;
 using Kingmaker.UI.ServiceWindow;
 using Kingmaker.UI._ConsoleUI.CharGen;
 using Kingmaker.UI._ConsoleUI.Context;
@@ -86,6 +90,32 @@ namespace Level1Companions
         static bool Prefix()
         {
             return !StoryDoll.Active;
+        }
+    }
+
+    // The respec character selection opens with nobody chosen, so OK stays off even when the main character is the
+    // only one offered. Put the main character first and choose it on opening.
+    [HarmonyPatch(typeof(CharSelectWindow), nameof(CharSelectWindow.HandleSelectCharacter))]
+    static class CharSelectMainFirstPatch
+    {
+        static void Prefix(ref List<UnitEntityData> characters)
+        {
+            UnitEntityData main = Game.Instance.Player?.MainCharacter.Value;
+            if (characters == null || main == null || !characters.Contains(main)) return;
+            characters = new[] { main }.Concat(characters.Where(u => u != main)).ToList();
+        }
+
+        static void Postfix(List<HeroPortraitButton> ___m_SelectorItems)
+        {
+            try
+            {
+                HeroPortraitButton first = ___m_SelectorItems?.FirstOrDefault(i => i.gameObject.activeSelf && i.Index == 0);
+                if (first != null) first.Toggle.isOn = true;
+            }
+            catch (Exception e)
+            {
+                Main.Log.Error(e.ToString());
+            }
         }
     }
 
