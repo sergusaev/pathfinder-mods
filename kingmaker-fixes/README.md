@@ -69,6 +69,22 @@ If a save uses a portrait whose folder has no pictures, the game puts its defaul
 
 This fix used to be a separate mod, Custom Portraits Gamepad Selection Fix (`Mods/ConsoleCustomPortraits`). Remove that folder: while the old mod is on, Kingmaker Fixes leaves the portraits to it so that they are not listed twice, and says so in the log.
 
+### No zoom for the character doll with the gamepad interface
+
+**Symptom.** In the gamepad interface the right stick turns the character doll in the inventory, but nothing zooms it, and the mouse wheel over the doll does nothing either. The item description (R3) is also remembered between openings, so the inventory may open with it on.
+
+**Cause.** The doll room of the gamepad interface keeps the game's doll camera (`DollCamera`) switched off, so its zoom does nothing and `DollCamera.Current` stays empty. The stick's vertical axis reaches the inventory only while the horizontal one is active too (`InputLayer.AddCursor`), and the inventory uses it to scroll the stash behind the doll page.
+
+**Fix.** The right stick up zooms in and down zooms out, in the inventory on the doll page with the item description off (with it on, the stick scrolls it as before) and on the appearance page of character creation; left and right turn the doll as before, and on the race and class pages the stick keeps scrolling their text. The mouse wheel over the doll zooms in the gamepad interface too; in the keyboard and mouse interface the game's own wheel zoom stays. In the gamepad interface the mod moves the camera itself toward the doll's head, smoothly, and puts it back when the doll is closed. The inventory opens with the item description off, and the hint row shows the right stick with "Zoom". While a window of our mods is open, the doll is left alone.
+
+### Diagnostics: the game started in the keyboard interface after pressing A
+
+**Symptom.** Now and then, with the gamepad connected, the start window "press A or any key" started the game in the keyboard and mouse interface after A was pressed. It came after the game window flickered while going full screen and has not been seen since.
+
+**Suspected cause.** The window picks the keyboard on any keyboard key, checked after the gamepad buttons. While the game window is out of focus, Steam Input may send the gamepad through its desktop layout, where A is Enter.
+
+**What the mod does.** Nothing is changed: when the keyboard interface is chosen, the UMM log gets the keys that chose it, for example `controller mode window: the keyboard interface is chosen by Return`.
+
 ## On the Steam Deck
 
 Nothing to bind and no settings. Setting up Unity Mod Manager: [the Steam Deck guide](../docs/steam-deck.md).

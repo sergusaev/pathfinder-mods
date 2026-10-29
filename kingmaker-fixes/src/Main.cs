@@ -22,6 +22,7 @@ namespace KingmakerFixes
         {
             Log = modEntry.Logger;
             new Harmony(modEntry.Info.Id).PatchAll(typeof(Main).Assembly);
+            modEntry.OnUpdate = DollZoom.OnUpdate;
             return true;
         }
     }
