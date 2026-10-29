@@ -5,6 +5,7 @@ using HarmonyLib;
 using Kingmaker;
 using Kingmaker.Assets.Console.GamepadInput;
 using Kingmaker.UI.ServiceWindow;
+using Kingmaker.UI._ConsoleUI.CharGen.Common;
 using Kingmaker.UI._ConsoleUI.Common;
 using Kingmaker.UI._ConsoleUI.Inventory;
 using Rewired;
@@ -190,6 +191,31 @@ namespace KingmakerFixes
             if (s_Camera != null) s_Camera.SetPositionAndRotation(s_Position, s_Rotation);
             s_Camera = null;
             s_Zoom = s_Goal = 0f;
+        }
+    }
+
+    // Character creation keeps the doll on screen from page to page, so the zoom of the appearance page stayed on the
+    // pages after it. Each page with the doll binds its own DollCharacterController and unbinds it on leaving; the
+    // camera goes back to its place on both.
+    [HarmonyPatch]
+    static class CharGenPageZoomReset
+    {
+        static IEnumerable<MethodBase> TargetMethods()
+        {
+            yield return AccessTools.Method(typeof(DollCharacterController), nameof(DollCharacterController.Bind));
+            yield return AccessTools.Method(typeof(DollCharacterController), nameof(DollCharacterController.Unbind));
+        }
+
+        static void Postfix()
+        {
+            try
+            {
+                GamepadZoom.Reset();
+            }
+            catch (Exception e)
+            {
+                Main.Log.Error("doll zoom, character creation page: " + e);
+            }
         }
     }
 
