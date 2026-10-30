@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using HarmonyLib;
 using Kingmaker.Blueprints;
 using Kingmaker.Blueprints.CharGen;
 using Kingmaker.Blueprints.Classes;
@@ -28,6 +30,7 @@ namespace KingmakerCosmetics
         internal static readonly string BrowsId = Styles.MadeId("EE_Eyebrows_Face01_F_EL", "eyeliner face brows");
         internal static readonly string HalfElfFaceId = Styles.MadeId("EE_Head_Face01_F_HE", "eyeliner face");
         internal static readonly string HalfElfBrowsId = Styles.MadeId("EE_Eyebrows_Face01_F_HE", "eyeliner face brows");
+        internal static readonly string HalfElfHairId = Styles.MadeId("EE_Hair_FrenchBraid_F_EL", "half-elf fringe");
 
         internal static void Build()
         {
@@ -39,7 +42,7 @@ namespace KingmakerCosmetics
             }
             try
             {
-                Hair(elf.FemaleOptions);
+                Hair(elf.FemaleOptions, elf.FemaleOptions, "EL", "Fringe", "_Fringe", HairId, null);
             }
             catch (Exception ex)
             {
@@ -67,26 +70,41 @@ namespace KingmakerCosmetics
             {
                 Main.Log.Error($"half-elf eyeliner face not made: {ex}");
             }
+            try
+            {
+                Hair(elf.FemaleOptions, halfElf.FemaleOptions, "HE", "FringeHE", "_FringeHE", HalfElfHairId, "EE_Hair_HairLong_F_HE");
+            }
+            catch (Exception ex)
+            {
+                Main.Log.Error($"half-elf fringe not made: {ex}");
+            }
         }
 
-        static void Hair(CustomizationOptions options)
+        // The elf French braid (half-elf women have none) with the mesh <files>.mesh and the painting on the head
+        // <files with Growth>.png, added to the hair styles of the race (EL, HE): the half-elf one has the hair moved
+        // onto the lower half-elf skull and its painting in the half-elf head layout. colorsFrom: a hair style of the
+        // race whose colours the copy takes, as the doll gives one colour number to the hair and the brows and each
+        // turns it into a colour by its own list (the elf list differs from the half-elf one).
+        static void Hair(CustomizationOptions elf, CustomizationOptions options, string race, string files, string suffix, string id, string colorsFrom)
         {
-            var link = Link(options.Hair, "EE_Hair_FrenchBraid_F_EL");
+            var link = Link(elf.Hair, "EE_Hair_FrenchBraid_F_EL");
             var original = link == null ? null : link.Load(true);
             if (original == null)
             {
-                Main.Log.Error("no elf French braid, no fringe");
+                Main.Log.Error($"no elf French braid, no {race} fringe");
                 return;
             }
-            var copy = Styles.Copy(link.AssetId, original, "_Fringe");
+            var copy = Styles.Copy(link.AssetId, original, suffix);
             // Both parts, the hair and its tape, are drawn on the one mesh: the locks lie where the tape is clear.
-            if (!Swap(copy, original, "Fringe.mesh", m => m.name.StartsWith("H1_FrenchBraid", StringComparison.OrdinalIgnoreCase)))
+            if (!Swap(copy, original, files + ".mesh", m => m.name.StartsWith("H1_FrenchBraid", StringComparison.OrdinalIgnoreCase)))
                 return;
             // The painting on the head is as large as the faces with detailed eyes, made smaller like them.
-            Paint(copy, new Dictionary<string, string> { { "HD_Head_FrenchBraidBW_F_EL", "FringeGrowth.png" } }, Eyes.Fit);
-            Styles.Register(HairId, copy);
-            options.Hair = options.Hair.Concat(new[] { new EquipmentEntityLink { AssetId = HairId } }).ToArray();
-            Main.Log.Log($"{copy.name}: female elf hair style {options.Hair.Length}");
+            Paint(copy, new Dictionary<string, string> { { "HD_Head_FrenchBraidBW_F_EL", files.Replace("Fringe", "FringeGrowth") + ".png" } }, Eyes.Fit);
+            if (colorsFrom != null && !TakeColors(copy, options, colorsFrom))
+                return;
+            Styles.Register(id, copy);
+            options.Hair = options.Hair.Concat(new[] { new EquipmentEntityLink { AssetId = id } }).ToArray();
+            Main.Log.Log($"{copy.name}: female {race} hair style {options.Hair.Length}");
         }
 
         // The face on the first female face of the race (EL, HE), from the files <files>.mesh, <files>BW.png,
@@ -120,6 +138,28 @@ namespace KingmakerCosmetics
             options.Heads = options.Heads.Concat(new[] { new EquipmentEntityLink { AssetId = faceId } }).ToArray();
             options.Eyebrows = options.Eyebrows.Concat(new[] { new EquipmentEntityLink { AssetId = browsId } }).ToArray();
             Main.Log.Log($"{copy.name}: female {race} face {options.Heads.Length}");
+        }
+
+        static readonly FieldInfo s_PrimaryRamps = AccessTools.Field(typeof(EquipmentEntity), "m_PrimaryRamps");
+        static readonly FieldInfo s_SecondaryRamps = AccessTools.Field(typeof(EquipmentEntity), "m_SecondaryRamps");
+
+        // The copy gets the colour lists of the hair style named, the very lists, so the hair colours added to them
+        // (HairColors) come in the same order too; that hair is kept loaded with its colours.
+        static bool TakeColors(EquipmentEntity copy, CustomizationOptions options, string name)
+        {
+            var link = Link(options.Hair, name);
+            var donor = link == null ? null : link.Load(true);
+            if (donor == null)
+            {
+                Main.Log.Error($"{copy.name}: no {name} to take the hair colours from");
+                return false;
+            }
+            Styles.Keep(link.AssetId, donor);
+            copy.ColorsProfile = donor.ColorsProfile;
+            s_PrimaryRamps.SetValue(copy, s_PrimaryRamps.GetValue(donor));
+            s_SecondaryRamps.SetValue(copy, s_SecondaryRamps.GetValue(donor));
+            Main.Log.Log($"{copy.name}: the hair colours of {donor.name} ({copy.PrimaryRamps.Count})");
+            return true;
         }
 
         static EquipmentEntityLink Link(EquipmentEntityLink[] links, string name)
