@@ -16,13 +16,16 @@ namespace KingmakerCosmetics
     // own, see assets/): long hair falling back with thin strands over the forehead and a braid from the parting
     // down past the ear, as a new hair style; and the first elf face with smaller eyes, eyeliner and its own brows,
     // as a new face with its brows. The hair is the long elf hair with its mesh and textures swapped, the face the
-    // first elf face likewise: they keep the materials, bones and colours of the originals.
+    // first elf face likewise: they keep the materials, bones and colours of the originals. The same face is made
+    // for half-elf women on the first half-elf face: its skull, hoop, ears and neck stay, the elf face set in.
     static class SideBraid
     {
         // Asset ids. They go into DollData.EquipmentEntityIds of saves, so they never change.
         internal static readonly string HairId = Styles.MadeId("EE_HairLong_F_EL", "side braid");
         internal static readonly string FaceId = Styles.MadeId("EE_Head_Face01_F_EL", "eyeliner face");
         internal static readonly string BrowsId = Styles.MadeId("EE_Eyebrows_Face01_F_EL", "eyeliner face brows");
+        internal static readonly string HalfElfFaceId = Styles.MadeId("EE_Head_Face01_F_HE", "eyeliner face");
+        internal static readonly string HalfElfBrowsId = Styles.MadeId("EE_Eyebrows_Face01_F_HE", "eyeliner face brows");
 
         internal static void Build()
         {
@@ -42,11 +45,25 @@ namespace KingmakerCosmetics
             }
             try
             {
-                Face(elf.FemaleOptions);
+                Face(elf.FemaleOptions, "EL", "LinerFace", FaceId, BrowsId);
             }
             catch (Exception ex)
             {
                 Main.Log.Error($"eyeliner face not made: {ex}");
+            }
+            var halfElf = BlueprintRoot.Instance.Progression.CharacterRaces.FirstOrDefault(r => r != null && r.RaceId == Race.HalfElf);
+            if (halfElf == null)
+            {
+                Main.Log.Error("HalfElfRace not found, no half-elf eyeliner face");
+                return;
+            }
+            try
+            {
+                Face(halfElf.FemaleOptions, "HE", "LinerFaceHE", HalfElfFaceId, HalfElfBrowsId);
+            }
+            catch (Exception ex)
+            {
+                Main.Log.Error($"half-elf eyeliner face not made: {ex}");
             }
         }
 
@@ -76,34 +93,37 @@ namespace KingmakerCosmetics
             Main.Log.Log($"{copy.name}: female elf hair style {options.Hair.Length}");
         }
 
-        static void Face(CustomizationOptions options)
+        // The face on the first female face of the race (EL, HE), from the files <files>.mesh, <files>BW.png,
+        // <files>ColorOver.png and the brows <brows>.png (LinerFace: LinerBrows).
+        static void Face(CustomizationOptions options, string race, string files, string faceId, string browsId)
         {
-            var link = Link(options.Heads, "EE_Head_Face01_F_EL");
+            string brows = files.Replace("LinerFace", "LinerBrows");
+            var link = Link(options.Heads, "EE_Head_Face01_F_" + race);
             int at = link == null ? -1 : Array.IndexOf(options.Heads, link);
             var browsLink = at >= 0 && at < options.Eyebrows.Length ? options.Eyebrows[at] : null;
             var original = link == null ? null : link.Load(true);
-            var brows = browsLink == null ? null : browsLink.Load(true);
-            if (original == null || brows == null || options.Eyebrows.Length != options.Heads.Length)
+            var browsEntity = browsLink == null ? null : browsLink.Load(true);
+            if (original == null || browsEntity == null || options.Eyebrows.Length != options.Heads.Length)
             {
-                Main.Log.Error("no first elf face with its brows, no eyeliner face");
+                Main.Log.Error($"no first {race} face with its brows, no eyeliner face");
                 return;
             }
             var copy = Styles.Copy(link.AssetId, original, "_Eyeliner");
-            if (!Swap(copy, original, "LinerFace.mesh", m => m.name.StartsWith("HD_Head", StringComparison.OrdinalIgnoreCase)))
+            if (!Swap(copy, original, files + ".mesh", m => m.name.StartsWith("HD_Head", StringComparison.OrdinalIgnoreCase)))
                 return;
             Paint(copy, new Dictionary<string, string>
             {
-                { "HD_Head_Face01BW_F_EL", "LinerFaceBW.png" },
-                { "HD_Head_Face01ColorOver_F_EL", "LinerFaceColorOver.png" },
+                { "HD_Head_Face01BW_F_" + race, files + "BW.png" },
+                { "HD_Head_Face01ColorOver_F_" + race, files + "ColorOver.png" },
             }, Eyes.Fit);
-            var browsCopy = Styles.Copy(browsLink.AssetId, brows, "_Eyeliner");
-            Paint(browsCopy, new Dictionary<string, string> { { "HD_Head_Face01EyebrowsBW_F_EL", "LinerBrows.png" } });
-            Styles.Register(FaceId, copy);
-            Styles.Register(BrowsId, browsCopy);
+            var browsCopy = Styles.Copy(browsLink.AssetId, browsEntity, "_Eyeliner");
+            Paint(browsCopy, new Dictionary<string, string> { { "HD_Head_Face01EyebrowsBW_F_" + race, brows + ".png" } });
+            Styles.Register(faceId, copy);
+            Styles.Register(browsId, browsCopy);
             // Heads and brows go in pairs, one index for both.
-            options.Heads = options.Heads.Concat(new[] { new EquipmentEntityLink { AssetId = FaceId } }).ToArray();
-            options.Eyebrows = options.Eyebrows.Concat(new[] { new EquipmentEntityLink { AssetId = BrowsId } }).ToArray();
-            Main.Log.Log($"{copy.name}: female elf face {options.Heads.Length}");
+            options.Heads = options.Heads.Concat(new[] { new EquipmentEntityLink { AssetId = faceId } }).ToArray();
+            options.Eyebrows = options.Eyebrows.Concat(new[] { new EquipmentEntityLink { AssetId = browsId } }).ToArray();
+            Main.Log.Log($"{copy.name}: female {race} face {options.Heads.Length}");
         }
 
         static EquipmentEntityLink Link(EquipmentEntityLink[] links, string name)
