@@ -13,14 +13,16 @@ using UnityEngine;
 namespace KingmakerCosmetics
 {
     // A female elf look made after a portrait, from meshes and textures the mod carries (made offline from the game's
-    // own, see assets/): long hair falling back with thin strands over the forehead and a braid from the parting
-    // down past the ear, as a new hair style; and the first elf face with smaller eyes, eyeliner and its own brows,
-    // as a new face with its brows. The hair is the long elf hair with its mesh and textures swapped, the face the
-    // first elf face likewise: they keep the materials, bones and colours of the originals. The same face is made
+    // own, see assets/): the elf French braid with four thick locks of a fringe looping out of the middle of the
+    // hairline and falling along the face, and short tongues of hair painted on the forehead under them, as a new
+    // hair style; and the first elf face with smaller eyes, eyeliner and its own brows, as a new face with its brows.
+    // The hair is the French braid with its mesh and its painting on the head swapped, the face the first elf face
+    // likewise: they keep the materials, bones and colours of the originals. The same face is made
     // for half-elf women on the first half-elf face: its skull, hoop, ears and neck stay, the elf face set in.
     static class SideBraid
     {
-        // Asset ids. They go into DollData.EquipmentEntityIds of saves, so they never change.
+        // Asset ids. They go into DollData.EquipmentEntityIds of saves, so they never change. The hair id is the one of
+        // the side braid this style replaced (0.1.0-0.2.0): saves wearing that wear this.
         internal static readonly string HairId = Styles.MadeId("EE_HairLong_F_EL", "side braid");
         internal static readonly string FaceId = Styles.MadeId("EE_Head_Face01_F_EL", "eyeliner face");
         internal static readonly string BrowsId = Styles.MadeId("EE_Eyebrows_Face01_F_EL", "eyeliner face brows");
@@ -32,7 +34,7 @@ namespace KingmakerCosmetics
             var elf = BlueprintRoot.Instance.Progression.CharacterRaces.FirstOrDefault(r => r != null && r.RaceId == Race.Elf);
             if (elf == null)
             {
-                Main.Log.Error("ElfRace not found, no side braid");
+                Main.Log.Error("ElfRace not found, no fringe");
                 return;
             }
             try
@@ -41,7 +43,7 @@ namespace KingmakerCosmetics
             }
             catch (Exception ex)
             {
-                Main.Log.Error($"side braid not made: {ex}");
+                Main.Log.Error($"fringe not made: {ex}");
             }
             try
             {
@@ -67,27 +69,21 @@ namespace KingmakerCosmetics
             }
         }
 
-        // EE_HairLong_F_EL: not among the elf styles of character creation, so it is taken by its asset id.
-        const string LongHairId = "a402292bdc74f8c4887f15d76d0378dd";
-
         static void Hair(CustomizationOptions options)
         {
-            var link = Link(options.Hair, "EE_HairLong_F_EL")
-                ?? (ResourcesLibrary.LibraryObject.ResourceNamesByAssetId.ContainsKey(LongHairId) ? new EquipmentEntityLink { AssetId = LongHairId } : null);
+            var link = Link(options.Hair, "EE_Hair_FrenchBraid_F_EL");
             var original = link == null ? null : link.Load(true);
             if (original == null)
             {
-                Main.Log.Error("no long elf hair, no side braid");
+                Main.Log.Error("no elf French braid, no fringe");
                 return;
             }
-            var copy = Styles.Copy(link.AssetId, original, "_SideBraid");
-            if (!Swap(copy, original, "SideBraid.mesh", m => m.name.StartsWith("H1_HairLong", StringComparison.OrdinalIgnoreCase)))
+            var copy = Styles.Copy(link.AssetId, original, "_Fringe");
+            // Both parts, the hair and its tape, are drawn on the one mesh: the locks lie where the tape is clear.
+            if (!Swap(copy, original, "Fringe.mesh", m => m.name.StartsWith("H1_FrenchBraid", StringComparison.OrdinalIgnoreCase)))
                 return;
-            Paint(copy, new Dictionary<string, string>
-            {
-                { "H1_HairLong_White_F_EL", "SideBraid.png" },
-                { "HD_Head_HairLongWhite_F_EL", "SideBraidGrowth.png" },
-            });
+            // The painting on the head is as large as the faces with detailed eyes, made smaller like them.
+            Paint(copy, new Dictionary<string, string> { { "HD_Head_FrenchBraidBW_F_EL", "FringeGrowth.png" } }, Eyes.Fit);
             Styles.Register(HairId, copy);
             options.Hair = options.Hair.Concat(new[] { new EquipmentEntityLink { AssetId = HairId } }).ToArray();
             Main.Log.Log($"{copy.name}: female elf hair style {options.Hair.Length}");

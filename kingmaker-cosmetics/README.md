@@ -8,7 +8,7 @@ A Unity Mod Manager mod for Pathfinder: Kingmaker. It adds hair styles, a face a
 
 - **New hair styles for human women:** a bob, shorter at the nape and longer toward the face; the bob with the ponytail of the elf bob; the high ponytail with the lush elf ponytail.
 - **Humans and aasimars share hair styles.** Their heads are the same, so each race gets the styles of the other, of the same gender.
-- **A new face and hair style for elf women,** made after a portrait: the sixth face, with smaller eyes, eyeliner and a smirk; long hair falling back with a braid from the parting down past the ear.
+- **A new face and hair style for elf women,** made after a portrait: the sixth face, with smaller eyes, eyeliner and a smirk; the elf French braid with a fringe: four thick locks loop out of the middle of the hairline and fall along the face, with short tongues of hair on the forehead under them.
 - **The same face for half-elf women:** the elf face as it is, set into the first half-elf head (its skull, ears and neck stay), so half-elf hair styles sit on it as on their own faces.
 - **Detailed eyes of elf women.** The five game faces get eye textures four times as large: a white eye white, a round iris with its pupil looking straight ahead, a highlight, a dark upper lid. The flat lash cards that looked jagged up close are taken off the faces. The textures follow the character atlas size of the graphics settings.
 - **Shorter elf ears,** halfway between elf and half-elf ears and turned a little away from the head.
