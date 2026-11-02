@@ -27,6 +27,7 @@
 | [Success Chance](../success-chance/README.ru.md) | обе | `SuccessChance` | `SuccessChance` |
 | [Kingmaker Cosmetics](../kingmaker-cosmetics/README.ru.md) | Kingmaker | `KingmakerCosmetics` | `KingmakerCosmetics` |
 | [Kingmaker Fixes](../kingmaker-fixes/README.ru.md) | Kingmaker | `KingmakerFixes` | `KingmakerFixes` |
+| [Portrait Gallery](../kingmaker-portrait-gallery/README.ru.md) | Kingmaker | `PortraitGallery` | `PortraitGallery` |
 | [Camera Rotation and Compass](../kingmaker-gamepad-camera-rotation/README.ru.md) | Kingmaker | `GamepadCameraRotation` | `GamepadCameraRotation` |
 | [Time Control and Deadlines](../kingmaker-time-control/README.ru.md) | Kingmaker | `TimeControl` | `TimeControl` |
 | [Buff It 2 The Limit (Groups) для Kingmaker](https://github.com/sergusaev/wrath-epic-buffing/blob/gamepad/pad-docs/README.ru.md#kingmaker) | Kingmaker | `PadBuffsKingmaker` (релизы меню баффов) | `PadBuffsKingmaker` |

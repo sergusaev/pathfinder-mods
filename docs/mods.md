@@ -27,6 +27,7 @@ All mods are on the release pages: [pathfinder-mods](https://github.com/sergusae
 | [Success Chance](../success-chance) | both | `SuccessChance` | `SuccessChance` |
 | [Kingmaker Cosmetics](../kingmaker-cosmetics) | Kingmaker | `KingmakerCosmetics` | `KingmakerCosmetics` |
 | [Kingmaker Fixes](../kingmaker-fixes) | Kingmaker | `KingmakerFixes` | `KingmakerFixes` |
+| [Portrait Gallery](../kingmaker-portrait-gallery) | Kingmaker | `PortraitGallery` | `PortraitGallery` |
 | [Camera Rotation and Compass](../kingmaker-gamepad-camera-rotation) | Kingmaker | `GamepadCameraRotation` | `GamepadCameraRotation` |
 | [Time Control and Deadlines](../kingmaker-time-control) | Kingmaker | `TimeControl` | `TimeControl` |
 | [Buff It 2 The Limit (Groups) for Kingmaker](https://github.com/sergusaev/wrath-epic-buffing/blob/gamepad/pad-docs/README.md#kingmaker) | Kingmaker | `PadBuffsKingmaker` (buff menu releases) | `PadBuffsKingmaker` |

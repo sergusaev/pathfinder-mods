@@ -75,7 +75,10 @@ namespace SuccessChance
                     if (s_Hovered.TryGetValue(__instance, out last) && last == hovered) return;
                     if (s_Hovered.Count > 500) s_Hovered.Clear();
                     s_Hovered[__instance] = hovered;
-                    __instance.GetComponentInParent<UnitOvertipView>()?.TweenComponentsToPlace();
+                    // The name part is shown and hidden also while the overtip is being unbound (back to the pool):
+                    // the overtip itself has no view model then and cannot be laid out.
+                    var overtip = __instance.GetComponentInParent<UnitOvertipView>();
+                    if (overtip != null && s_ViewModel(overtip) != null) overtip.TweenComponentsToPlace();
                 }
                 catch (Exception e)
                 {

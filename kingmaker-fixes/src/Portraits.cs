@@ -13,12 +13,14 @@ namespace KingmakerFixes
     // The gamepad character creation lists only the built-in portraits; the custom ones from the Portraits folder are
     // appended after them. UnitUISettings.SetPortrait stores a portrait with custom Data as m_CustomPortrait, so saves
     // stay vanilla. Formerly the separate mod ConsoleCustomPortraits: while that one is on, it adds them instead.
+    // While Portrait Gallery is on, the list is its own (categories in both interfaces), nothing is added here.
     [HarmonyPatch(typeof(CharGenPortraitPhaseVM), MethodType.Constructor, new Type[] { typeof(LevelUpController) })]
     static class CustomPortraitsInGamepadCharGen
     {
         const string OldModId = "ConsoleCustomPortraits";
+        const string GalleryModId = "PortraitGallery";
         static readonly Dictionary<string, BlueprintPortrait> Cache = new Dictionary<string, BlueprintPortrait>();
-        static bool s_ToldOldMod;
+        static bool s_ToldOldMod, s_ToldGallery;
 
         static void Postfix(CharGenPortraitPhaseVM __instance)
         {
@@ -30,6 +32,14 @@ namespace KingmakerFixes
                     if (!s_ToldOldMod)
                         Main.Log.Log("custom portraits: left to the old mod " + OldModId + ", it can be removed");
                     s_ToldOldMod = true;
+                    return;
+                }
+                var gallery = UnityModManager.FindMod(GalleryModId);
+                if (gallery != null && gallery.Active)
+                {
+                    if (!s_ToldGallery)
+                        Main.Log.Log("custom portraits: left to " + GalleryModId);
+                    s_ToldGallery = true;
                     return;
                 }
                 var list = __instance.SelectorGroupVM?.VisibleCollection;

@@ -4,6 +4,8 @@ using Kingmaker;
 using Kingmaker.EntitySystem.Entities;
 using Kingmaker.UI._ConsoleUI.LocalMap;
 using Kingmaker.UI._ConsoleUI.Models;
+using Kingmaker.UnitLogic.Commands;
+using Kingmaker.UnitLogic.Commands.Base;
 using Kingmaker.Utility;
 using Kingmaker.View;
 
@@ -53,6 +55,66 @@ namespace KingmakerFixes
         }
 
         static bool s_Logged;
+    }
+
+    // The stick runs the character only while it is pushed at least 0.95 of the way (InGameInputLayer.UpdateMovement:
+    // Accelerate at >= 0.95, Deaccelerate below), checked every frame. An Xbox controller on Windows gives less than
+    // that on part of its rim, and turning the stick to another direction takes it near the centre (0.06-0.5 in the
+    // log): the character dropped to a walk for a moment. Now the run starts at 0.85, lasts while the stick is past
+    // half way, and lasts through a dip of up to 0.35 s (the stick crossing the centre, also into a new move command);
+    // a light push from standing still walks. The first dips that kept the run are written to the log ("stick run:").
+    [HarmonyPatch(typeof(UnitCommand), nameof(UnitCommand.Deaccelerate))]
+    static class StickRunHysteresis
+    {
+        const float Start = 0.85f, Keep = 0.5f, Grace = 0.35f;
+        static int s_Logged;
+        static float s_Lowest = 1f;
+        internal static float LastRun = -100f;
+
+        static bool Prefix(UnitCommand __instance)
+        {
+            try
+            {
+                if (!(__instance is UnitMoveContiniously)) return true;
+                var view = __instance.Executor != null ? __instance.Executor.View : null;
+                var agent = view != null ? view.AgentOverride as UnitMovementAgentContinious : null;
+                if (agent == null) return true;
+                float m = agent.DirectionFromControllerMagnitude, now = UnityEngine.Time.unscaledTime;
+                bool run;
+                if (m >= Start || (__instance.IsAccelerated && m >= Keep)) { run = true; LastRun = now; }
+                else run = m > 0f && now - LastRun < Grace;
+                if (!run) return true;
+                if (m < 0.95f && m < s_Lowest - 0.02f && s_Logged < 8)
+                {
+                    s_Lowest = m;
+                    s_Logged++;
+                    Main.Log.Log(string.Format("stick run: kept at stick {0:F2} (the game walks below 0.95)", m));
+                }
+                if (!__instance.IsAccelerated)
+                {
+                    float last = LastRun;
+                    __instance.Accelerate();
+                    LastRun = last;   // running on in the grace does not prolong it
+                }
+                return false;
+            }
+            catch (Exception e)
+            {
+                if (s_Logged < 100) Main.Log.Error("stick run: " + e);
+                s_Logged = 100;
+                return true;
+            }
+        }
+    }
+
+    // The game's own run (stick at 0.95 and more) counts for the grace above too.
+    [HarmonyPatch(typeof(UnitCommand), nameof(UnitCommand.Accelerate))]
+    static class StickRunSeen
+    {
+        static void Postfix(UnitCommand __instance)
+        {
+            if (__instance is UnitMoveContiniously && __instance.IsAccelerated) StickRunHysteresis.LastRun = UnityEngine.Time.unscaledTime;
+        }
     }
 
     // The gamepad local map sends the selected characters to the point under its cursor (A), but the camera follows

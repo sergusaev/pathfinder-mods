@@ -67,7 +67,7 @@ Each portrait is a subfolder of `Portraits` with `Small.png` (185×242), `Medium
 
 If a save uses a portrait whose folder has no pictures, the game puts its default placeholder pictures there by itself. If the main character still has the placeholder after you moved your saves, replace the three PNG files in that portrait's folder with the real ones.
 
-This fix used to be a separate mod, Custom Portraits Gamepad Selection Fix (`Mods/ConsoleCustomPortraits`). Remove that folder: while the old mod is on, Kingmaker Fixes leaves the portraits to it so that they are not listed twice, and says so in the log.
+This fix used to be a separate mod, Custom Portraits Gamepad Selection Fix (`Mods/ConsoleCustomPortraits`). Remove that folder: while the old mod is on, Kingmaker Fixes leaves the portraits to it so that they are not listed twice, and says so in the log. With Portrait Gallery installed, the portrait list is that mod's (categories in both interfaces), and Kingmaker Fixes adds nothing to it.
 
 ### No zoom for the character doll with the gamepad interface
 
@@ -85,6 +85,14 @@ This fix used to be a separate mod, Custom Portraits Gamepad Selection Fix (`Mod
 
 **Fix.** The character under the stick goes no faster than the group: the group's limit, accelerated when the group is, times how far the stick is pushed. A character walked alone is not limited.
 
+### The character under the stick drops to a walk when turning
+
+**Symptom.** In the gamepad interface out of combat, the character run with the left stick drops to a walk for a moment now and then, when the stick is turned to another direction. Seen with an Xbox controller on Windows.
+
+**Cause.** The game runs the character only while the stick is pushed at least 0.95 of the way, and checks it every frame. An Xbox controller gives less than that on part of its rim, and turning the stick to another direction takes it near the centre (0.06 to 0.5 in the log): for that moment the game walks.
+
+**Fix.** The run starts at 0.85, lasts while the stick is past half way, and lasts through a dip of up to 0.35 s, the stick crossing the centre. A light push from standing still walks, as before; a stick let go stops the run. The UMM log gets the first dips that kept the run, `stick run: kept at stick 0.47 (the game walks below 0.95)`.
+
 ### The view outline on the gamepad local map stays behind
 
 **Symptom.** On the gamepad local map, after sending the characters to a point with A, the outline of the visible area sometimes stays where it was while they walk off.
@@ -93,13 +101,15 @@ This fix used to be a separate mod, Custom Portraits Gamepad Selection Fix (`Mod
 
 **Fix.** After an order on the local map the camera follows the selected character again, as it does when the character is walked with the stick.
 
-### Diagnostics: the game started in the keyboard interface after pressing A
+### The start window chose the keyboard when the game started in a window
 
-**Symptom.** Now and then, with the gamepad connected, the start window "press A or any key" started the game in the keyboard and mouse interface after A was pressed. It came after the game window flickered while going full screen and has not been seen since.
+**Symptom.** With the gamepad connected, the start window "press A or any key" now and then started the game in the keyboard and mouse interface. It happened only when the game started in a window although its settings say full screen; started full screen, it chose right.
 
-**Suspected cause.** The window picks the keyboard on any keyboard key, checked after the gamepad buttons. While the game window is out of focus, Steam Input may send the gamepad through its desktop layout, where A is Enter.
+**Cause.** Unity starts the game in the screen mode it remembered on the last exit, which may differ from the game's own setting; the game puts its setting back only in the main menu, after the start window. Started in a window, the window took a keyboard key that was never pressed (`RightShift` in the log) and chose the keyboard.
 
-**What the mod does.** Nothing is changed: when the keyboard interface is chosen, the UMM log gets the keys that chose it, for example `controller mode window: the keyboard interface is chosen by Return`.
+**Fix.** The game's own screen mode and resolution are applied as soon as the mod loads, before the start window. The UMM log gets `start screen: Windowed 2560x1440 -> ExclusiveFullScreen 2560x1440, as set in the game`, or the same mode as set when nothing had to change.
+
+**Diagnostics.** When the start window chooses the keyboard, the log gets the keys that chose it (`controller mode window: the keyboard interface is chosen by ...`); what the game saw when it decided goes there too (`controller mode start: gamepad seen ...`).
 
 ## On the Steam Deck
 
