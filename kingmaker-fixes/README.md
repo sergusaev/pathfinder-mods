@@ -77,6 +77,22 @@ This fix used to be a separate mod, Custom Portraits Gamepad Selection Fix (`Mod
 
 **Fix.** The right stick up zooms in and down zooms out, in the inventory on the doll page with the item description off (with it on, the stick scrolls it as before) and on the appearance page of character creation; left and right turn the doll as before, and on the race and class pages the stick keeps scrolling their text. The mouse wheel over the doll zooms in the gamepad interface too; in the keyboard and mouse interface the game's own wheel zoom stays. In the gamepad interface the mod moves the camera itself toward the doll's head, smoothly, and puts it back when the doll is closed or another page of character creation opens. The inventory opens with the item description off, and the hint row shows the right stick with "Zoom". While a window of our mods is open, the doll is left alone.
 
+### The character walked with the stick outruns the party
+
+**Symptom.** In the gamepad interface, walking with the left stick out of combat, the character under the stick goes much faster than the rest of the party and the formation stretches. With the keyboard and mouse the party keeps together.
+
+**Cause.** The character under the stick goes at its own speed, and the game's stick movement adds a quarter on top. The others are sent to their places in the formation at the speed of the slowest of the group (at least 30 ft), the same limit the keyboard and mouse give every character of the group.
+
+**Fix.** The character under the stick goes no faster than the group: the group's limit, accelerated when the group is, times how far the stick is pushed. A character walked alone is not limited.
+
+### The view outline on the gamepad local map stays behind
+
+**Symptom.** On the gamepad local map, after sending the characters to a point with A, the outline of the visible area sometimes stays where it was while they walk off.
+
+**Cause.** The camera follows the selected character only if it did so before. Moving the map with the right stick, or the cursor at the edge of the screen, lets the camera go, and the order on the map does not take it up again.
+
+**Fix.** After an order on the local map the camera follows the selected character again, as it does when the character is walked with the stick.
+
 ### Diagnostics: the game started in the keyboard interface after pressing A
 
 **Symptom.** Now and then, with the gamepad connected, the start window "press A or any key" started the game in the keyboard and mouse interface after A was pressed. It came after the game window flickered while going full screen and has not been seen since.
