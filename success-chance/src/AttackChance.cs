@@ -161,6 +161,10 @@ namespace SuccessChance
                 if (attacker.Descriptor.Buffs.HasFact(bp.Buff)) continue;
                 pending.Add(new KeyValuePair<BlueprintBuff, string>(bp.Buff, bp.Name));
             }
+            // A charge puts its buff (+2 to attack) on as it starts.
+            var chargeBuff = attack != null && attack.IsCharge ? Kingmaker.Blueprints.Root.BlueprintRoot.Instance.SystemMechanics.ChargeBuff : null;
+            if (chargeBuff != null && !attacker.Descriptor.Buffs.HasFact(chargeBuff))
+                pending.Add(new KeyValuePair<BlueprintBuff, string>(chargeBuff, chargeBuff.Name));
 #if WOTR
             var weapon = stats.Weapon;
             var sources = new List<KeyValuePair<BlueprintBuff, string>>(pending);

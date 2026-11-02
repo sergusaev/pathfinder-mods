@@ -396,12 +396,34 @@ namespace SuccessChance
         // An ability cast on the target: its own chance, or the attack with the weapon that brings it (Spellstrike).
         static string AbilityText(AbilityData ability, UnitEntityData target)
         {
+            // A charge has no roll of its own: it is an attack with the hand that threatens, as AbilityCustomCharge
+            // makes it (IsCharge, the charge buff put on as it starts).
+            var charging = ChargeWeapon(ability);
+            if (charging != null)
+            {
+                var caster = ability.Caster.Unit;
+                var attack = new RuleAttackWithWeapon(caster, target, charging, 0) { IsCharge = true };
+                return AttackText(AttackChance.Predict(caster, target, charging, 0, attack));
+            }
             var spell = ability;
             var weapon = Spellstrike.Weapon(ref spell, target);
             if (weapon == null) return SpellText(SpellChance.Predict(ability, target));
             var p = AttackChance.Predict(spell.Caster.Unit, target, weapon, 0);
             p.Charge = SpellChance.Predict(spell, target, true);
             return AttackText(p);
+        }
+
+        // The weapon a charge attacks with, or null when the ability is not a charge.
+        static ItemEntityWeapon ChargeWeapon(AbilityData ability)
+        {
+            if (!ability.Blueprint.ComponentsArray.OfType<Kingmaker.UnitLogic.Abilities.Components.AbilityCustomCharge>().Any()) return null;
+            var caster = ability.Caster.Unit;
+#if WOTR
+            var hand = Kingmaker.UnitLogic.UnitHelper.GetThreatHandMelee(caster, true);
+#else
+            var hand = Kingmaker.Controllers.Combat.UnitEngagementExtension.GetThreatHand(caster);
+#endif
+            return hand?.MaybeWeapon;
         }
 
         // The predictions of the attacks of a full attack (only the first one when it is not full).

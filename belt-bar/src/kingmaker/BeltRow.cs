@@ -307,16 +307,21 @@ namespace BeltBar
             picture.anchoredPosition = Vector2.zero;
         }
 
-        // The slot views tell which of them is selected; the game's own bar does the same for its slots.
+        // The slot views tell which of them is selected; the game's own bar does the same for its slots. The others
+        // are unselected first: a slot still selected while it is being unselected counts the turn's prediction for
+        // itself (SetSelect hovers before it changes Select), so unselected after the new one it would replace the
+        // new slot's prediction with its own.
         void OnSlotSelected(ActionBarSlotVM selected)
         {
-            for (int i = 0; i < m_Vms.Count; i++)
-            {
-                bool on = m_Vms[i] == selected;
-                m_Vms[i].SetSelect(on);
-                if (m_Entities[i] != null) m_Entities[i].SetSelected(on);
-                if (m_SelectBottoms[i] != null) m_SelectBottoms[i].gameObject.SetActive(on);
-            }
+            for (int pass = 0; pass < 2; pass++)
+                for (int i = 0; i < m_Vms.Count; i++)
+                {
+                    bool on = m_Vms[i] == selected;
+                    if (on != (pass == 1)) continue;
+                    m_Vms[i].SetSelect(on);
+                    if (m_Entities[i] != null) m_Entities[i].SetSelected(on);
+                    if (m_SelectBottoms[i] != null) m_SelectBottoms[i].gameObject.SetActive(on);
+                }
         }
 
         void Confirm()
