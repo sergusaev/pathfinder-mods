@@ -9,7 +9,10 @@ using Kingmaker.EntitySystem.Entities;
 using Kingmaker.Items;
 using Kingmaker.Kingdom;
 using Kingmaker.UnitLogic.Buffs;
+using Kingmaker.UnitLogic.Commands;
+using Kingmaker.UnitLogic.Commands.Base;
 using Kingmaker.UnitLogic.Parts;
+using Kingmaker.View;
 
 namespace TimeControl
 {
@@ -21,12 +24,33 @@ namespace TimeControl
     // Nothing that has happened comes back: finished quests and objectives keep their state, fired timed quest events
     // keep DidTrigger, resolved kingdom events are in the history, expired buffs are gone.
     // Timers of the units themselves are moved back together with the clock, so their remaining time stays the same:
-    // buffs, temporary enchantments, fatigue, the last rest and camp, the last random encounters.
+    // buffs, temporary enchantments, fatigue, the last rest and camp, the last random encounters, temporary negative
+    // levels, and every other moment a unit keeps as an absolute game time (last move, grapple, confusion, magus,
+    // touch charge, ferocity, idle of roaming NPCs, death). Left as they were, these would lie ahead of the clock
+    // by the whole span and hold their checks ("not yet") for that long.
+    // The same goes for the moments that live only in memory and are not saved: when a running command approaches
+    // its target again, its cooldown exemption, and the avoidance after a charge.
     static class Rewinder
     {
         static readonly PropertyInfo s_NextTick = AccessTools.Property(typeof(Buff), "NextTickTime");
         static readonly FieldInfo s_RegionEncounters = AccessTools.Field(typeof(RandomEncounterManager), "m_LastEncounterInRegionTime");
         static readonly FieldInfo s_CampEncounter = AccessTools.Field(typeof(RandomEncounterManager), "m_LastCampEncounterTime");
+
+        static readonly FieldInfo s_NegativeLevels = AccessTools.Field(typeof(UnitPartNegativeLevels), "m_LevelsData");
+        static readonly Type s_NegativeLevelType = AccessTools.Inner(typeof(UnitPartNegativeLevels), "Data");
+        static readonly FieldInfo s_NegativeLevelEnd = s_NegativeLevelType == null ? null : AccessTools.Field(s_NegativeLevelType, "EndTime");
+        static readonly PropertyInfo s_GrappleAttempt = AccessTools.Property(typeof(UnitPartGrappleTarget), "LastBreakFreeAttempt");
+        static readonly PropertyInfo s_ConfusionRound = AccessTools.Property(typeof(UnitPartConfusion), "RoundStartTime");
+        static readonly PropertyInfo s_MagusCast = AccessTools.Property(typeof(UnitPartMagus), "LastCastedMagusSpellTime");
+        static readonly PropertyInfo s_MagusAttack = AccessTools.Property(typeof(UnitPartMagus), "LastAttackTime");
+        static readonly PropertyInfo s_MagusOpportunity = AccessTools.Property(typeof(UnitPartMagus), "LastSpellCombatOpportunityTime");
+        static readonly PropertyInfo s_MagusArcher = AccessTools.Property(typeof(UnitPartMagus), "EldritchArcherSpellCastTime");
+        static readonly PropertyInfo s_TouchAppear = AccessTools.Property(typeof(UnitPartTouch), "AppearTime");
+        static readonly FieldInfo s_FerocityStart = AccessTools.Field(typeof(UnitPartFerocity), "m_StartTime");
+        static readonly FieldInfo s_RoamingIdle = AccessTools.Field(typeof(UnitPartRoaming), "IdleEndTime");
+        static readonly FieldInfo s_Commands = AccessTools.Field(typeof(UnitCommands), "m_Commands");
+        static readonly FieldInfo s_CommandIgnoreCooldown = AccessTools.Field(typeof(UnitCommand), "m_IgnoreCooldownBeforeTime");
+        static readonly FieldInfo s_ChargeAvoidance = AccessTools.Field(typeof(UnitMovementAgent), "m_ChargeAvoidanceFinishTime");
 
         // The earliest the clock may go: the start of the game.
         internal static int MaxHours
@@ -109,6 +133,7 @@ namespace TimeControl
                     weariness.LastStackTime = Back(weariness.LastStackTime, delta);
                     weariness.LastBuffApplyTime = Back(weariness.LastBuffApplyTime, delta);
                 }
+                moved += ShiftUnitMoments(unit, delta);
             }
             foreach (ItemEntity item in game.Player.Inventory.ToList())
             {
@@ -122,6 +147,78 @@ namespace TimeControl
                 }
             }
             return moved;
+        }
+
+        // Each part on its own: one that fails must not keep the others from moving.
+        static int ShiftUnitMoments(UnitEntityData unit, TimeSpan delta)
+        {
+            int moved = 0;
+            unit.LastMoveTime = Back(unit.LastMoveTime, delta);
+            unit.Descriptor.State.DeathTime = Back(unit.Descriptor.State.DeathTime, delta);
+            Guard(unit, "negative levels", () =>
+            {
+                var levels = s_NegativeLevels == null || s_NegativeLevelEnd == null ? null
+                    : s_NegativeLevels.GetValue(unit.Get<UnitPartNegativeLevels>()) as IList;
+                if (levels == null) return;
+                foreach (object data in levels)
+                {
+                    var end = (TimeSpan?)s_NegativeLevelEnd.GetValue(data);
+                    if (!end.HasValue) continue;
+                    s_NegativeLevelEnd.SetValue(data, (TimeSpan?)Back(end.Value, delta));
+                    moved++;
+                }
+            });
+            Guard(unit, "part timers", () =>
+            {
+                ShiftProperty(unit.Get<UnitPartGrappleTarget>(), s_GrappleAttempt, delta);
+                ShiftProperty(unit.Get<UnitPartConfusion>(), s_ConfusionRound, delta);
+                var magus = unit.Get<UnitPartMagus>();
+                ShiftProperty(magus, s_MagusCast, delta);
+                ShiftProperty(magus, s_MagusAttack, delta);
+                ShiftProperty(magus, s_MagusOpportunity, delta);
+                ShiftProperty(magus, s_MagusArcher, delta);
+                ShiftProperty(unit.Get<UnitPartTouch>(), s_TouchAppear, delta);
+                ShiftField(unit.Get<UnitPartFerocity>(), s_FerocityStart, delta);
+                ShiftField(unit.Get<UnitPartRoaming>(), s_RoamingIdle, delta);
+            });
+            Guard(unit, "commands", () =>
+            {
+                var commands = new List<UnitCommand>();
+                var slots = s_Commands == null ? null : s_Commands.GetValue(unit.Commands) as UnitCommand[];
+                if (slots != null) commands.AddRange(slots.Where(c => c != null));
+                commands.AddRange(unit.Commands.Queue.Where(c => c != null && !commands.Contains(c)));
+                foreach (var cmd in commands)
+                {
+                    cmd.NextApproachTime = Back(cmd.NextApproachTime, delta);
+                    if (s_CommandIgnoreCooldown == null) continue;
+                    var ignore = (TimeSpan?)s_CommandIgnoreCooldown.GetValue(cmd);
+                    if (ignore.HasValue) s_CommandIgnoreCooldown.SetValue(cmd, (TimeSpan?)Back(ignore.Value, delta));
+                }
+            });
+            Guard(unit, "movement", () =>
+            {
+                var view = unit.View;
+                ShiftField(view == null ? null : view.AgentASP, s_ChargeAvoidance, delta);
+            });
+            return moved;
+        }
+
+        static void Guard(UnitEntityData unit, string what, Action action)
+        {
+            try { action(); }
+            catch (Exception e) { Main.Error(e, string.Format("moving {0} of {1} back", what, unit)); }
+        }
+
+        static void ShiftProperty(object owner, PropertyInfo p, TimeSpan delta)
+        {
+            if (owner == null || p == null) return;
+            p.SetValue(owner, Back((TimeSpan)p.GetValue(owner, null), delta), null);
+        }
+
+        static void ShiftField(object owner, FieldInfo f, TimeSpan delta)
+        {
+            if (owner == null || f == null) return;
+            f.SetValue(owner, Back((TimeSpan)f.GetValue(owner), delta));
         }
 
         static void ShiftCamp(TimeSpan delta)
