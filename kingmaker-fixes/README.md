@@ -22,6 +22,8 @@ A Unity Mod Manager mod that collects small fixes of the game's own bugs. Each f
 
 **Fix.** A prefix skips the update until the rules, the party pawn and the camera exist; after that the arrows work as before.
 
+Also: the arrows show whenever the camera is more than 2 m from the pawn, and the kingdom and settlement screens, as well as the entrance map of a location with several entrances (the capital: tavern, square, throne room), open over the global map with the camera at a region or a town, so the crosshair sat in the middle of those screens and did not move. It is hidden there now (and while the update is skipped).
+
 ### A character's voiced lines stuck after an area loads
 
 **Symptom.** While an area loads, the log gets `NullReferenceException` in `UnitAsksComponent+Bark.Play`. After that the character may go silent: that line never plays again, and the character's other ordinary lines do not play either, until the area is reloaded.
@@ -110,6 +112,14 @@ This fix used to be a separate mod, Custom Portraits Gamepad Selection Fix (`Mod
 **Fix.** The game's own screen mode and resolution are applied as soon as the mod loads, before the start window. The UMM log gets `start screen: Windowed 2560x1440 -> ExclusiveFullScreen 2560x1440, as set in the game`, or the same mode as set when nothing had to change.
 
 **Diagnostics.** When the start window chooses the keyboard, the log gets the keys that chose it (`controller mode window: the keyboard interface is chosen by ...`); what the game saw when it decided goes there too (`controller mode start: gamepad seen ...`).
+
+### Travel on the gamepad global map started without asking
+
+**Symptom.** On the global map with the gamepad interface, A on a location chosen with the D-pad or the stick sets the party off at once. With the mouse the game asks first and says how long the journey takes.
+
+**Cause.** The gamepad interface shows the question only for the location the party stands in; a journey anywhere else starts at once.
+
+**Fix.** The same question as with the mouse is asked before the journey: the game's text and its estimate of the time (with Time Control, with its travel coefficient). Yes sets the party off as before, No keeps it where it is. Going on along a journey stopped half way (B or an event on the road) is asked too, with the time left. A journey of one stretch, to the next point (a step with the stick, say), goes without the question, so it does not come up at every step. Entering the current location, stopping a journey, choosing an entrance of a location with several and the cases where the game finds no road are left as they are.
 
 ## On the Steam Deck
 

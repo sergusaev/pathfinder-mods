@@ -43,7 +43,7 @@ Duration multiplier: ×0.5 is twice as fast, ×2 twice as long, from ×0.1 to ×
 | Advisor rank-ups | rank-up projects |
 | Ruler's time spent on projects | days the ruler spends on a project |
 | Building construction | construction time; buildings started after the change only |
-| Travel time on the map | game hours spent travelling on the global map |
+| Travel time on the map | game hours spent travelling on the global map; the time in the route box and the trip to the capital when the party is changed follow it |
 | Camping time | game time spent camping, hunting and sleeping |
 
 The game recomputes kingdom durations every time, so a new multiplier also moves events and projects already under way. Coefficients take effect on Apply; right after it the Deadline Check window shows which current deadlines moved: "was 5 days, now 2 days and 12 hours", or that a deadline is now already due and happens when the day changes. When travel or camping time changes, it shows the nearest deadlines: the time left is the same, but it will be used up faster or more slowly.

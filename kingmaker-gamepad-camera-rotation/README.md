@@ -50,6 +50,8 @@ The compass graphics belong to Wrath of the Righteous and are not shipped with t
 
 In Kingmaker the local map follows the camera direction but only re-renders when the area changes, so after a rotation the picture and the frame of the visible area no longer matched. As in WotR, the map now keeps a fixed orientation (the default direction of the area), and the frame of the visible area is drawn as the exact footprint of the camera on the ground: it turns with the camera and becomes a trapezoid when the camera is tilted.
 
+The global map is left alone: its side map (RB) is a fixed picture, and the frame of the visible area there is placed as in the game itself. Before, the frame turned with the direction of the last area, and north and south were swapped.
+
 ## Settings (UMM window)
 
 - Rotation speed (degrees per second) and zoom speed; inverting either axis.

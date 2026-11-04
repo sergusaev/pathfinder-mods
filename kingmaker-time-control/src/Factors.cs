@@ -6,6 +6,7 @@ using HarmonyLib;
 using Kingmaker;
 using Kingmaker.Controllers.GlobalMap;
 using Kingmaker.GameModes;
+using Kingmaker.Globalmap;
 using Kingmaker.Kingdom;
 using Kingmaker.Kingdom.Blueprints;
 using Kingmaker.Kingdom.Settlements;
@@ -129,6 +130,20 @@ namespace TimeControl
         static void Prefix(ref float deltaDistance)
         {
             deltaDistance *= Main.Settings.TravelFactor;
+        }
+    }
+
+    // The time a route takes, as the game foresees it: the route box on the global map (both interfaces) and the trip
+    // to the capital and back when the party is changed there. Scaled like the travel itself, so what is shown is
+    // what will pass.
+    [HarmonyPatch(typeof(GlobalMapRules), "GetPathTime")]
+    static class PathTimePatch
+    {
+        static void Postfix(ref TimeSpan __result)
+        {
+            float factor = Main.Settings.TravelFactor;
+            if (Mathf.Approximately(factor, 1f) || __result <= TimeSpan.Zero || __result == TimeSpan.MaxValue) return;
+            __result = TimeSpan.FromTicks((long)(__result.Ticks * (double)factor));
         }
     }
 

@@ -219,6 +219,8 @@ namespace ModBar
         const int PadSide = 0, PadTop = 14, PadBottom = 14;
         const float DefaultPadRight = 18f;
         const string SheetName = "TBM_backButton", PlateName = SheetName;
+        // The global map's sheet under its buttons: the same top as the frame, only lower, and loaded there instead of it.
+        const string MapPlateName = "globalmap_leftbackmeny";
         // The parts of the sprite kept whole: the left ornament and the right corner, in its pixels; the edge between
         // them tiled; the top half turned over for the bottom.
         const float PlateLeft = 60f, PlateRight = 112f, EdgeFrom = PlateLeft, EdgeTo = 668f - PlateRight;
@@ -239,6 +241,7 @@ namespace ModBar
         const int PadSide = 0, PadTop = 20, PadBottom = 20;
         const float DefaultPadRight = 18f;
         const string SheetName = "UI_HudBackgroundIcon", PlateName = SheetName;
+        const string MapPlateName = null;
         const float PlateLeft = 0f, PlateRight = 130f, EdgeFrom = 20f, EdgeTo = 180f;
         const bool Mirror = true;
         const bool CleanInside = true;
@@ -545,6 +548,13 @@ namespace ModBar
             int padLeft = Mathf.Max(0, Mathf.RoundToInt(pos.x - x));
             // Our frame's own margin over and under the buttons: the game's, or what the whole plate leaves round them.
             float own = above;
+            // The global map's buttons stand flush with its sheet's top and right: no margins to measure there, the
+            // frame keeps those of the game's frame of menu buttons.
+            if (MapPlateName != null && gameSheet != null && gameSheet.sprite.name == MapPlateName)
+            {
+                own = GameFrameAbove;
+                padRight = DefaultPadRight;
+            }
             var plateSource = Mirror ? null : Source();
             if (plateSource != null) own = Mathf.Max(2f, (plateSource.rect.height * s_UnitsPerPixel - ButtonSizeAt(anchor)) / 2f);
             if (CleanInside)
@@ -590,7 +600,13 @@ namespace ModBar
             var place = new Vector2(left - holderRect.xMin, bottom - holderRect.yMin);
             if (frame.anchoredPosition != place) frame.anchoredPosition = place;
             if (frame.sizeDelta != size) frame.sizeDelta = size;
-            if (!Parts(Mirror ? size.y / 2f : size.y)) return;
+            if (!Parts(Mirror ? size.y / 2f : size.y))
+            {
+                // No sprite to cut the frame from: no frame.
+                foreach (var part in frame.GetComponentsInChildren<Image>(true))
+                    if (part.enabled) part.enabled = false;
+                return;
+            }
             var top = (RectTransform)frame.GetChild(0);
             if (!Mirror && top.anchorMin.y != 0f)
             {
@@ -666,7 +682,10 @@ namespace ModBar
                 {
                     var part = (RectTransform)new GameObject(i == 0 ? "Left" : i == 1 ? "Edge" : "Right", typeof(RectTransform)).transform;
                     part.SetParent(half, false);
-                    part.gameObject.AddComponent<Image>().raycastTarget = false;
+                    // Off until it has its sprite: an image without one is drawn as a white box.
+                    var image = part.gameObject.AddComponent<Image>();
+                    image.raycastTarget = false;
+                    image.enabled = false;
                 }
             }
             return rect;
@@ -732,6 +751,19 @@ namespace ModBar
             var sheet = s_Anchor != null ? Sheet(s_Anchor) : null;
             if (sheet != null && sheet.sprite.name == PlateName) s_Source = sheet.sprite;
             else s_Source = Resources.FindObjectsOfTypeAll<Sprite>().FirstOrDefault(sp => sp.name == PlateName) ?? FromBundles(PlateName);
+            // The global map unloads the game's frame of menu buttons; its own sheet has the same top to cut the frame from.
+            if (s_Source == null && MapPlateName != null)
+            {
+                if (sheet != null && sheet.sprite.name == MapPlateName) s_Source = sheet.sprite;
+                else s_Source = Resources.FindObjectsOfTypeAll<Sprite>().FirstOrDefault(sp => sp.name == MapPlateName);
+                if (s_Source != null) Debug.Log("[ModBar] plate from the global map's sheet");
+            }
+            // Kept loaded once found, so the frame cut in one place is shown in the other too.
+            if (s_Source != null)
+            {
+                s_Source.hideFlags |= HideFlags.DontUnloadUnusedAsset;
+                if (s_Source.texture != null) s_Source.texture.hideFlags |= HideFlags.DontUnloadUnusedAsset;
+            }
             return s_Source;
         }
 

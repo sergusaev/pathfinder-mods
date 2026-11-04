@@ -5,6 +5,7 @@ using System.Reflection.Emit;
 using HarmonyLib;
 using Kingmaker;
 using Kingmaker.Blueprints.Root.Strings.GameLog;
+using Kingmaker.GameModes;
 using Kingmaker.Globalmap;
 using Kingmaker.RuleSystem.Rules;
 using Kingmaker.UI._ConsoleUI.CombatLog;
@@ -90,14 +91,24 @@ namespace KingmakerFixes
     // The arrows that point back to the party on the gamepad global map start updating every frame before the global
     // map rules exist, and throw NullReferenceException (a burst of "Error in Observer" in the log on entering the map).
     // Skip the update until the rules, the party pawn and the camera are there; then it runs as before.
+    // They also show whenever the camera is more than 2 m from the pawn, and the kingdom and settlement screens are
+    // opened over the global map with the camera taken to a region or a town, as is the map of the entrances of a
+    // location with several: the crosshair then sits in the middle of those screens and does not move. It is hidden there, and while the update is skipped.
     [HarmonyPatch(typeof(GlobalMapCenterArrowsVm), "OnUpdateHandler")]
     static class CenterArrowsBeforeMapLoaded
     {
-        static bool Prefix()
+        static bool Prefix(GlobalMapCenterArrowsVm __instance)
         {
             var rules = GlobalMapRules.Instance;
-            return rules != null && rules.Pawn != null && Game.Instance != null && Game.Instance.UI != null
-                && Game.Instance.UI.GetCameraRig() != null;
+            var game = Game.Instance;
+            bool ready = rules != null && rules.Pawn != null && game != null && game.UI != null && game.UI.GetCameraRig() != null;
+            bool kingdom = game != null && (game.IsModeActive(GameModeType.Kingdom) || game.IsModeActive(GameModeType.KingdomSettlement));
+            // The map of the entrances of a location with several (the capital's tavern, square, throne room) is shown
+            // over the global map the same way, with the camera at the location.
+            if (rules != null && TravelConfirm.MultiEntrance != null && (bool)TravelConfirm.MultiEntrance.GetValue(rules)) kingdom = true;
+            if (ready && !kingdom) return true;
+            if (__instance.IsVisible.Value) __instance.IsVisible.Value = false;
+            return false;
         }
     }
 }

@@ -2,6 +2,7 @@ using System;
 using System.Reflection;
 using HarmonyLib;
 using Kingmaker;
+using Kingmaker.Blueprints.Root;
 using Kingmaker.UI._ConsoleUI.LocalMap;
 using Kingmaker.View;
 using Kingmaker.Visual.LocalMap;
@@ -11,6 +12,8 @@ using UnityEngine.UI;
 namespace GamepadCameraRotation
 {
     // As in WotR the local map keeps a fixed yaw (the area default) instead of following the camera, so the image never goes stale.
+    // Not on the global map: its side map (RB) is a fixed picture, only the frame of the view is placed through this camera,
+    // and with the yaw of the last area the frame went round with it (north and south swapped). There it keeps the game's own.
     [HarmonyPatch(typeof(LocalMapRenderer), "UpdateCamera")]
     static class LocalMapCameraPatch
     {
@@ -21,9 +24,17 @@ namespace GamepadCameraRotation
             new Vector3(1f, 1f, 1f), new Vector3(-1f, 1f, 1f), new Vector3(1f, -1f, 1f), new Vector3(-1f, -1f, 1f)
         };
 
+        internal static bool OnGlobalMap()
+        {
+            var game = Game.Instance;
+            var root = BlueprintRoot.Instance;
+            if (game == null || root == null || root.GlobalMap == null || root.GlobalMap.GlobalMapEnterPoint == null) return false;
+            return game.CurrentlyLoadedArea != null && game.CurrentlyLoadedArea == root.GlobalMap.GlobalMapEnterPoint.Area;
+        }
+
         static void Postfix(LocalMapRenderer __instance)
         {
-            if (__instance.CurrentArea == null) return;
+            if (__instance.CurrentArea == null || OnGlobalMap()) return;
             var cam = CameraField.GetValue(__instance) as Camera;
             if (cam == null) return;
 
