@@ -41,6 +41,8 @@ namespace KingmakerCosmetics
             ElfEars.Build();
             // After the ears: the face is a copy of an elf face and keeps their ears.
             SideBraid.Build();
+            // The human war paint face: a copy of the fourth human face, made before anything changes the game faces.
+            Warpaint.Build();
             // After the side braid face: it is made from the first face as the game has it.
             Lashes.Build();
             // The game faces, after the side braid face took its own textures from the first one.

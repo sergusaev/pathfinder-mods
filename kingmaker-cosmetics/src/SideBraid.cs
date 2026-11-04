@@ -162,7 +162,7 @@ namespace KingmakerCosmetics
             return true;
         }
 
-        static EquipmentEntityLink Link(EquipmentEntityLink[] links, string name)
+        internal static EquipmentEntityLink Link(EquipmentEntityLink[] links, string name)
         {
             string found;
             return links.FirstOrDefault(l => l != null && l.AssetId != null
@@ -234,7 +234,7 @@ namespace KingmakerCosmetics
             }
         }
 
-        static Texture2D ReadTexture(string file, Texture2D like)
+        internal static Texture2D ReadTexture(string file, Texture2D like)
         {
             var texture = new Texture2D(2, 2, TextureFormat.RGBA32, true);
             texture.LoadImage(Resource(file));
@@ -252,7 +252,7 @@ namespace KingmakerCosmetics
         // A mesh of the mod's file format (written by export_mod.py of the hair stand): positions, normals, uv, four
         // bone weights each on the bones of the game mesh it was made from, triangles. The file names the first
         // vertices of that mesh as the stand saw them; the game mesh tells whether x or v are to be mirrored.
-        static Mesh ReadMesh(string file, Mesh source)
+        internal static Mesh ReadMesh(string file, Mesh source)
         {
             using (var reader = new BinaryReader(new MemoryStream(Resource(file))))
             {
