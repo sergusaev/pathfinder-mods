@@ -170,7 +170,7 @@ namespace KingmakerCosmetics
         }
 
         // The parts of the copy on the original's mesh picked get the mesh of the file instead.
-        static bool Swap(EquipmentEntity copy, EquipmentEntity original, string file, Func<Mesh, bool> which)
+        internal static bool Swap(EquipmentEntity copy, EquipmentEntity original, string file, Func<Mesh, bool> which)
         {
             Mesh mesh = null;
             int swapped = 0;
@@ -191,7 +191,7 @@ namespace KingmakerCosmetics
         }
 
         // The textures of the copy named are swapped for those of the files; their colour masks stay.
-        static void Paint(EquipmentEntity copy, Dictionary<string, string> files, Func<Texture2D, Texture2D> fit = null)
+        internal static void Paint(EquipmentEntity copy, Dictionary<string, string> files, Func<Texture2D, Texture2D> fit = null)
         {
             var made = new Dictionary<string, Texture2D>();
             Paint(copy, files, made, fit);

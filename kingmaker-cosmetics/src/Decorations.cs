@@ -101,6 +101,7 @@ namespace KingmakerCosmetics
                 copy.HideBodyParts = 0;
                 copy.ColorsProfile = s_Palette;
                 Styles.ReplaceMesh(copy, 0, face, mesh);
+                UnderHair.Paints.Add(copy);
                 Styles.Register(id, copy);
                 Main.Log.Log($"{copy.name}: face decoration, {mesh.vertexCount} vertices, {mesh.triangles.Length / 3} triangles, {s_Paints.Length} paints");
                 return true;
