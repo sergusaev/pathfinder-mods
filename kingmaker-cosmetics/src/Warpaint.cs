@@ -11,13 +11,12 @@ using UnityEngine;
 namespace KingmakerCosmetics
 {
     // A ready head of a human woman after a portrait (made offline on the hair stand, hm_eye.py, hm_warpaint.py,
-    // hm_decal_mod.py): the fourth human face with detailed eyes (iris, pupil, white, a shadow on the upper lid), a
+    // hm_decal_mod.py): the fourth human face with detailed eyes (iris, pupil, white, a shadow on the upper lid) and a
     // line of lashes along the upper lid drawn into her brows (so it takes the colour of the brows, that is of the
-    // hair), and grey-violet war paint on her right side only: a wide band from the forehead down over the eye and
-    // along the cheek to the jaw, and a thin stripe beside it on the temple.
+    // hair). The war paint once part of it is a face decoration of its own now (Decorations.cs).
     // The head's texture is shared by both halves of the face, so the paint is a mesh of its own: the head triangles
     // of the right side cut along the paint's outline and lifted 0.4 mm, a body part of type Glasses on the head's
-    // bones with only the paint colour on it (the doll gives each body part type its own place in the atlas).
+    // bones (the doll gives each body part type its own place in the atlas), its grey shade repainted by a palette.
     static class Warpaint
     {
         // Asset ids: they go into saves and never change.
@@ -74,15 +73,7 @@ namespace KingmakerCosmetics
             };
             if (SideBraid.Paint(copy, files, made, Eyes.Fit) != 2)
                 Main.Log.Error($"{copy.name}: face textures swapped: {string.Join(", ", made.Keys.ToArray())}");
-            var paint = SideBraid.ReadTexture("Warpaint.png", null);
-            paint.wrapMode = TextureWrapMode.Clamp;
-            copy.BodyParts.Add(new BodyPart
-            {
-                Type = BodyPartType.Glasses,
-                Material = face.Material,
-                Textures = new List<CharacterTextureDescription> { new CharacterTextureDescription(CharacterTextureChannel.Diffuse, paint) },
-            });
-            Styles.ReplaceMesh(copy, copy.BodyParts.Count - 1, face, mesh);
+            Decorations.Build(link.AssetId, original, face, mesh);
             var browsCopy = Styles.Copy(browsLink.AssetId, browsEntity, "_Warpaint");
             var browsMade = new Dictionary<string, Texture2D>();
             if (SideBraid.Paint(browsCopy, new Dictionary<string, string> { { "HD_Head_Face04EyebrowsBW_F_HM", "WarpaintBrows.png" } }, browsMade, Eyes.Fit) != 1)
@@ -92,7 +83,10 @@ namespace KingmakerCosmetics
             // Heads and brows go in pairs, one index for both.
             options.Heads = options.Heads.Concat(new[] { new EquipmentEntityLink { AssetId = FaceId } }).ToArray();
             options.Eyebrows = options.Eyebrows.Concat(new[] { new EquipmentEntityLink { AssetId = BrowsId } }).ToArray();
-            Main.Log.Log($"{copy.name}: female human face {options.Heads.Length}, war paint {mesh.vertexCount} vertices, {mesh.triangles.Length / 3} triangles");
+            Main.Log.Log($"{copy.name}: female human face {options.Heads.Length}");
+            Decorations.Face04Ids.Add(link.AssetId);
+            Decorations.Face04Ids.Add(FaceId);
+            Decorations.Offer(options);
         }
     }
 }
