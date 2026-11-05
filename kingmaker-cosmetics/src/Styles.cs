@@ -90,6 +90,7 @@ namespace KingmakerCosmetics
 
         internal static void Tick()
         {
+            DollDump.Tick();
             while (s_Soon.Count > 0)
             {
                 string id = s_Soon.Dequeue();
