@@ -129,6 +129,14 @@ This fix used to be a separate mod, Custom Portraits Gamepad Selection Fix (`Mod
 
 **Fix.** A prefix removes the `DOORSTOP_*` variables just before the restart; the old process quits right after it, and the new one loads the mods as usual. The UMM log of the old process gets `restart: cleared DOORSTOP_INITIALIZED, ...`.
 
+### An animal companion without equipment and doll in the inventory
+
+**Symptom.** With the gamepad interface an animal companion (the wolf, say) gets a picture instead of the equipment page and the stash, so nothing can be put on it, though the keyboard and mouse inventory has its slots. In the keyboard and mouse inventory a picture covers its doll, and while the animal is not on the map (on the global map, in the capital) the doll room is empty in both interfaces.
+
+**Cause.** The gamepad inventory takes a pet for a polymorphed character (`InventoryDollVM.IsPet`, `InventoryStashVM.IsPet`) and hides its slots and stash; the mouse inventory shows its `Placeholder` over a pet. The doll of a pet is a copy of its view in the world (`DollRoom.SetupInfo`), and the copy of an animal that is not on the map is switched off.
+
+**Fix.** A pet gets its equipment page and the stash in the gamepad inventory, the picture over its doll is taken off in the mouse inventory, and the copy of its view is switched on and animated in the doll room. A polymorphed character keeps the game's picture. The UMM log gets `pet doll: the copy of <name> switched on`.
+
 ## On the Steam Deck
 
 Nothing to bind and no settings. Setting up Unity Mod Manager: [the Steam Deck guide](../docs/steam-deck.md).

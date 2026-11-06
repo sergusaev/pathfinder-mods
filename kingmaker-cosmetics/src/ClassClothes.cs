@@ -398,12 +398,22 @@ namespace KingmakerCosmetics
             return string.Join(" < ", names.ToArray());
         }
 
+        // The picture of an image: its sprite, colour and how it is drawn.
+        static string Look(Transform t)
+        {
+            var image = t.GetComponent<Image>();
+            if (image == null)
+                return "";
+            return " {" + (image.sprite == null ? "no sprite" : image.sprite.name + (image.sprite.border != Vector4.zero ? " border " + image.sprite.border : ""))
+                + " " + image.type + " " + (Color32)image.color + (image.enabled ? "" : " disabled") + "}";
+        }
+
         internal static string Tree(Transform t, string indent)
         {
             var rect = t as RectTransform;
             var text = t.GetComponent<TextMeshProUGUI>();
             var parts = new List<string> { indent + t.name + (t.gameObject.activeSelf ? "" : " (off)") + " [" + string.Join(",", t.GetComponents<Component>().Select(c => c.GetType().Name).ToArray()) + "]"
-                + (rect == null ? "" : " " + rect.anchoredPosition + " " + rect.rect.size) + (text == null ? "" : " \"" + text.text + "\"") };
+                + (rect == null ? "" : " " + rect.anchoredPosition + " " + rect.rect.size) + (text == null ? "" : " \"" + text.text + "\"") + Look(t) };
             for (int i = 0; i < t.childCount; i++)
                 parts.Add(Tree(t.GetChild(i), indent + "  "));
             return string.Join("\n", parts.ToArray());
@@ -501,11 +511,79 @@ namespace KingmakerCosmetics
                 Label(primary, ClassClothes.TextPrimary);
                 Label(secondary, ClassClothes.TextSecondary);
                 Label(rows.Details, ClassClothes.TextDetails);
+                Restyle(__instance.transform);
             }
             catch (Exception ex)
             {
                 Main.Log.Error("clothes layers rows (gamepad): " + ex);
             }
+        }
+
+        static Transform s_Model;
+        static bool s_Styled;
+
+        // The selectors of the window are drawn as those of character creation: the value on its light plate in a
+        // golden frame, the chevrons on their round plates. Everything is copied from a selector of the gamepad's
+        // character creation (loaded with the gamepad interface): sprites and colours of the plates and the chevrons,
+        // the plate and frame of the value; sizes stay those of the window. The colour rows keep their swatch and get
+        // the frame and the chevrons. The game's rows and ours alike; without the model nothing changes.
+        static void Restyle(Transform window)
+        {
+            if (s_Model == null)
+                foreach (var view in Resources.FindObjectsOfTypeAll<SequentialSelectorView>())
+                {
+                    if (view == null || view.transform.Find("ValuePlace") == null)
+                        continue;
+                    bool creation = false;
+                    for (var t = view.transform; t != null && !creation; t = t.parent)
+                        creation = t.name == "Console_CharacterGen";
+                    if (creation)
+                    {
+                        s_Model = view.transform.Find("ValuePlace");
+                        Main.Log.Log("gamepad selectors model:\n" + ClassClothes.Tree(s_Model, "  "));
+                        break;
+                    }
+                }
+            if (s_Model == null)
+            {
+                if (!s_Styled)
+                    Main.Log.Log("gamepad selectors: no model of character creation, left as they are");
+                s_Styled = true;
+                return;
+            }
+            int rows = 0;
+            foreach (var entity in window.GetComponentsInChildren<Kingmaker.UI._ConsoleUI.Common.ConsoleSelectableEntity>(true))
+            {
+                var place = entity.transform.Find("ValuePlace");
+                if (place == null || place == s_Model)
+                    continue;
+                bool texture = entity.GetComponent<TextureSequentialSelectorView>() != null;
+                foreach (var name in new[] { "ButtonPlaceBack", "ButtonPlaceNext" })
+                {
+                    Copy(s_Model.Find(name), place.Find(name));
+                    Copy(s_Model.Find(name + "/Button"), place.Find(name + "/Button"));
+                }
+                Copy(s_Model.Find("Value/Frame/Border"), place.Find("Value/Frame/Border"));
+                if (!texture)
+                    Copy(s_Model.Find("Value/Frame"), place.Find("Value/Frame"));
+                rows++;
+            }
+            if (!s_Styled)
+                Main.Log.Log("gamepad selectors restyled after character creation: " + rows + " rows");
+            s_Styled = true;
+        }
+
+        // The picture of one image onto another: sprite, colour and how it is drawn. Sizes stay those of the window.
+        static void Copy(Transform from, Transform to)
+        {
+            var source = from == null ? null : from.GetComponent<Image>();
+            var target = to == null ? null : to.GetComponent<Image>();
+            if (source == null || target == null)
+                return;
+            target.sprite = source.sprite;
+            target.type = source.type;
+            target.color = source.color;
+            target.preserveAspect = source.preserveAspect;
         }
 
         static SequentialSelectorView CopyRow(SequentialSelectorView helm, string name)
@@ -1054,90 +1132,6 @@ namespace KingmakerCosmetics
                         return;
                 }
                 s_Toggle.Invoke(View, null);
-            }
-        }
-    }
-
-    // The keyboard and mouse inventory covers the doll of a pet with a picture, though the doll room builds the pet
-    // (a copy of its view, as for any unit without a character avatar). The picture stays for a polymorphed character.
-    [HarmonyPatch(typeof(Inventory), nameof(Inventory.SetCharacter))]
-    static class PetDoll
-    {
-        static readonly FieldInfo s_Simple = AccessTools.Field(typeof(DollRoom), "m_SimpleAvatar");
-        static readonly FieldInfo s_Camera = AccessTools.Field(typeof(DollRoom), "m_Camera");
-
-        static void Postfix(Inventory __instance)
-        {
-            try
-            {
-                var unit = Kingmaker.UI.Group.GroupController.Instance?.GetCurrentCharacter();
-                if (unit == null || !unit.Descriptor.IsPet || unit.Body.IsPolymorphed || __instance.Placeholder == null)
-                    return;
-                __instance.Placeholder.gameObject.SetActive(false);
-                var room = Game.Instance?.UI?.Common?.DollRoom;
-                var simple = room == null ? null : s_Simple.GetValue(room) as Component;
-                Main.Log.Log("pet doll: " + unit.CharacterName + ", picture off, " + Report(room));
-                if (simple != null)
-                {
-                    // The copy is made of the pet's view as it is in the world: switched off while the pet is not
-                    // on the map (on the global map, in the capital). It is switched on and animated as the game
-                    // does with a copy that comes out on.
-                    if (!simple.gameObject.activeSelf)
-                    {
-                        simple.gameObject.SetActive(true);
-                        var animation = simple.GetComponentInChildren<Kingmaker.Visual.Animation.Kingmaker.UnitAnimationManager>();
-                        if (animation != null)
-                        {
-                            if (animation.PlayableGraph.IsValid())
-                                animation.PlayableGraph.SetTimeUpdateMode(UnityEngine.Playables.DirectorUpdateMode.UnscaledGameTime);
-                            animation.IsInCombat = true;
-                            animation.Tick();
-                        }
-                        Main.Log.Log("pet doll: the copy switched on, animation " + (animation == null ? "none" : animation.PlayableGraph.IsValid().ToString()));
-                    }
-                    simple.gameObject.AddComponent<LateReport>().Room = room;
-                }
-            }
-            catch (Exception ex)
-            {
-                Main.Log.Error("pet doll: " + ex);
-            }
-        }
-
-        internal static string Report(DollRoom room)
-        {
-            var simple = room == null ? null : s_Simple.GetValue(room) as Component;
-            if (simple == null)
-                return "no copy of the view";
-            var owner = s_Camera.GetValue(room) as Component;
-            var camera = owner == null ? null : owner.GetComponent<Camera>() ?? owner.GetComponentInChildren<Camera>(true);
-            var parts = new List<string>
-            {
-                $"copy {simple.name} active {simple.gameObject.activeInHierarchy} layer {simple.gameObject.layer} at {simple.transform.position} scale {simple.transform.lossyScale}",
-                camera == null ? "no camera" : $"camera {camera.name} enabled {camera.isActiveAndEnabled} mask {camera.cullingMask:X} at {camera.transform.position} looks {camera.transform.forward} near {camera.nearClipPlane} far {camera.farClipPlane}",
-            };
-            foreach (var r in simple.GetComponentsInChildren<Renderer>(true))
-            {
-                var view = camera == null ? Vector3.zero : camera.WorldToViewportPoint(r.bounds.center);
-                parts.Add($"{r.GetType().Name} {r.name} enabled {r.enabled} active {r.gameObject.activeInHierarchy} layer {r.gameObject.layer} bounds {r.bounds.center} {r.bounds.size} view {view} "
-                    + $"materials {string.Join(",", r.sharedMaterials.Select(m => m == null ? "null" : m.name + "/" + (m.shader == null ? "null" : m.shader.name)).ToArray())}"
-                    + (r is SkinnedMeshRenderer ? " mesh " + (((SkinnedMeshRenderer)r).sharedMesh == null ? "null" : ((SkinnedMeshRenderer)r).sharedMesh.name) + " offscreen " + ((SkinnedMeshRenderer)r).updateWhenOffscreen : ""));
-            }
-            return string.Join("\n  ", parts.ToArray());
-        }
-
-        class LateReport : MonoBehaviour
-        {
-            internal DollRoom Room;
-            float m_Time;
-
-            void Update()
-            {
-                m_Time += Time.unscaledDeltaTime;
-                if (m_Time < 1f)
-                    return;
-                Main.Log.Log("pet doll a second later: " + Report(Room));
-                Destroy(this);
             }
         }
     }
