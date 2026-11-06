@@ -121,6 +121,14 @@ This fix used to be a separate mod, Custom Portraits Gamepad Selection Fix (`Mod
 
 **Fix.** The same question as with the mouse is asked before the journey: the game's text and its estimate of the time (with Time Control, with its travel coefficient). Yes sets the party off as before, No keeps it where it is. Going on along a journey stopped half way (B or an event on the road) is asked too, with the time left. A journey of one stretch, to the next point (a step with the stick, say), goes without the question, so it does not come up at every step. Entering the current location, stopping a journey, choosing an entrance of a location with several and the cases where the game finds no road are left as they are.
 
+### Mods gone after the game restarts itself
+
+**Symptom.** After the control scheme is changed in the settings, the game restarts itself and comes back without any mods: no mod buttons or windows, mod content such as heads and hair from Kingmaker Cosmetics is missing, and saves made with mods show "No DLC" and do not load. Started again from Steam, the game has its mods.
+
+**Cause.** The game restarts by starting its exe from the running process (`SystemUtil.ApplicationRestart`), so the new process inherits its environment. The loader of Unity Mod Manager (Doorstop) marks the environment of the process it starts in (`DOORSTOP_INITIALIZED` and others) and does nothing in a process that already has the mark.
+
+**Fix.** A prefix removes the `DOORSTOP_*` variables just before the restart; the old process quits right after it, and the new one loads the mods as usual. The UMM log of the old process gets `restart: cleared DOORSTOP_INITIALIZED, ...`.
+
 ## On the Steam Deck
 
 Nothing to bind and no settings. Setting up Unity Mod Manager: [the Steam Deck guide](../docs/steam-deck.md).
