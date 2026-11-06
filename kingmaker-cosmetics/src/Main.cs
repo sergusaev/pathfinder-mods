@@ -9,10 +9,12 @@ namespace KingmakerCosmetics
     public static class Main
     {
         internal static UnityModManager.ModEntry.ModLogger Log;
+        internal static string ModPath;
 
         public static bool Load(UnityModManager.ModEntry modEntry)
         {
             Log = modEntry.Logger;
+            ModPath = modEntry.Path;
             new Harmony(modEntry.Info.Id).PatchAll(typeof(Main).Assembly);
             modEntry.OnUpdate = OnUpdate;
             return true;
