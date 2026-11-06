@@ -17,12 +17,14 @@ A Unity Mod Manager mod for Pathfinder: Kingmaker. It adds hair styles, faces, f
 - **Detailed eyes of elf women.** The five game faces get eye textures four times as large: a white eye white, a round iris with its pupil looking straight ahead, a highlight, a dark upper lid. The flat lash cards that looked jagged up close are taken off the faces. The textures follow the character atlas size of the graphics settings.
 - **Shorter elf ears,** halfway between elf and half-elf ears and turned a little away from the head.
 - **Hair colours of all races for every race.** In the mouse interface five colours are shown at a time, between arrows like those of the hair style; in the gamepad interface the colour row of the game simply gets longer.
+- **Clothes layers and colours in the inventory, for every member of the party.** The gear button of the appearance window ("Appearance") gets two groups. "Clothing": "Show skirt" (the skirt of the class clothes, seen under the armour's own) and "Show belts and bottles" (the class belts, pouches and bottles over the armour); the shirt and trousers always stay. They act only while armour is worn: without it all the clothes are there. Story companions with clothes of their own get the same. "Colors": "Primary", "Secondary" and "Details" of the clothes. In the mouse interface each colour is a circle in a golden frame, as in character creation, which opens the game's palette with "Reset" (back to the class colours, details to the first); in the gamepad interface they are rows of the game's kind. The bottles of the quick slots on the belt are the game's and stay.
+- **The pet's doll in the mouse inventory.** The game shows a picture instead of an animal companion (the wolf, say); now the animal itself is there, as in the gamepad interface. A polymorphed character keeps the picture.
 
 ## Saves
 
 The looks are kept in the save by their ids, like the game's own. A save where someone wears a style or the face of the mod is marked as needing a DLC: without the mod the game shows it greyed out with the DLC label and does not load it from the save list, instead of loading a character without hair or head. With the mod back, the save loads with its looks. "Continue", quick load and load after death skip this check: such a load without the mod only loses the looks until the mod is back.
 
-A face decoration is kept as horns, its colour as the horn colour; the detail colour as the braids' second colour. The detailed eyes, the faces without lashes and the shorter ears change the game's own faces and need nothing in the save.
+A face decoration is kept as horns, its colour as the horn colour; the detail colour as the braids' second colour. The clothes colours of the inventory are the game's own. The clothes layers are kept out of the save, in `Mods/KingmakerCosmetics/ClothesLayers.txt` (by the playthrough and the character): without the mod all the clothes are shown. The detailed eyes, the faces without lashes and the shorter ears change the game's own faces and need nothing in the save.
 
 ## Installing
 

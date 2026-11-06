@@ -32,7 +32,6 @@ namespace KingmakerCosmetics
             var paint = character.EquipmentEntities.FirstOrDefault(e => e != null && Paints.Contains(e));
             if (paint == null)
                 return;
-            DollDump.Soon(character);
             var covers = character.EquipmentEntities
                 .Where(e => e != null && e != paint && e.Layer > paint.Layer && e.BodyParts != null)
                 .OrderBy(e => e.Layer)
