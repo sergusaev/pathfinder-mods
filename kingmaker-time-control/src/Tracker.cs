@@ -112,12 +112,13 @@ namespace TimeControl
                 {
                     // Gone: it ran out when it was about due, otherwise the player resolved it or it was cancelled.
                     if (!s_Rebase && tracked.Alerts.Contains(0) && !tracked.Fired.Contains(0) && tracked.LastRemaining <= elapsed + 2)
-                        alerts.Add(new Alert { Key = tracked.Key, Text = string.Format(S.Gone, tracked.Name), Final = true });
+                        alerts.Add(new Alert { Key = tracked.Key, Text = string.Format(tracked.Critical ? S.GoneFailed : S.Gone, tracked.Name), Final = true });
                     Remove(tracked.Key);
                     changed = true;
                     continue;
                 }
                 tracked.Name = t.Name;
+                tracked.Critical = t.Critical;
                 tracked.LastRemaining = t.Remaining.TotalHours;
                 // Another save or a rewind: the alerts still ahead are armed again, the ones already passed are not shown.
                 if (s_Rebase)

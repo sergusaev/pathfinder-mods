@@ -49,12 +49,14 @@ namespace TimeControl
         internal static string LeftToDeadline { get { return P("До своего срока «{0}» осталось {1}", "{1} left until your deadline for \"{0}\""); } }
         internal static string DeadlineDue { get { return P("Наступил свой срок: «{0}»", "Your deadline for \"{0}\" is due"); } }
         internal static string Gone { get { return P("Срок «{0}» прошёл: событие наступило.", "\"{0}\" is over: the event has happened."); } }
+        internal static string GoneFailed { get { return P("Срок «{0}» прошёл: провалено.", "\"{0}\" is over: failed."); } }
         internal static string AffectedNote { get { return P("Зависит от коэффициентов королевства.", "Affected by the kingdom coefficients."); } }
         internal static string HiddenNote { get { return P("Скрытый: игра не показывает этот таймер.", "Hidden: the game does not show this timer."); } }
         internal static string CriticalNote { get { return P("По истечении срока что-то будет провалено.", "Something fails when it runs out."); } }
 
         // Timer names
         internal static string ObjectiveFail { get { return P("Провал цели: {0} ({1})", "Objective fails: {0} ({1})"); } }
+        internal static string QuestFail { get { return P("Провал задания: {0}", "Quest fails: {0}"); } }
         internal static string QuestTrigger { get { return P("Событие задания: {0}", "Quest event: {0}"); } }
         internal static string EventStart { get { return P("Начало события: {0}", "Event starts: {0}"); } }
         internal static string TaskEnd { get { return P("Решение: {0}", "Resolved: {0}"); } }

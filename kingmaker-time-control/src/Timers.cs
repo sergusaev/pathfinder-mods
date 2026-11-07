@@ -126,17 +126,25 @@ namespace TimeControl
                     if (objective.State != QuestObjectiveState.Started) continue;
                     var fail = objective.TimeToFail;
                     string title = objective.Blueprint.GetTitile();
-                    if (string.IsNullOrEmpty(title)) title = objective.Blueprint.name;
                     if (fail.HasValue)
                     {
+                        // The game itself tells the two apart in the journal: IsFakeFail reads "Развитие событий через…",
+                        // the rest "Будет провалено через…". A hidden objective that does not finish the quest is a plain
+                        // countdown too: its "failure" only opens what checks its state (Old Recipe: Bokken's reaction).
+                        var bp = objective.Blueprint;
+                        bool critical = !bp.IsFakeFail && !(bp.IsHidden && !bp.IsFinishParent);
+                        string name;
+                        if (!critical) name = string.Format(S.QuestTrigger, questName);
+                        else if (string.IsNullOrEmpty(title)) name = string.Format(S.QuestFail, questName);
+                        else name = string.Format(S.ObjectiveFail, title, questName);
                         list.Add(new GameTimer
                         {
                             Key = "qo:" + Guid(objective.Blueprint),
                             Title = questName,
-                            Name = string.Format(S.ObjectiveFail, title, questName),
+                            Name = name,
                             Due = now + fail.Value,
                             Hidden = !objective.IsVisible,
-                            Critical = true
+                            Critical = critical
                         });
                     }
                     int index = 0;

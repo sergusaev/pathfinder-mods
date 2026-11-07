@@ -20,7 +20,7 @@ Controls as in the buff menu: D-pad / left stick / W S A D / arrows select and c
 
 ## Timers
 
-- **Quests:** objectives that fail on a deadline (`AutoFailDays`), hidden objectives included; hidden timed quest events (`TimedObjectiveTrigger`).
+- **Quests:** objectives that fail on a deadline (`AutoFailDays`); deadlines the journal calls "Next development in…" (`IsFakeFail`, such as the moons of An Ancient Curse) and hidden timer objectives that do not finish the quest (such as Bokken's reaction in An Ancient Formula) are shown as quest events, not failures; hidden timed quest events (`TimedObjectiveTrigger`).
 - **Kingdom:** resolution of events and projects by advisors; events that resolve themselves; an event nobody took (at the start of a month an event without an advisor that began more than 10 days earlier fails, unless a free advisor is assigned); ignored events; the next tick of recurring events; random events planned for the month (hidden); story events on kingdom days (hidden); end of kingdom effects; buildings under construction; artisans' items; weekly treasury income; start of the month; the raven's report (hidden).
 
 Deadlines after which something fails are tracked as soon as they appear (can be turned off in UMM). Once you stop tracking one, the mod does not add it again.
