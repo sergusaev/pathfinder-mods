@@ -25,6 +25,7 @@ All mods are on the release pages: [pathfinder-mods](https://github.com/sergusae
 | [Level 1 Companions & Free Respec](../level1-companions) | both | `Level1Companions` | `Level1Companions` |
 | [Scrolls](../learn-scrolls) | both | `LearnScrolls` | `LearnScrolls` |
 | [Success Chance](../success-chance) | both | `SuccessChance` | `SuccessChance` |
+| [Bonus Overlap Warnings](../kingmaker-bonus-overlap-warnings) | Kingmaker | `BonusOverlapWarnings` | `BonusOverlapWarnings` |
 | [Kingmaker Cosmetics](../kingmaker-cosmetics) | Kingmaker | `KingmakerCosmetics` | `KingmakerCosmetics` |
 | [Kingmaker Fixes](../kingmaker-fixes) | Kingmaker | `KingmakerFixes` | `KingmakerFixes` |
 | [Portrait Gallery](../kingmaker-portrait-gallery) | Kingmaker | `PortraitGallery` | `PortraitGallery` |

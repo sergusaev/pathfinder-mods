@@ -1,0 +1,11 @@
+{
+  "Id": "BonusOverlapWarnings",
+  "DisplayName": "Bonus Overlap Warnings",
+  "Author": "sergusaev",
+  "Version": "0.1.0",
+  "HomePage": "https://github.com/sergusaev/pathfinder-mods",
+  "ManagerVersion": "0.22.0",
+  "AssemblyName": "BonusOverlapWarnings.dll",
+  "EntryMethod": "BonusOverlapWarnings.Main.Load",
+  "Requirements": []
+}

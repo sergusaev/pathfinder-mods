@@ -25,6 +25,7 @@
 | [Level 1 Companions & Free Respec](../level1-companions/README.ru.md) | обе | `Level1Companions` | `Level1Companions` |
 | [Scrolls («Свитки»)](../learn-scrolls/README.ru.md) | обе | `LearnScrolls` | `LearnScrolls` |
 | [Success Chance](../success-chance/README.ru.md) | обе | `SuccessChance` | `SuccessChance` |
+| [Bonus Overlap Warnings](../kingmaker-bonus-overlap-warnings/README.ru.md) | Kingmaker | `BonusOverlapWarnings` | `BonusOverlapWarnings` |
 | [Kingmaker Cosmetics](../kingmaker-cosmetics/README.ru.md) | Kingmaker | `KingmakerCosmetics` | `KingmakerCosmetics` |
 | [Kingmaker Fixes](../kingmaker-fixes/README.ru.md) | Kingmaker | `KingmakerFixes` | `KingmakerFixes` |
 | [Portrait Gallery](../kingmaker-portrait-gallery/README.ru.md) | Kingmaker | `PortraitGallery` | `PortraitGallery` |

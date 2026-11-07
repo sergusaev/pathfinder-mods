@@ -135,7 +135,55 @@ This fix used to be a separate mod, Custom Portraits Gamepad Selection Fix (`Mod
 
 **Cause.** The gamepad inventory takes a pet for a polymorphed character (`InventoryDollVM.IsPet`, `InventoryStashVM.IsPet`) and hides its slots and stash; the mouse inventory shows its `Placeholder` over a pet. The doll of a pet is a copy of its view in the world (`DollRoom.SetupInfo`), and the copy of an animal that is not on the map is switched off.
 
-**Fix.** A pet gets its equipment page and the stash in the gamepad inventory, the picture over its doll is taken off in the mouse inventory, and the copy of its view is switched on and animated in the doll room. A polymorphed character keeps the game's picture. The UMM log gets `pet doll: the copy of <name> switched on`.
+**Fix.** A pet gets its equipment page and the stash in the gamepad inventory, the picture over its doll is taken off in the mouse inventory, and the copy of its view is switched on and animated in the doll room. A polymorphed character keeps the game's picture. The UMM log gets `pet doll: the copy of <name> switched on`. Known gap: while the animal is not on the map, its doll stands still.
+
+### "Qualities" twice in an item's description
+
+**Symptom.** The description of an item with bonuses to stats (a breastplate of +2 Wisdom and Charisma, say) has two blocks titled "Qualities" one after the other.
+
+**Cause.** The block of the stat bonuses (`DescriptionTemplatesItem.ItemStatBonuses`) takes the title of the qualities block that follows it.
+
+**Fix.** The title of the first block is "Bonuses".
+
+### Two separator lines in a row in an item's description
+
+**Symptom.** In an item's description two separator lines stand one right under the other.
+
+**Cause.** A block ends with a separator, and the next one may start with its own.
+
+**Fix.** Of two separators in a row (`DescriptionBricksBox.Add`) only the later one stays.
+
+### A long mouse tooltip cut off at the bottom of the screen
+
+**Symptom.** With keyboard and mouse the tooltip of an item with a long description (many properties, a long story) is cut at its height limit: the end of the text cannot be read. The mouse wheel over the item scrolls the inventory list under the tooltip instead.
+
+**Cause.** The tooltip (`TooltipConstructor`) has a height limit and no scrolling.
+
+**Fix.** While the tooltip of the item under the cursor is longer than its limit, the mouse wheel scrolls its text; the cursor stays on the item, the tooltip need not be held. A copy of the inventory's scroll bar shows where the text is (it takes no clicks), and the list under the tooltip does not scroll meanwhile. Compared items beside the tooltip show their bar too.
+
+### The circle of a magic item over its picture in the gamepad interface
+
+**Symptom.** In the gamepad inventory, loot and vendor windows the circle of a magic item covers the item's picture; with keyboard and mouse it is under the picture.
+
+**Cause.** The slot's magic layer (`ItemSlotView.SetupMagicLayer`) is drawn after the picture.
+
+**Fix.** The layer is put under the picture, as in the mouse interface.
+
+### The right stick races through a list or a tooltip
+
+**Symptom.** With the gamepad the right stick scrolls the inventory, the combat log, the character's pages or a tooltip to the end at once, faster the higher the frame rate.
+
+**Cause.** The scroll (`VirtualListController.Scroll`, `TooltipSectionView.Scroll`) moves by one wheel step on every frame the stick is held, sometimes twice a frame.
+
+**Fix.** The scroll is made per second, once a frame, as strong as the stick is tilted: a list at 6 wheel steps a second with the stick held fully; a tooltip at 8, up to 16 the longer its text is against its window.
+
+### Items scattered in the gamepad inventory the first time it is opened
+
+**Symptom.** The first time the gamepad inventory (or loot) is opened, the items of a tab stand scattered with empty slots between them; after any change they are laid out one after another.
+
+**Cause.** The first show (`SlotsGroupVM.UpdateVisibleCollection`) puts each item at its stored slot index, kept from the mouse interface's grid of another width and counted over all the tabs; only later refreshes make the indices anew.
+
+**Fix.** The first show lays the items out the same as the later ones.
 
 ## On the Steam Deck
 
