@@ -11,9 +11,10 @@ A Unity Mod Manager mod for both games and both interfaces (gamepad, keyboard an
 - **Confirmation first.** The game's own window with the list comes first: the characters, under each its spells with the level and the school. Nothing is learned before you confirm. The school is green with a thumbs up when it is the character's specialization, red with a thumbs down when it is an opposition school.
 - **Counts.** Next to each character: how many scrolls the party plan gives it; the characters' numbers add up to the Whole party's.
 - **Not learned:** a spell already in the book, a spell not on the class's list, a spell the casting ability score is too low for (10 + the spell level). Optionally (off by default) spells of opposition schools.
+- **Quill on scrolls (Kingmaker).** A quill in the upper left corner of the icon means the main character or a companion can learn the scroll: in the party, in the camp or the capital, or away for a while. Shown in the inventory, the stash, loot and the vendor's window. The scroll's description gets "Spell can be learned by" with the names under the game's "Spell is known by". In Kingmaker the casting ability score is taken without temporary effects (spells, potions, ability damage); tomes and worn items count.
 - **Opening the window.** With a gamepad, the Scrolls card in the game's menu. With keyboard and mouse, the buttons over the game's menu buttons: a scroll learns everything for the whole party, a scroll with a gear opens the window. The window has a Help tab with all the controls.
 
-The pictures are made once from the scroll of the games' Journal card and shipped in the DLL.
+The pictures are made once from the scroll and the quill of the games' Journal card and shipped in the DLL.
 
 ## Installing
 

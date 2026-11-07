@@ -64,6 +64,9 @@ namespace LearnScrolls
 
         internal static string RecipesLabel => T("Рецепты", "Recipes");
 
+        // In the item's description under the game's "Spell is known by", the same way.
+        internal static string CanBeLearnedBy => T("Заклинание может быть выучено:", "Spell can be learned by:");
+
         internal static string WouldGoTo(string names)
         {
             return T("по общей раздаче достался бы: ", "party distribution assigns it to ") + names;
@@ -120,7 +123,33 @@ namespace LearnScrolls
         internal static string HintScroll => T("Прокрутка", "Scroll");
         internal static string HintClose => T("Закрыть", "Close");
 
-        internal static string Help => Ru ? HelpRu : HelpEn;
+        internal static string Help
+        {
+            get
+            {
+#if KINGMAKER
+                // Kingmaker only: the quill on the slots and the line in the item's description.
+                return Ru ? HelpRu.Replace("# Что не изучается", QuillRu + "\n# Что не изучается")
+                          : HelpEn.Replace("# What is not learned", QuillEn + "\n# What is not learned");
+#else
+                return Ru ? HelpRu : HelpEn;
+#endif
+            }
+        }
+
+#if KINGMAKER
+        const string QuillRu =
+@"# Перо на свитках
+- Перо в левом верхнем углу иконки — этот свиток может выучить ГГ или кто-то из спутников: в группе, в лагере или столице, ушедший на время. Видно в инвентаре, тайнике, добыче и у торговца.
+- В описании свитка под строкой игры «Заклинание известно» — «Заклинание может быть выучено» и имена.
+- Колдовская характеристика здесь и при изучении считается без временных эффектов (заклинаний, зелий, урона характеристикам); тома и надетые предметы учитываются.";
+
+        const string QuillEn =
+@"# Quill on scrolls
+- A quill in the upper left corner of the icon: the main character or a companion can learn this scroll (in the party, in the camp or the capital, or away for a while). Shown in the inventory, the stash, loot and the vendor's window.
+- In the scroll's description, under the game's ""Spell is known by"": ""Spell can be learned by"" and the names.
+- The casting ability score here and when learning is taken without temporary effects (spells, potions, ability damage); tomes and worn items count.";
+#endif
 
         // Markup of Help.Build: "# " section, "- " bullet, "{A}| text" button line, "**bold**"; "@pad " and "@kb " lines
         // only with a gamepad or with keyboard and mouse.

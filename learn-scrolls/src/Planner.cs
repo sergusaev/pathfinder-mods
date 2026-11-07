@@ -8,6 +8,7 @@ using Kingmaker.Blueprints.Items.Components;
 using Kingmaker.Blueprints.Items.Equipment;
 using Kingmaker.Designers.Mechanics.Facts;
 using Kingmaker.EntitySystem.Entities;
+using Kingmaker.Enums;
 using Kingmaker.Items;
 using Kingmaker.UnitLogic;
 using Kingmaker.UnitLogic.Abilities.Blueprints;
@@ -112,7 +113,7 @@ namespace LearnScrolls
                     if (Main.Settings.ExcludeOpposition && Opposition(book, spell)) continue;
                     var c = new Candidate { Unit = unit, Book = book, Level = book.Blueprint.SpellList.GetLevel(spell), Order = i };
                     // The game copies a scroll the character could never cast: a spell needs the casting score of 10 + its level.
-                    if (Stat(c) < 10 + c.Level) continue;
+                    if (!ScoreAllows(unit, book, c.Level)) continue;
                     if (best == null || Compare(spell, c, best) < 0) best = c;
                 }
                 if (best != null) list.Add(best);
@@ -172,6 +173,71 @@ namespace LearnScrolls
             var stat = c.Unit.Stats.GetStat(c.Book.Blueprint.CastingAttribute);
             return stat != null ? stat.ModifiedValue : 0;
         }
+
+        // Whether the casting score lets the character cast a spell of this level: 10 + the level.
+        static bool ScoreAllows(UnitEntityData unit, Spellbook book, int level)
+        {
+#if KINGMAKER
+            // The score without what passes: spells and potions, ability damage. Otherwise the slot marks and the
+            // learning would change with every buff.
+            return SteadyScore(unit, book) >= 10 + level;
+#else
+            var stat = unit.Stats.GetStat(book.Blueprint.CastingAttribute);
+            return (stat != null ? stat.ModifiedValue : 0) >= 10 + level;
+#endif
+        }
+
+#if KINGMAKER
+        // The base score with the racial modifiers (the game's PermanentValue), plus the inherent bonuses (tomes) and
+        // the bonuses of the items worn (headbands, belts). Bonuses of one type that do not stack give their highest.
+        static int SteadyScore(UnitEntityData unit, Spellbook book)
+        {
+            var stat = unit.Stats.GetStat(book.Blueprint.CastingAttribute);
+            if (stat == null) return 0;
+            int score = stat.PermanentValue;
+            var highest = new Dictionary<ModifierDescriptor, int>();
+            foreach (var mod in stat.Modifiers)
+            {
+                if (mod == null || mod.ModDescriptor == ModifierDescriptor.Racial) continue;
+                if (mod.ItemSource == null && mod.ModDescriptor != ModifierDescriptor.Inherent) continue;
+                if (mod.Stacks) { score += mod.ModValue; continue; }
+                int had;
+                if (!highest.TryGetValue(mod.ModDescriptor, out had) || mod.ModValue > had) highest[mod.ModDescriptor] = mod.ModValue;
+            }
+            foreach (var value in highest.Values) score += value;
+            return score;
+        }
+
+        // The game's characters the main character has: the party, the companions waiting in the camp or the capital
+        // and the ones away on their own quests, the dead included (they can be raised); not those who left for good,
+        // not pets.
+        internal static List<UnitEntityData> Roster()
+        {
+            var player = Game.Instance.Player;
+            var gone = new HashSet<UnitEntityData>(player.ExCompanions.Select(r => r.Value).Where(u => u != null));
+            var list = new List<UnitEntityData>();
+            foreach (var reference in player.PartyCharacters.Concat(player.RemoteCompanions).Concat(player.DetachedPartyCharacters))
+            {
+                var unit = reference.Value;
+                if (unit == null || unit.Descriptor.IsPet || gone.Contains(unit) || list.Contains(unit)) continue;
+                list.Add(unit);
+            }
+            return list;
+        }
+
+        // Whether the character can learn the spell from a scroll: a book of theirs takes it (CopyScroll's own check),
+        // the settings do not leave it out, the casting score allows it.
+        internal static bool CanLearn(UnitEntityData unit, BlueprintAbility spell)
+        {
+            foreach (var book in unit.Descriptor.Spellbooks)
+            {
+                if (!BookTakes(book, spell)) continue;
+                if (Main.Settings.ExcludeOpposition && Opposition(book, spell)) continue;
+                if (ScoreAllows(unit, book, book.Blueprint.SpellList.GetLevel(spell))) return true;
+            }
+            return false;
+        }
+#endif
 
         static bool MagusTouch(Spellbook book, BlueprintAbility spell)
         {

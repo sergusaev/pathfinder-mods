@@ -104,6 +104,9 @@ namespace LearnScrolls
                 LessonList.Tick();
                 Cards.Tick();
                 Bar.Ensure();
+#if KINGMAKER
+                QuillMarks.Tick();
+#endif
             }
             catch (Exception e)
             {

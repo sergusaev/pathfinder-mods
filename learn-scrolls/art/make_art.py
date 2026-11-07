@@ -111,8 +111,30 @@ def marks():
         mark_on(back, kind, 'km')
 
 
+def quill_mark():
+    # The slot mark of a scroll someone can learn: the quill of Kingmaker's Journal card (quill_cut_km.png, the
+    # card's opaque part that the gap round the quill cuts off) in a dark halo, so that it shows on any item icon.
+    from PIL import ImageFilter
+    pic = Image.open(os.path.join(HERE, 'quill_cut_km.png')).convert('RGBA')
+    size, pad = 64, 5
+    h = size - 2 * pad
+    w = round(pic.width * h / pic.height)
+    pic = pic.resize((w * K, h * K), Image.LANCZOS)
+    canvas = Image.new('RGBA', (size * K, size * K), (0, 0, 0, 0))
+    ox, oy = (size * K - w * K) // 2, pad * K
+    alpha = Image.new('L', canvas.size, 0)
+    alpha.paste(pic.getchannel('A'), (ox, oy))
+    halo = alpha.filter(ImageFilter.MaxFilter(4 * K + 1)).filter(ImageFilter.GaussianBlur(K))
+    dark = Image.new('RGBA', canvas.size, (24, 16, 10, 0))
+    dark.putalpha(halo.point(lambda v: min(255, v * 9 // 10)))
+    canvas.alpha_composite(dark)
+    canvas.alpha_composite(pic, (ox, oy))
+    canvas.resize((size, size), Image.LANCZOS).save(os.path.join(HERE, 'quill_km.png'))
+
+
 scroll_art()
 marks()
+quill_mark()
 print('ok')
 
 FORK = os.path.join(HERE, '..', '..', 'wotr-pad-buffs', 'BuffIt2TheLimit', 'Assets', 'icons')
