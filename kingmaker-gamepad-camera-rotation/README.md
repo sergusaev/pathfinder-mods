@@ -37,7 +37,7 @@ A Unity Mod Manager mod that lets you rotate the camera in Pathfinder: Kingmaker
 
 ## Compass
 
-The hourglass in the lower left corner is replaced by the WotR console compass. It is built with WotR's layout: the same position, size and layers. The hints around it (Pause, Cursor, Menu, Highlight) stand on one arc: their icons at one distance from the compass, clear of the arrow; the camera mode hint stands on the same arc above it. The arrow and the rings turn with the camera; north is the default camera direction of the current area.
+The hourglass in the lower left corner is replaced by the WotR console compass. It is built with WotR's layout: the same position, size and layers. The hints around it (Pause, Cursor, Menu, Highlight) stand on one arc: their icons at one distance from the compass, clear of the arrow; the camera mode hint stands on the same arc above it. The arrow and the rings turn with the camera; north is the direction opposite to the area's entry view (the entry is seen from the south, north is up on the map).
 
 The compass graphics belong to Wrath of the Righteous and are not shipped with the mod. On the first start the mod finds the installed WotR, reads the sprites from its `Bundles/ui` bundle and saves them as PNG files into `Compass/` inside the mod folder. Later starts use those files.
 
@@ -48,7 +48,7 @@ The compass graphics belong to Wrath of the Righteous and are not shipped with t
 
 ## Local map
 
-In Kingmaker the local map follows the camera direction but only re-renders when the area changes, so after a rotation the picture and the frame of the visible area no longer matched. As in WotR, the map now keeps a fixed orientation (the default direction of the area), and the frame of the visible area is drawn as the exact footprint of the camera on the ground: it turns with the camera and becomes a trapezoid when the camera is tilted.
+In Kingmaker the local map follows the camera direction but only re-renders when the area changes, so after a rotation the picture and the frame of the visible area no longer matched. As in WotR, the map now keeps a fixed orientation, always read with north up (north is the direction opposite to the area's entry view), and the frame of the visible area is drawn as the exact footprint of the camera on the ground: it turns with the camera and becomes a trapezoid when the camera is tilted.
 
 The global map is left alone: its side map (RB) is a fixed picture, and the frame of the visible area there is placed as in the game itself. Before, the frame turned with the direction of the last area, and north and south were swapped.
 

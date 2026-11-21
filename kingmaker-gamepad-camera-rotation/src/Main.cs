@@ -209,13 +209,14 @@ namespace GamepadCameraRotation
     }
 
     // Area entry passes the default yaw of the area part; it is north for the compass and the fixed yaw of the local map.
+    // North is the direction opposite to the entry view (turned 180 degrees): that is the way the map reads as north up.
     [HarmonyPatch(typeof(CameraRig), "SetRotation")]
     static class SetRotationPatch
     {
         [HarmonyPriority(Priority.First)]
         static void Prefix(float cameraRotation)
         {
-            Main.MapYaw = cameraRotation;
+            Main.MapYaw = cameraRotation + 180f;
         }
     }
 

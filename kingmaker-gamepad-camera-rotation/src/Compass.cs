@@ -272,7 +272,8 @@ namespace GamepadCameraRotation
             s_Dials.RemoveAll(d => d.Arrow == null);
             foreach (Dial d in s_Dials)
             {
-                d.Arrow.localEulerAngles = new Vector3(0f, 0f, -angle);
+                // North is the entry view turned 180 degrees (Main.MapYaw), so the arrow reads it the other way around.
+                d.Arrow.localEulerAngles = new Vector3(0f, 0f, -angle + 180f);
                 d.Astro01.localEulerAngles = new Vector3(0f, 0f, angle);
                 d.Astro02.localEulerAngles = new Vector3(0f, 0f, -angle);
             }
